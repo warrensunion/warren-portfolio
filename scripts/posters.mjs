@@ -20,6 +20,8 @@ const SHOTS = [
   { file: 'ws-2', q: 'poster=ring&shape=2' },
   { file: 'ws-3', q: 'poster=ring&shape=3' },
   { file: 'ws-4', q: 'poster=ring&shape=4' },
+  // A track figure's stage stills (spec 3.6): one per stage, into public/stills at the plate's 1280x800.
+  ...[0, 1, 2, 3, 4].map((i) => ({ file: 'terrarium-s' + i, q: 'poster=terrarium&stage=' + i, dir: 'stills', size: [1280, 800] })),
 ];
 const TRACK_STILLS = [
   ...[0, 1, 2, 3, 4].map((i) => ({ file: `stills/howpolluted-s${i}`, q: `poster=howpolluted&stage=${i}`, still: true })),
@@ -61,8 +63,9 @@ try {
     // Two more frames after scrolling, so the compositor has the canvas at its final place.
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     const png = await stage.screenshot({ type: 'png', animations: 'disabled' });
-    const out = shot.still ? path.join(root, 'public', shot.file + '.webp') : path.join(root, 'public/posters', shot.file + '.webp');
-    const info = await sharp(png).webp({ quality: shot.still ? 78 : 80, effort: 6 }).toFile(out);
+    const out = shot.still ? path.join(root, 'public', shot.file + '.webp') : path.join(root, 'public', shot.dir || 'posters', shot.file + '.webp');
+    const img = shot.size ? sharp(png).resize(shot.size[0], shot.size[1], { fit: 'cover' }) : sharp(png);
+    const info = await img.webp({ quality: shot.still || shot.dir ? 78 : 80, effort: 6 }).toFile(out);
     const kb = ((await stat(out)).size / 1024).toFixed(0);
     console.log(`ok   ${shot.file}.webp ${info.width}x${info.height} ${kb} KB`);
     await page.close();

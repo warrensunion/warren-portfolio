@@ -13,7 +13,7 @@ import { GPU_ARGS, build, root, startPreview } from './lib/preview.mjs';
 const argv = process.argv.slice(2);
 const SECONDS = Number((argv.find((a) => a.startsWith('--seconds=')) || '--seconds=5').slice(10)) || 5;
 const WARMUP_MS = 1500;
-const FIGS = ['iceberg-0', 'ring-0', 'howpolluted-0', 'archer-0'];
+const FIGS = ['iceberg-0', 'ring-0', 'howpolluted-0', 'archer-0', 'terrarium-0'];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const pct = (arr, p) => {
