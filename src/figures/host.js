@@ -1,7 +1,8 @@
 // The page is complete with posters alone; this host decides when a figure may upgrade to a live scene
 // and takes the scene away again before it can cost the visitor a crashed tab or a hot phone. It owns
 // lifetime (create/start/stop/destroy), the WebGL context budget and every fallback, so figure modules
-// only have to draw. Figures own their own rAF; the host's rAF only counts frames and writes readouts.
+// only have to draw. Figures own their own rAF and report each frame via ctx.frame(); the host rAF only
+// writes readouts and repaints the ?fps=1 meter.
 import { createBudget } from './budget.js';
 import { fallbackReason, isWebGLKind, pastLine, readEnv } from './env.js';
 
@@ -18,6 +19,32 @@ const safe = (kind, fn) => {
     console.warn('[fig:' + kind + ']', err && err.message ? err.message : err);
   }
 };
+
+// Pure helpers, exported for the Node tests.
+
+export function recordFrame(st, dtMs) {
+  if (!(dtMs > 0) || !Number.isFinite(dtMs)) return;
+  st.frames += 1;
+  st.dtSum += dtMs;
+  if (dtMs > st.dtMax) st.dtMax = dtMs;
+}
+
+// Which on-screen figures, sitting on their poster after an eviction, should take the free slots.
+export function slotRetries(candidates, free, now) {
+  if (free <= 0) return [];
+  return candidates
+    .filter((c) => isWebGLKind(c.kind) && c.visible && !c.instance && !c.build && !c.failed && !(now < c.blockedUntil))
+    .slice(0, free)
+    .map((c) => c.id);
+}
+
+// Evicting a figure whose create() is still running would not free its context any sooner, so
+// when every other slot is held by such a build the newcomer waits for the next freed slot instead.
+export function mustWait(liveIds, id, max, isBuilding) {
+  if (liveIds.includes(id)) return false;
+  const others = liveIds.filter((x) => x !== id);
+  return others.length >= max && others.every(isBuilding);
+}
 
 // Gap in px between the figure and the viewport; 0 while any part of it is on screen.
 function distance(el) {
@@ -49,9 +76,11 @@ export function initFigures(root, { loaders, env } = {}) {
     if (reason !== 'context-lost') setupUnderPoster(s);
   }
 
+  // Only canvases added since this build's create() began are the figure's. Anything already in the
+  // stage (a cancelled build's leftovers) is never tagged, or its later loss would kill this instance.
   function tagCanvases(s) {
     for (const c of s.stage.querySelectorAll('canvas')) {
-      if (s.canvases.has(c)) continue;
+      if (s.canvases.has(c) || s.preexisting.has(c)) continue;
       c.classList.add('fig-canvas');
       c.setAttribute('aria-hidden', 'true');
       s.canvases.add(c);
@@ -74,9 +103,10 @@ export function initFigures(root, { loaders, env } = {}) {
     s.lastReadout = '';
   }
 
-  /* Lifecycle */
+  /* Lifecycle. At most one create() per figure is ever in flight (s.build); a build cancelled
+     mid-flight keeps its budget slot until it settles, because its context exists until then. */
 
-  function ctxFor(s) {
+  function ctxFor(s, build) {
     let data = {};
     try {
       data = JSON.parse(s.fig.dataset.figData || '{}');
@@ -86,41 +116,84 @@ export function initFigures(root, { loaders, env } = {}) {
       reduced: env.reduced,
       log: (msg) => console.info('[fig:' + s.kind + '] ' + msg),
       data,
+      // Figures call this once per rendered frame. Only the installed instance counts, so a
+      // cancelled build or a destroyed instance's last frame never pollutes the stats.
+      frame(dtMs) {
+        if (s.live !== build) return;
+        recordFrame(stats[s.id], dtMs);
+        let w = meterWin.get(s.id);
+        if (!w) meterWin.set(s.id, (w = { frames: 0, dtSum: 0, dtMax: 0 }));
+        recordFrame(w, dtMs);
+      },
     };
   }
 
-  async function ensure(s) {
-    if (s.instance || s.pending || s.failed || !(s.near || s.visible)) return;
+  const freeSlots = () => MAX_LIVE - budget.live().length;
+
+  function release(s) {
+    if (!isWebGLKind(s.kind)) return;
+    budget.release(s.id);
+    refill();
+  }
+
+  // An evicted figure that is still on screen gets its scene back as soon as a slot frees up,
+  // instead of waiting on its poster for its next IntersectionObserver transition.
+  function refill() {
+    for (const id of slotRetries(states, freeSlots(), performance.now())) ensure(byId.get(id));
+  }
+
+  function ensure(s) {
+    if (s.instance || s.build || s.failed || !(s.near || s.visible)) return;
     if (performance.now() < s.blockedUntil) return; // the cooldown timer retries
-    const token = {};
-    s.pending = token;
+    if (isWebGLKind(s.kind) && mustWait(budget.live(), s.id, MAX_LIVE, (id) => !!byId.get(id).build)) return;
+    const build = { cancelled: false, preexisting: new Set() };
+    s.build = build;
     if (isWebGLKind(s.kind)) {
-      for (const id of budget.acquire(s.id, () => distance(s.fig))) destroy(byId.get(id));
+      // Builds rank below every installed figure, so mustWait() above guarantees the evictee is installed.
+      const evict = budget.acquire(s.id, () => (s.build ? -1 : distance(s.fig)));
+      for (const id of evict) destroy(byId.get(id));
     }
-    let inst;
+    run(s, build);
+  }
+
+  async function run(s, build) {
+    let inst = null;
+    let err = null;
     try {
       const mod = await loaders[s.kind]();
-      if (s.pending !== token) return;
-      inst = await mod.create(s.stage, ctxFor(s));
-      if (!inst) throw new Error('create() returned nothing');
-    } catch (err) {
-      if (s.pending !== token) return; // cancelled meanwhile; the next attempt reports for itself
-      s.pending = null;
+      if (!build.cancelled) {
+        build.preexisting = s.preexisting = new Set(s.stage.querySelectorAll('canvas'));
+        inst = await mod.create(s.stage, ctxFor(s, build));
+        if (!inst) throw new Error('create() returned nothing');
+      }
+    } catch (e) {
+      err = e;
+    }
+    s.build = null;
+    const ownCanvases = () =>
+      [...s.stage.querySelectorAll('canvas')].filter((c) => !build.preexisting.has(c));
+
+    if (build.cancelled) {
+      // Destroyed (scrolled far, evicted) while it was being built: drop it unseen, then free its slot.
+      if (inst) safe(s.kind, () => inst.destroy());
+      for (const c of ownCanvases()) c.remove();
+      s.preexisting = new Set();
+      if (isWebGLKind(s.kind)) budget.release(s.id);
+      if ((s.near || s.visible) && (!isWebGLKind(s.kind) || freeSlots() > 0)) ensure(s);
+      refill();
+      return;
+    }
+    if (err) {
       s.failed = true;
-      budget.release(s.id);
-      tagCanvases(s); // whatever create() left behind before throwing goes too
+      for (const c of ownCanvases()) c.remove(); // whatever create() left behind before throwing
       unreveal(s);
       fallback(s, 'error');
       console.warn('[fig:' + s.kind + '] ' + (err && err.message ? err.message : String(err)));
+      release(s);
       return;
     }
-    if (s.pending !== token) {
-      // Destroyed (scrolled far, evicted, context lost) while it was being built: drop it unseen.
-      safe(s.kind, () => inst.destroy());
-      return;
-    }
-    s.pending = null;
     s.instance = inst;
+    s.live = build;
     delete s.fig.dataset.fallback; // recovered from an earlier context loss
     tagCanvases(s);
     if (s.size) safe(s.kind, () => inst.resize(s.size.w, s.size.h));
@@ -143,64 +216,48 @@ export function initFigures(root, { loaders, env } = {}) {
 
   function destroy(s) {
     if (!s) return;
-    if (s.pending) {
-      s.pending = null;
-      budget.release(s.id);
-    }
+    if (s.build) s.build.cancelled = true; // run() frees the slot once create() settles
     if (s.instance) {
       const inst = s.instance;
       stop(s);
       s.instance = null;
-      budget.release(s.id);
+      s.live = null;
       safe(s.kind, () => inst.destroy());
+      unreveal(s);
+      release(s);
+      return;
     }
     unreveal(s);
   }
 
   function onContextLost(s, e) {
     if (!s.instance || !s.canvases.has(e.target)) return; // stale canvas or our own loseContext()
+    // Block first: destroy() frees a slot, and the refill must not hand it straight back to us.
+    s.blockedUntil = performance.now() + LOST_COOLDOWN_MS;
     destroy(s);
     fallback(s, 'context-lost');
-    s.blockedUntil = performance.now() + LOST_COOLDOWN_MS;
     setTimeout(() => {
       s.blockedUntil = 0;
       ensure(s);
     }, LOST_COOLDOWN_MS);
   }
 
-  /* Frame stats, readouts, ?fps=1 meter: one cheap loop while anything runs */
+  /* Readouts and the ?fps=1 meter: one cheap loop while anything runs. Frame stats come from the
+     figures themselves through ctx.frame(), so they measure the figure's own render loop. */
 
   let rafId = 0;
-  let last = 0;
   let lastReadout = 0;
   let lastMeter = 0;
   const meter = env.fps ? makeMeter() : null;
-  const meterWin = new Map(); // id -> { frames, dt } since the last meter update
+  const meterWin = new Map(); // id -> frame stats since the last meter repaint
 
   function ensureLoop() {
     if (rafId) return;
-    last = performance.now();
     rafId = requestAnimationFrame(tick);
   }
 
   function tick(t) {
-    const dt = t - last;
-    last = t;
-    let any = false;
-    for (const s of states) {
-      if (!s.running) continue;
-      any = true;
-      if (dt > 0) {
-        const st = stats[s.id];
-        st.frames += 1;
-        st.dtSum += dt;
-        if (dt > st.dtMax) st.dtMax = dt;
-        const w = meterWin.get(s.id) || { frames: 0, dt: 0 };
-        w.frames += 1;
-        w.dt += dt;
-        meterWin.set(s.id, w);
-      }
-    }
+    const any = states.some((s) => s.running);
     if (t - lastReadout >= READOUT_MS) {
       lastReadout = t;
       for (const s of states) {
@@ -217,7 +274,7 @@ export function initFigures(root, { loaders, env } = {}) {
       const lines = [];
       for (const s of states) {
         const w = meterWin.get(s.id);
-        if (s.running && w && w.dt > 0) lines.push(s.id + ' ' + Math.round((1000 * w.frames) / w.dt) + ' fps');
+        if (s.running && w && w.dtSum > 0) lines.push(s.id + ' ' + Math.round((1000 * w.frames) / w.dtSum) + ' fps');
       }
       meterWin.clear();
       meter.textContent = lines.join('\n') || 'no running figures';
@@ -346,7 +403,9 @@ export function initFigures(root, { loaders, env } = {}) {
       logged: new Set(),
       canvases: new Set(),
       instance: null,
-      pending: null,
+      build: null, // the one create() in flight, if any
+      live: null, // the build whose instance is installed (gates ctx.frame)
+      preexisting: new Set(), // stage canvases that predate the current build
       ready: false,
       running: false,
       near: false,
@@ -370,7 +429,8 @@ export function initFigures(root, { loaders, env } = {}) {
     states.push(s);
     stats[s.id] = { frames: 0, dtSum: 0, dtMax: 0 };
     stage.addEventListener('fig:ready', () => {
-      if (!s.instance && !s.pending) return; // late frame from a destroyed instance
+      // Late frame from a destroyed instance or a cancelled build: ignore.
+      if (!s.instance && !(s.build && !s.build.cancelled)) return;
       s.ready = true;
       if (s.instance) reveal(s);
     });

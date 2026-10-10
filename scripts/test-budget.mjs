@@ -115,3 +115,43 @@ test('pastLine: a sentinel is past the line once its top is above it', () => {
   assert.equal(pastLine({ boundingClientRect: { top: 300 } }, 422), true);
   assert.equal(pastLine({ boundingClientRect: { top: 500 } }, 422), false);
 });
+
+// Fix round 1: figure-owned frame counting and refilling a freed slot are pure decisions too.
+const hostHelpers = await import('../src/figures/host.js');
+const { recordFrame, slotRetries } = hostHelpers;
+
+test('recordFrame: accumulates real frame times, ignores junk', () => {
+  const st = { frames: 0, dtSum: 0, dtMax: 0 };
+  recordFrame(st, 16);
+  recordFrame(st, 20);
+  for (const bad of [0, -5, NaN, Infinity, undefined]) recordFrame(st, bad);
+  assert.deepEqual(st, { frames: 2, dtSum: 36, dtMax: 20 });
+});
+
+test('slotRetries: refills free slots with visible, unbuilt, unblocked WebGL figures only', () => {
+  const f = (id, o = {}) => ({ id, kind: 'iceblock', visible: true, instance: null, build: null, failed: false, blockedUntil: 0, ...o });
+  const cands = [
+    f('a'),
+    f('b', { visible: false }),
+    f('c', { instance: {} }),
+    f('d', { build: {} }),
+    f('e', { failed: true }),
+    f('g', { blockedUntil: 2000 }),
+    f('h', { kind: 'contests' }),
+    f('i'),
+  ];
+  assert.deepEqual(slotRetries(cands, 2, 1000), ['a', 'i']);
+  assert.deepEqual(slotRetries(cands, 1, 1000), ['a']);
+  assert.deepEqual(slotRetries(cands, 0, 1000), []);
+  assert.deepEqual(slotRetries(cands, 3, 3000), ['a', 'g', 'i']);
+});
+
+test('mustWait: a full budget held only by in-flight builds makes the acquirer wait', () => {
+  const { mustWait } = hostHelpers;
+  const building = new Set(['a', 'b', 'c']);
+  const isBuilding = (id) => building.has(id);
+  assert.equal(mustWait(['a', 'b', 'c'], 'z', 3, isBuilding), true);
+  assert.equal(mustWait(['a', 'b', 'x'], 'z', 3, isBuilding), false); // x is installed: evict it
+  assert.equal(mustWait(['a', 'b'], 'z', 3, isBuilding), false); // a free slot
+  assert.equal(mustWait(['a', 'b', 'z'], 'z', 3, isBuilding), false); // already holds a slot
+});
