@@ -17,7 +17,8 @@
     "stills": "node scripts/stills.mjs",
     "stats": "node scripts/bttr-stats.mjs",
     "prebuild": "node scripts/bttr-stats.mjs --soft",
-    "capture:bttr": "node scripts/capture/bttr.mjs"
+    "capture:bttr": "node scripts/capture/bttr.mjs",
+    "sync:howpolluted": "node scripts/sync-howpolluted.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

@@ -1,0 +1,2 @@
+Copied by scripts/sync-howpolluted.mjs from Warren's HowPolluted project (public/) at commit 80f6d06c5cfe83c09b8ce2711e475b66ee75da91.
+The art is Warren's own. The fonts are under the SIL Open Font License; see fonts/OFL-*.txt.

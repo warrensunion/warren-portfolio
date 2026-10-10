@@ -1,0 +1,325 @@
+{
+ "plates/land.webp": {
+  "w": 1536,
+  "h": 1024,
+  "kind": "plate",
+  "horizon": 0.4551
+ },
+ "plates/land-1280.webp": {
+  "w": 1280,
+  "h": 853,
+  "kind": "plate",
+  "horizon": 0.4551
+ },
+ "plates/snow.webp": {
+  "w": 1536,
+  "h": 1024,
+  "kind": "plate",
+  "horizon": 0.4326
+ },
+ "plates/snow-1280.webp": {
+  "w": 1280,
+  "h": 853,
+  "kind": "plate",
+  "horizon": 0.4326
+ },
+ "plates/water.webp": {
+  "w": 1536,
+  "h": 1024,
+  "kind": "plate",
+  "horizon": 0.3877
+ },
+ "plates/water-1280.webp": {
+  "w": 1280,
+  "h": 853,
+  "kind": "plate",
+  "horizon": 0.3877
+ },
+ "plates/night-city.webp": {
+  "w": 1536,
+  "h": 1024,
+  "kind": "plate",
+  "horizon": 0.25
+ },
+ "plates/night-city-1280.webp": {
+  "w": 1280,
+  "h": 853,
+  "kind": "plate",
+  "horizon": 0.25
+ },
+ "fx/oil.webp": {
+  "w": 1024,
+  "h": 1024,
+  "kind": "texture"
+ },
+ "fx/chemical.webp": {
+  "w": 1024,
+  "h": 1024,
+  "kind": "texture"
+ },
+ "layers/fg-land.webp": {
+  "w": 1536,
+  "h": 1024,
+  "kind": "layer"
+ },
+ "layers/fg-snow.webp": {
+  "w": 1536,
+  "h": 1024,
+  "kind": "layer"
+ },
+ "layers/fg-water.webp": {
+  "w": 1536,
+  "h": 1024,
+  "kind": "layer"
+ },
+ "layers/smog-1.webp": {
+  "w": 1536,
+  "h": 1024,
+  "kind": "layer"
+ },
+ "layers/smog-2.webp": {
+  "w": 1536,
+  "h": 1024,
+  "kind": "layer"
+ },
+ "trash/a-01.webp": {
+  "w": 280,
+  "h": 244,
+  "kind": "sheet",
+  "anchor": [
+   103,
+   240
+  ],
+  "fill": 0.52
+ },
+ "trash/a-02.webp": {
+  "w": 316,
+  "h": 208,
+  "kind": "sheet",
+  "anchor": [
+   208,
+   206
+  ],
+  "fill": 0.498
+ },
+ "trash/a-03.webp": {
+  "w": 324,
+  "h": 164,
+  "kind": "sheet",
+  "anchor": [
+   212,
+   162
+  ],
+  "fill": 0.604
+ },
+ "trash/a-04.webp": {
+  "w": 240,
+  "h": 156,
+  "kind": "sheet",
+  "anchor": [
+   146,
+   152
+  ],
+  "fill": 0.744
+ },
+ "trash/a-05.webp": {
+  "w": 344,
+  "h": 140,
+  "kind": "sheet",
+  "anchor": [
+   176,
+   136
+  ],
+  "fill": 0.618
+ },
+ "trash/a-06.webp": {
+  "w": 280,
+  "h": 220,
+  "kind": "sheet",
+  "anchor": [
+   234,
+   216
+  ],
+  "fill": 0.603
+ },
+ "trash/a-07.webp": {
+  "w": 288,
+  "h": 212,
+  "kind": "sheet",
+  "anchor": [
+   153,
+   208
+  ],
+  "fill": 0.615
+ },
+ "trash/a-08.webp": {
+  "w": 276,
+  "h": 196,
+  "kind": "sheet",
+  "anchor": [
+   187,
+   191
+  ],
+  "fill": 0.592
+ },
+ "trash/a-09.webp": {
+  "w": 320,
+  "h": 224,
+  "kind": "sheet",
+  "anchor": [
+   228,
+   220
+  ],
+  "fill": 0.211
+ },
+ "trash/a-10.webp": {
+  "w": 284,
+  "h": 176,
+  "kind": "sheet",
+  "anchor": [
+   266,
+   170
+  ],
+  "fill": 0.41
+ },
+ "trash/a-11.webp": {
+  "w": 356,
+  "h": 232,
+  "kind": "sheet",
+  "anchor": [
+   272,
+   229
+  ],
+  "fill": 0.57
+ },
+ "trash/a-12.webp": {
+  "w": 140,
+  "h": 120,
+  "kind": "sheet",
+  "anchor": [
+   65,
+   115
+  ],
+  "fill": 0.8
+ },
+ "trash/b-01.webp": {
+  "w": 288,
+  "h": 256,
+  "kind": "sheet",
+  "anchor": [
+   89,
+   253
+  ],
+  "fill": 0.664
+ },
+ "trash/b-02.webp": {
+  "w": 156,
+  "h": 248,
+  "kind": "sheet",
+  "anchor": [
+   80,
+   245
+  ],
+  "fill": 0.776
+ },
+ "trash/b-03.webp": {
+  "w": 280,
+  "h": 272,
+  "kind": "sheet",
+  "anchor": [
+   101,
+   270
+  ],
+  "fill": 0.626
+ },
+ "trash/b-04.webp": {
+  "w": 316,
+  "h": 176,
+  "kind": "sheet",
+  "anchor": [
+   247,
+   171
+  ],
+  "fill": 0.598
+ },
+ "trash/b-05.webp": {
+  "w": 276,
+  "h": 272,
+  "kind": "sheet",
+  "anchor": [
+   115,
+   267
+  ],
+  "fill": 0.699
+ },
+ "trash/b-06.webp": {
+  "w": 160,
+  "h": 304,
+  "kind": "sheet",
+  "anchor": [
+   69,
+   299
+  ],
+  "fill": 0.55
+ },
+ "trash/b-07.webp": {
+  "w": 332,
+  "h": 216,
+  "kind": "sheet",
+  "anchor": [
+   279,
+   214
+  ],
+  "fill": 0.43
+ },
+ "trash/b-08.webp": {
+  "w": 288,
+  "h": 228,
+  "kind": "sheet",
+  "anchor": [
+   228,
+   223
+  ],
+  "fill": 0.522
+ },
+ "trash/b-09.webp": {
+  "w": 332,
+  "h": 288,
+  "kind": "sheet",
+  "anchor": [
+   120,
+   285
+  ],
+  "fill": 0.338
+ },
+ "trash/b-10.webp": {
+  "w": 176,
+  "h": 304,
+  "kind": "sheet",
+  "anchor": [
+   124,
+   301
+  ],
+  "fill": 0.296
+ },
+ "trash/b-11.webp": {
+  "w": 336,
+  "h": 312,
+  "kind": "sheet",
+  "anchor": [
+   222,
+   309
+  ],
+  "fill": 0.587
+ },
+ "trash/b-12.webp": {
+  "w": 296,
+  "h": 260,
+  "kind": "sheet",
+  "anchor": [
+   222,
+   255
+  ],
+  "fill": 0.562
+ }
+}
