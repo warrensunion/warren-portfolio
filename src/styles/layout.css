@@ -9,7 +9,7 @@ main > *,
   margin-inline: auto;
 }
 
-/* Top bar. Task 2 toggles .is-scrolled from an IntersectionObserver sentinel. */
+/* Top bar. src/main.js toggles .is-scrolled from an IntersectionObserver sentinel. */
 .bar {
   position: sticky;
   top: 0;
