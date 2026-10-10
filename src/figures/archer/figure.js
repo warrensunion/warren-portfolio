@@ -328,12 +328,13 @@ export async function create(el, ctx) {
       last = 0;
       raf = requestAnimationFrame(frame);
     },
-    // Scrolled away: the sim waits (no frames, no steps) and nothing stays held.
+    // Scrolled away: the sim waits (no frames, no steps), nothing stays held and the pointer is free.
     stop() {
       running = false;
       cancelAnimationFrame(raf);
       raf = 0;
       input.clear();
+      releasePointer();
     },
     resize(w, h) {
       if (destroyed || !w || !h) return;

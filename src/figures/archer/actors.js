@@ -296,6 +296,7 @@ export function createActors(scene) {
   const S1 = new THREE.Vector3(1, 1, 1);
   let walk = 0;
   let lastT = null;
+  let lastState = null;
 
   return {
     root,
@@ -303,6 +304,15 @@ export function createActors(scene) {
     sync(state, alpha = 1, camera = null, now = 0) {
       const dt = lastT == null ? 0 : Math.min(0.1, Math.max(0, now - lastT));
       lastT = now;
+      // A new game numbers its enemies from 1 again, so views of the old one never carry over.
+      if (state !== lastState) {
+        for (const v of views.values()) {
+          root.remove(v.g);
+          v.mat.dispose();
+        }
+        views.clear();
+        lastState = state;
+      }
       const a = state.archer;
 
       // Archer: walk cycle, aim, bow draw, hurt flash, a lean while dashing.

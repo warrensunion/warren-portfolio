@@ -73,9 +73,13 @@ test('sim: dodge pressed on the lethal tick saves the archer', () => {
   g.archer.hp = 5;
   const e = addEnemy(g, { x: 0, z: 11 });
   e.atkCd = 0;
-  step(g, { ...IDLE, dodge: true }, DT);
+  // Both skills on the same tick as the blow: the dodge still comes first, and the rain is cast too.
+  step(g, { ...IDLE, dodge: true, rain: true }, DT);
   assert.equal(g.archer.hp, 5);
   assert.equal(g.status, 'playing');
+  near(g.archer.dodgeCd, 3, 0.05, 'dodgeCd');
+  near(g.archer.rainCd, 8, 0.05, 'rainCd');
+  assert.equal(g.rains.length, 1);
   // Without the dodge the same tick is lethal.
   const h = empty();
   h.archer.hp = 5;
