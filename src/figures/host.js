@@ -11,7 +11,7 @@
 // save-data) ignored, transitions off, and sets window.__posterReady = true one frame after fig:ready
 // (window.__posterError = message if it cannot). No observers, budget or other figures in that mode.
 import { createBudget } from './budget.js';
-import { fallbackReason, isWebGLKind, pastLine, readEnv, readPoster } from './env.js';
+import { fallbackReason, isWebGLKind, pastLine, readEnv, readPoster, weightOf } from './env.js';
 import { bindMorphLinks } from './ring/morphLinks.js';
 
 const MAX_LIVE = 3;
@@ -81,6 +81,7 @@ export function initFigures(root, { loaders, env } = {}) {
   env = env || readEnv();
 
   const budget = createBudget(MAX_LIVE);
+  window.__figWeight = () => budget.used(); // for scripts/check-figures.mjs
   const stats = (window.__figStats = window.__figStats || {});
   const states = [];
   const byId = new Map();
@@ -148,6 +149,17 @@ export function initFigures(root, { loaders, env } = {}) {
       reduced: env.reduced,
       log: (msg) => console.info('[fig:' + s.kind + '] ' + msg),
       data,
+      // A figure whose context count changes at runtime (bcwc attaching its iframe) re-weighs itself;
+      // whatever that pushes over the cap is destroyed farthest-first, never this figure.
+      claim(weight) {
+        if (s.live !== build) return;
+        for (const id of budget.acquire(s.id, () => distance(s.fig), weight)) destroy(byId.get(id));
+      },
+      unclaim() {
+        if (s.live !== build) return;
+        budget.acquire(s.id, () => distance(s.fig), weightOf(s.kind));
+        refill();
+      },
       // Figures call this once per rendered frame. Only the installed instance counts, so a
       // cancelled build or a destroyed instance's last frame never pollutes the stats.
       frame(dtMs) {
@@ -160,7 +172,7 @@ export function initFigures(root, { loaders, env } = {}) {
     };
   }
 
-  const freeSlots = () => MAX_LIVE - budget.live().length;
+  const freeSlots = () => MAX_LIVE - budget.used();
 
   function release(s) {
     if (!isWebGLKind(s.kind)) return;
@@ -221,7 +233,7 @@ export function initFigures(root, { loaders, env } = {}) {
       s.deferred = true;
       return;
     }
-    if (isWebGLKind(s.kind) && mustWait(budget.live(), s.id, MAX_LIVE, (id) => !!byId.get(id).build)) {
+    if (weightOf(s.kind) > 0 && mustWait(budget.live(), s.id, MAX_LIVE, (id) => !!byId.get(id).build)) {
       s.waiting = true;
       return;
     }
@@ -230,7 +242,7 @@ export function initFigures(root, { loaders, env } = {}) {
     s.build = build;
     if (isWebGLKind(s.kind)) {
       // Builds rank below every installed figure, so mustWait() above guarantees the evictee is installed.
-      const evict = budget.acquire(s.id, () => (s.build ? -1 : distance(s.fig)));
+      const evict = budget.acquire(s.id, () => (s.build ? -1 : distance(s.fig)), weightOf(s.kind));
       for (const id of evict) destroy(byId.get(id));
     }
     run(s, build);

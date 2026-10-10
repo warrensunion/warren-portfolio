@@ -2,16 +2,23 @@
 // expensive a scene may be. The rules are pure functions over plain values (Node-tested); the small
 // probes at the bottom are the only parts that touch the browser.
 
-const WEBGL_KINDS = new Set(['iceberg', 'iceblock', 'ring']);
+// WebGL contexts each figure kind holds once live. bcwc holds none while it shows captured frames and
+// claims 2 at runtime when its iframe (whose /products page opens two contexts) attaches; bttr is a frame
+// player. The contests chart is plain SVG.
+export const WEIGHTS = { iceberg: 1, ring: 1, terrarium: 1, howpolluted: 1, archer: 1, bcwc: 0, bttr: 0, contests: 0 };
+export const TRACK_KINDS = new Set(['bcwc', 'bttr', 'terrarium', 'howpolluted', 'archer']);
 
-export const isWebGLKind = (kind) => WEBGL_KINDS.has(kind);
+export const weightOf = (kind) => WEIGHTS[kind] || 0;
+// Kinds the budget tracks: anything that holds a context now, or may claim one later.
+export const isWebGLKind = (kind) => weightOf(kind) > 0 || kind === 'bcwc';
 
 // Order matters: an explicit ?static=1 wins, then hard capability, then the visitor's data and motion
-// preferences. The contests chart is plain SVG, so none of these apply to it.
+// preferences. The contests chart is plain SVG, so none of these apply to it. A frame player (weight 0)
+// needs no WebGL, but still stills under reduced motion, save-data and ?static=1.
 export function fallbackReason({ webgl2, reduced, saveData, forced, kind }) {
-  if (!WEBGL_KINDS.has(kind)) return null;
+  if (!(kind in WEIGHTS) || kind === 'contests') return null;
   if (forced) return 'forced';
-  if (!webgl2) return 'no-webgl2';
+  if (!webgl2 && (weightOf(kind) > 0 || kind === 'bcwc')) return 'no-webgl2';
   if (saveData) return 'save-data';
   if (reduced) return 'reduced-motion';
   return null;

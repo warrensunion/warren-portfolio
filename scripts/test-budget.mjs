@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBudget } from '../src/figures/budget.js';
-import { fallbackReason, tierFor, readFlags, pastLine, readPoster } from '../src/figures/env.js';
+import { fallbackReason, tierFor, readFlags, pastLine, readPoster, weightOf, isWebGLKind } from '../src/figures/env.js';
 
 const dist = (map) => (id) => () => map[id];
 
@@ -63,13 +63,13 @@ test('budget: re-acquiring a live id and releasing twice are harmless', () => {
 const base = { webgl2: true, reduced: false, saveData: false, forced: false };
 
 test('fallbackReason: forced beats everything', () => {
-  for (const kind of ['iceberg', 'iceblock', 'ring']) {
+  for (const kind of ['iceberg', 'archer', 'ring']) {
     assert.equal(fallbackReason({ webgl2: false, reduced: true, saveData: true, forced: true, kind }), 'forced');
   }
 });
 
 test('fallbackReason: reduced motion stills the WebGL kinds only', () => {
-  for (const kind of ['iceberg', 'iceblock', 'ring']) {
+  for (const kind of ['iceberg', 'archer', 'ring']) {
     assert.equal(fallbackReason({ ...base, reduced: true, kind }), 'reduced-motion');
   }
   assert.equal(fallbackReason({ ...base, reduced: true, kind: 'contests' }), null);
@@ -77,7 +77,7 @@ test('fallbackReason: reduced motion stills the WebGL kinds only', () => {
 
 test('fallbackReason: no webgl2 and save-data', () => {
   assert.equal(fallbackReason({ ...base, webgl2: false, kind: 'ring' }), 'no-webgl2');
-  assert.equal(fallbackReason({ ...base, saveData: true, kind: 'iceblock' }), 'save-data');
+  assert.equal(fallbackReason({ ...base, saveData: true, kind: 'archer' }), 'save-data');
   assert.equal(fallbackReason({ ...base, webgl2: false, saveData: true, reduced: true, kind: 'ring' }), 'no-webgl2');
   assert.equal(fallbackReason({ ...base, saveData: true, reduced: true, kind: 'ring' }), 'save-data');
 });
@@ -137,7 +137,7 @@ test('recordFrame: logs each frame only when an opt-in dts array is present', ()
 });
 
 test('slotRetries: refills free slots with visible, unbuilt, unblocked WebGL figures only', () => {
-  const f = (id, o = {}) => ({ id, kind: 'iceblock', visible: true, instance: null, build: null, failed: false, blockedUntil: 0, ...o });
+  const f = (id, o = {}) => ({ id, kind: 'archer', visible: true, instance: null, build: null, failed: false, blockedUntil: 0, ...o });
   const cands = [
     f('a'),
     f('b', { visible: false }),
@@ -193,4 +193,45 @@ test('readPoster: no param, no poster mode; otherwise one figure and its still s
   assert.deepEqual(readPoster('?poster=ring&shape=2'), { kind: 'ring', index: 0, state: { shape: 2 } });
   assert.equal(readPoster('?poster=iceblock&i=-1').index, 0);
   assert.equal(readPoster('?poster=iceblock&i=x').index, 0);
+});
+
+test('budget: a weight-2 acquire evicts farthest weight-1 figures until used() <= 3', () => {
+  const b = createBudget(3);
+  const d = dist({ a: 5, b: 1, c: 3 });
+  for (const id of 'abc') b.acquire(id, d(id), 1);
+  assert.deepEqual(b.acquire('x', () => 0, 2), ['a', 'c']);
+  assert.equal(b.used(), 3);
+  assert.deepEqual(b.live().sort(), ['b', 'x']);
+});
+
+test('budget: weight-0 acquires never evict', () => {
+  const b = createBudget(3);
+  for (const id of 'abc') b.acquire(id, () => 1, 1);
+  assert.deepEqual(b.acquire('z', () => 0, 0), []);
+  assert.equal(b.used(), 3);
+});
+
+test('budget: re-acquire with a new weight replaces the old weight', () => {
+  const b = createBudget(3);
+  b.acquire('a', () => 0, 2);
+  b.acquire('a', () => 0, 1);
+  assert.equal(b.used(), 1);
+});
+
+test('env: weightOf gives contexts per kind at load time', () => {
+  assert.equal(weightOf('bcwc'), 0); // the iframe claims 2 at runtime
+  assert.equal(weightOf('archer'), 1);
+  assert.equal(weightOf('terrarium'), 1);
+  assert.equal(weightOf('bttr'), 0);
+  assert.equal(weightOf('unknown'), 0);
+  assert.equal(isWebGLKind('bcwc'), true);
+  assert.equal(isWebGLKind('bttr'), false);
+});
+
+test('env: fallbackReason covers track kinds; frame players do not need WebGL2', () => {
+  assert.equal(fallbackReason({ kind: 'bttr', reduced: true, webgl2: true }), 'reduced-motion');
+  assert.equal(fallbackReason({ kind: 'bttr', webgl2: false }), null);
+  assert.equal(fallbackReason({ kind: 'bttr', forced: true, webgl2: true }), 'forced');
+  assert.equal(fallbackReason({ kind: 'archer', webgl2: false }), 'no-webgl2');
+  assert.equal(fallbackReason({ kind: 'contests', reduced: true, webgl2: true }), null);
 });
