@@ -21,7 +21,10 @@ const SHOTS = [
   { file: 'ws-3', q: 'poster=ring&shape=3' },
   { file: 'ws-4', q: 'poster=ring&shape=4' },
 ];
-const TRACK_STILLS = [0, 1, 2, 3, 4].map((i) => ({ file: `stills/howpolluted-s${i}`, q: `poster=howpolluted&stage=${i}`, still: true }));
+const TRACK_STILLS = [
+  ...[0, 1, 2, 3, 4].map((i) => ({ file: `stills/howpolluted-s${i}`, q: `poster=howpolluted&stage=${i}`, still: true })),
+  ...[0, 1, 2, 3].map((i) => ({ file: `stills/archer-hero-s${i}`, q: `poster=archer&stage=${i}`, still: true })),
+];
 const KIND_INDEX = (q) => {
   const p = new URLSearchParams(q);
   return [p.get('poster'), Number(p.get('i') || 0)];
@@ -32,7 +35,7 @@ const ALL = [...SHOTS, ...TRACK_STILLS];
 const shots = only.length ? ALL.filter((s) => only.includes(s.file)) : ALL;
 
 build();
-const server = await startPreview(4318);
+const server = await startPreview(Number(process.env.PREVIEW_PORT) || 4318);
 const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
 let failed = 0;
 try {

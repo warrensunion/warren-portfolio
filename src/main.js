@@ -34,6 +34,7 @@ const loaders = {
   bttr: () => import('./figures/bttr/figure.js'),
   bcwc: () => import('./figures/bcwc/figure.js'),
   howpolluted: () => import('./figures/howpolluted/figure.js'),
+  archer: () => import('./figures/archer/figure.js'),
 };
 // Tracks first: they set each track's stage from where the page is, so stills and figures start right.
 // Their stage buttons and stills work even if the figure host fails.
