@@ -19,7 +19,8 @@
     "prebuild": "node scripts/bttr-stats.mjs --soft",
     "capture:bttr": "node scripts/capture/bttr.mjs",
     "sync:howpolluted": "node scripts/sync-howpolluted.mjs",
-    "capture:bcwc": "node scripts/capture/bcwc.mjs"
+    "capture:bcwc": "node scripts/capture/bcwc.mjs",
+    "compare": "node scripts/compare.mjs"
   },
   "dependencies": {
     "three": "0.180.0"
