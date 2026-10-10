@@ -130,7 +130,8 @@ test('each track has --stages equal to its stage buttons and stills', () => {
   const want = { bcwc: 5, bttrurslf: 15, terrarium: 5, howpolluted: 5, 'archer-hero': 4 };
   for (const [, id, n, body] of tracks) {
     assert.equal(Number(n), want[id], id + ' --stages');
-    assert.equal(count(body, /<button type="button" data-stage="\d+"/g), want[id], id + ' buttons');
+    const list = body.slice(body.indexOf('<ol class="fig-stages"'), body.indexOf('</ol>'));
+    assert.equal(count(list, /<button type="button" data-stage="\d+"/g), want[id], id + ' buttons');
     assert.equal(count(body, /<img class="fig-poster fig-still[^"]*" data-stage="\d+"/g), want[id], id + ' stills');
     assert.equal(count(body, /class="fig-poster fig-still is-on"/g), 1, id + ' one still on');
     assert.equal(count(body, /aria-current="step"/g), 1, id + ' one current step');
@@ -157,10 +158,12 @@ test('track role and dates render, as visible TODOs until supplied', () => {
 
 test('BTTRURSLF renders a tab row whose tabs jump to each tab\'s first stage', () => {
   const body = tracks.find((m) => m[1] === 'bttrurslf')[3];
-  assert.match(body, /<div class="fig-tabs" role="tablist" aria-label="Screens">/);
-  const tabs = [...body.matchAll(/<button type="button" role="tab" data-stage="(\d+)" data-tab="(\d+)" aria-selected="(true|false)"[^>]*>([^<]+)</g)];
+  // Plain buttons, not ARIA tabs: they jump to a stage like the stage list does, with no tab keyboard model.
+  assert.match(body, /<nav class="fig-tabs" aria-label="Screens">/);
+  assert.doesNotMatch(body, /role="tab/);
+  const tabs = [...body.matchAll(/<button type="button" data-stage="(\d+)" data-tab="(\d+)"( aria-current="true")?[^>]*>([^<]+)</g)];
   assert.deepEqual(tabs.map((t) => [Number(t[1]), t[4]]), [[0, 'Appearance'], [3, 'BTTRshop'], [7, 'Motivator'], [10, 'Knowledge &amp; Sociability'], [12, 'BTTRmap'], [14, 'Stats']]);
-  assert.deepEqual(tabs.map((t) => t[3]), ['true', 'false', 'false', 'false', 'false', 'false']);
+  assert.deepEqual(tabs.map((t) => !!t[3]), [true, false, false, false, false, false]);
   const lis = [...body.matchAll(/<li data-tab="(\d+)"(?: hidden)?><button type="button" data-stage="(\d+)"/g)].map((m) => [Number(m[1]), Number(m[2])]);
   assert.equal(lis.length, 15);
   assert.deepEqual(lis.filter(([t]) => t === 1).map(([, s]) => s), [3, 4, 5, 6]);
@@ -169,5 +172,5 @@ test('BTTRURSLF renders a tab row whose tabs jump to each tab\'s first stage', (
 });
 
 test('tracks without tabs render no tab row', () => {
-  for (const [, id, , body] of tracks) if (id !== 'bttrurslf') assert.doesNotMatch(body, /role="tablist"/);
+  for (const [, id, , body] of tracks) if (id !== 'bttrurslf') assert.doesNotMatch(body, /class="fig-tabs"/);
 });

@@ -1476,7 +1476,7 @@ async function checkBttr(browser, url) {
       await page.waitForFunction(([id, s]) => document.getElementById(id).dataset.stage === String(s), [id, s], { timeout: 4000 }).catch(() => {});
       const r = await page.evaluate(([id, j]) => ({
         stage: document.getElementById(id).dataset.stage,
-        sel: [...document.querySelectorAll(`#${id} .fig-tabs [role="tab"]`)].map((b) => b.getAttribute('aria-selected')).indexOf('true'),
+        sel: [...document.querySelectorAll(`#${id} .fig-tabs button[data-stage]`)].findIndex((b) => b.getAttribute('aria-current') === 'true'),
         shown: [...document.querySelectorAll(`#${id} .fig-stages li`)].filter((li) => !li.hidden).map((li) => Number(li.dataset.tab)),
       }), [id, j]);
       out.push({ s, j, ok: r.stage === String(s) && r.sel === j && r.shown.every((k) => k === j), r });

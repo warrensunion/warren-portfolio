@@ -317,7 +317,7 @@ html:not(.js) .fig-stages {
   color: var(--ink);
 }
 
-.fig-tabs button[aria-selected='true'] {
+.fig-tabs button[aria-current='true'] {
   color: var(--ink);
   border-bottom-color: var(--ink);
 }

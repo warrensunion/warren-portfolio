@@ -90,14 +90,14 @@ function trackFigure(fig, n, id) {
   // With tabs, each stage belongs to the last tab that starts at or before it; only tab 0's show at first.
   const tabOf = (i) => (fig.tabs ? fig.tabs.reduce((k, t, j) => (t.first <= i ? j : k), 0) : -1);
   const tabs = fig.tabs
-    ? `<div class="fig-tabs" role="tablist" aria-label="Screens">` +
+    ? `<nav class="fig-tabs" aria-label="Screens">` +
       fig.tabs
         .map(
           (t, j) =>
-            `<button type="button" role="tab" data-stage="${t.first}" data-tab="${j}" aria-selected="${j === 0}" aria-controls="${esc(id)}-stage">${esc(t.label)}</button>`,
+            `<button type="button" data-stage="${t.first}" data-tab="${j}"${j === 0 ? ' aria-current="true"' : ''} aria-controls="${esc(id)}-stage">${esc(t.label)}</button>`,
         )
         .join('') +
-      `</div>`
+      `</nav>`
     : '';
   const steps = fig.stages
     .map(

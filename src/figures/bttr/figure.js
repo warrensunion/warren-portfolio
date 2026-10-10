@@ -20,7 +20,7 @@ export async function create(stage, ctx) {
   const n = ctx.stages;
   const clips = Array.from({ length: n }, (_, i) => manifest.stages[i] || null);
   const fig = stage.closest('figure');
-  const tabs = fig ? [...fig.querySelectorAll('.fig-tabs [role="tab"]')].map((b) => ({ label: b.textContent, first: Number(b.dataset.stage) })) : [];
+  const tabs = fig ? [...fig.querySelectorAll('.fig-tabs button[data-stage]')].map((b) => ({ label: b.textContent, first: Number(b.dataset.stage) })) : [];
 
   const root = document.createElement('div');
   root.className = 'bt';
