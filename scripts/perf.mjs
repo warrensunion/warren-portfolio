@@ -79,7 +79,7 @@ async function measure(browser, url, ids, { throttle = 1 } = {}) {
 }
 
 if (!argv.includes('--no-build')) build();
-const server = await startPreview(4321);
+const server = await startPreview(Number(process.env.PREVIEW_PORT) || 4321);
 const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
 let high, low, thr;
 try {
