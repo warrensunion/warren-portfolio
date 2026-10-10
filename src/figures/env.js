@@ -42,7 +42,7 @@ export function readFlags(search) {
 
 // ?poster=<kind> (scripts/posters.mjs only): the one figure to shoot and the still state its create()
 // gets as ctx.data.posterState. i = index within the kind (default 0); iceberg takes depth=0|1; ring
-// takes shape=0|1|2 (absent: the initials); iceblock takes optional yaw and pitch in degrees.
+// takes shape=0..4 (absent: the initials); a track figure takes stage=<i> (default 0).
 export function readPoster(search) {
   const q = new URLSearchParams(search || '');
   const kind = q.get('poster');
@@ -52,7 +52,7 @@ export function readPoster(search) {
   let state = true;
   if (kind === 'iceberg') state = { depth: q.get('depth') === '1' ? 1 : 0 };
   else if (kind === 'ring') state = { shape: num('shape') };
-  else if (kind === 'iceblock') state = { yaw: num('yaw') || 0, pitch: num('pitch') || 0 };
+  else if (TRACK_KINDS.has(kind)) state = { stage: Number.isInteger(num('stage')) && num('stage') >= 0 ? num('stage') : 0 };
   return { kind, index: Number.isInteger(i) && i >= 0 ? i : 0, state };
 }
 

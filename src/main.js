@@ -4,6 +4,8 @@
 import { content } from './content.js';
 import { initCopyEmail } from './chrome/copyEmail.js';
 import { initFigures } from './figures/host.js';
+import { initTracks } from './figures/tracks.js';
+import { initStills } from './figures/stills.js';
 
 // <html class="js"> is set by an inline script in index.html, before first paint, so CSS that depends
 // on it (the drag hint) never shifts the layout when this module arrives.
@@ -27,12 +29,20 @@ if (bar && 'IntersectionObserver' in window) {
 // A host failure is caught so the posters, which are already on the page, simply stay.
 const loaders = {
   iceberg: () => import('./figures/iceberg/figure.js'),
-  iceblock: () => import('./figures/iceblock/figure.js'),
   ring: () => import('./figures/ring/figure.js'),
   contests: () => import('./figures/contests/figure.js'),
 };
+// Tracks first: they set each track's stage from where the page is, so stills and figures start right.
+// Their stage buttons and stills work even if the figure host fails.
+let tracks = null;
 try {
-  initFigures(document, { loaders });
+  tracks = initTracks(document, { reduced: matchMedia('(prefers-reduced-motion: reduce)').matches });
+  initStills(document, tracks);
+} catch (err) {
+  console.warn('[tracks] failed to start', err);
+}
+try {
+  initFigures(document, { loaders, tracks });
 } catch (err) {
   console.warn('[fig] host failed to start', err);
 }

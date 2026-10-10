@@ -73,7 +73,7 @@ function distance(el) {
   return 0;
 }
 
-export function initFigures(root, { loaders, env } = {}) {
+export function initFigures(root, { loaders, env, tracks = null } = {}) {
   if (!loaders) return null;
   const shot = readPoster(location.search);
   if (shot) return shootPoster(root, loaders, shot);
@@ -149,6 +149,7 @@ export function initFigures(root, { loaders, env } = {}) {
       reduced: env.reduced,
       log: (msg) => console.info('[fig:' + s.kind + '] ' + msg),
       data,
+      ...trackCtx(tracks, s.fig),
       // A figure whose context count changes at runtime (bcwc attaching its iframe) re-weighs itself;
       // whatever that pushes over the cap is destroyed farthest-first, never this figure.
       claim(weight) {
@@ -301,6 +302,7 @@ export function initFigures(root, { loaders, env } = {}) {
     if (!s.instance || s.running) return;
     s.running = true;
     safe(s.kind, () => s.instance.start());
+    syncRunning(s);
     ensureLoop();
   }
 
@@ -308,7 +310,10 @@ export function initFigures(root, { loaders, env } = {}) {
     if (!s.instance || !s.running) return;
     s.running = false;
     safe(s.kind, () => s.instance.stop());
+    syncRunning(s);
   }
+
+  const syncRunning = (s) => s.fig.toggleAttribute('data-running', !!(s.mid && s.running));
 
   function destroy(s) {
     if (!s) return;
@@ -472,6 +477,19 @@ export function initFigures(root, { loaders, env } = {}) {
     },
     { rootMargin: '100% 0px' },
   );
+  // Running, as on yuzeli.ca: only while the figure is inside the middle half of the viewport. The LED in
+  // a track plate's head pulses then (figure.css); a figure may also use it to pause decoration.
+  const runIO = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        const s = stateOf(e.target);
+        if (!s) continue;
+        s.mid = e.isIntersecting;
+        syncRunning(s);
+      }
+    },
+    { rootMargin: '-25% 0px -25% 0px' },
+  );
   const visIO = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
@@ -532,6 +550,7 @@ export function initFigures(root, { loaders, env } = {}) {
       running: false,
       near: false,
       visible: false,
+      mid: false, // inside the middle half of the viewport (runIO)
       failed: false,
       blockedUntil: 0,
       size: null,
@@ -561,11 +580,24 @@ export function initFigures(root, { loaders, env } = {}) {
     stage.addEventListener('webglcontextlost', (e) => onContextLost(s, e), true);
     nearIO.observe(fig);
     visIO.observe(fig);
+    runIO.observe(fig);
     farIO.observe(fig);
     ro?.observe(stage);
   }
 
   return { live: () => budget.live() };
+}
+
+// What a track figure reads about its track (spec 3.4): progress is pulled each frame, never pushed. A
+// figure outside a track (the hero, the ring) gets a fixed stage 0 of 1.
+function trackCtx(tracks, fig) {
+  const inTrack = tracks && fig.classList.contains('fig--track');
+  return {
+    progress: () => (inTrack ? tracks.progressOf(fig) : 0),
+    stage: () => (inTrack ? tracks.stageOf(fig) : 0),
+    stages: inTrack ? tracks.stagesOf(fig) : 1,
+    onStage: (fn) => (inTrack ? tracks.onStage(fig, fn) : () => {}),
+  };
 }
 
 // The stills hook (see the header): one figure, made at once in a fixed state, for a screenshot.
@@ -592,7 +624,13 @@ function shootPoster(root, loaders, shot) {
     log: (msg) => console.info('[fig:' + shot.kind + '] ' + msg),
     data: { ...data, posterState: shot.state },
     frame() {},
+    claim() {},
+    unclaim() {},
   };
+  // A stage still is shot at its stage, held there.
+  const n = fig.querySelectorAll('.fig-stages button[data-stage]').length || 1;
+  const at = Math.min(n - 1, (shot.state && shot.state.stage) || 0);
+  Object.assign(ctx, { progress: () => (n > 1 ? at / (n - 1) : 0), stage: () => at, stages: n, onStage: () => () => {} });
   // Untagged, a canvas sits in flow at its backing size and widens the stage, so tag before measuring.
   const tag = () => {
     for (const c of stage.querySelectorAll('canvas')) {

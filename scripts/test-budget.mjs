@@ -187,12 +187,10 @@ test('readPoster: no param, no poster mode; otherwise one figure and its still s
   assert.equal(readPoster('?static=1&tier=low'), null);
   assert.deepEqual(readPoster('?poster=iceberg'), { kind: 'iceberg', index: 0, state: { depth: 0 } });
   assert.deepEqual(readPoster('?poster=iceberg&depth=1'), { kind: 'iceberg', index: 0, state: { depth: 1 } });
-  assert.deepEqual(readPoster('?poster=iceblock&i=2'), { kind: 'iceblock', index: 2, state: { yaw: 0, pitch: 0 } });
-  assert.deepEqual(readPoster('?poster=iceblock&i=1&yaw=-20&pitch=5'), { kind: 'iceblock', index: 1, state: { yaw: -20, pitch: 5 } });
   assert.deepEqual(readPoster('?poster=ring'), { kind: 'ring', index: 0, state: { shape: null } });
   assert.deepEqual(readPoster('?poster=ring&shape=2'), { kind: 'ring', index: 0, state: { shape: 2 } });
-  assert.equal(readPoster('?poster=iceblock&i=-1').index, 0);
-  assert.equal(readPoster('?poster=iceblock&i=x').index, 0);
+  assert.equal(readPoster('?poster=archer&i=-1').index, 0);
+  assert.equal(readPoster('?poster=archer&i=x').index, 0);
 });
 
 test('budget: a weight-2 acquire evicts farthest weight-1 figures until used() <= 3', () => {
@@ -234,4 +232,10 @@ test('env: fallbackReason covers track kinds; frame players do not need WebGL2',
   assert.equal(fallbackReason({ kind: 'bttr', forced: true, webgl2: true }), 'forced');
   assert.equal(fallbackReason({ kind: 'archer', webgl2: false }), 'no-webgl2');
   assert.equal(fallbackReason({ kind: 'contests', reduced: true, webgl2: true }), null);
+});
+
+test('readPoster gives a track figure its stage', () => {
+  assert.deepEqual(readPoster('?poster=archer&stage=2'), { kind: 'archer', index: 0, state: { stage: 2 } });
+  assert.deepEqual(readPoster('?poster=terrarium'), { kind: 'terrarium', index: 0, state: { stage: 0 } });
+  assert.deepEqual(readPoster('?poster=bttr&stage=x'), { kind: 'bttr', index: 0, state: { stage: 0 } });
 });

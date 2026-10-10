@@ -12,13 +12,12 @@ import { GPU_ARGS, build, root, startPreview } from './lib/preview.mjs';
 const SHOTS = [
   { file: 'iceberg', q: 'poster=iceberg&depth=0' },
   { file: 'iceberg-under', q: 'poster=iceberg&depth=1' },
-  { file: 'window-blind', q: 'poster=iceblock&i=0' },
-  { file: 'summit-flag', q: 'poster=iceblock&i=1' },
-  { file: 'archer-bow', q: 'poster=iceblock&i=2' },
   { file: 'ws', q: 'poster=ring' },
   { file: 'ws-0', q: 'poster=ring&shape=0' },
   { file: 'ws-1', q: 'poster=ring&shape=1' },
   { file: 'ws-2', q: 'poster=ring&shape=2' },
+  { file: 'ws-3', q: 'poster=ring&shape=3' },
+  { file: 'ws-4', q: 'poster=ring&shape=4' },
 ];
 const KIND_INDEX = (q) => {
   const p = new URLSearchParams(q);

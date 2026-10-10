@@ -7,8 +7,6 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
 import { contestsLabel } from './figures/contests/figure.js';
 
-const DRAG_HINT = 'Drag or use arrow keys to turn it.';
-const DRAGGABLE = new Set(['iceblock']);
 
 const ext = (href) => /^https?:/.test(href);
 const link = (href, text, attrs = '') =>
@@ -29,9 +27,7 @@ function figure(fig, n, { hero = false } = {}) {
   const [w, h] = fig.size || [1200, 900];
   // Single-quoted attribute: only & and ' need escaping, so the JSON stays readable in the source.
   const json = JSON.stringify(fig.data || {}).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
-  // No tabindex here: a poster cannot be turned, so the host adds the tab stop once the scene is live,
-  // and CSS hides the drag hint until a script has marked <html class="js">.
-  const draggable = DRAGGABLE.has(fig.kind);
+  // No tabindex here: a poster cannot be played, so the host adds the tab stop once a scene is live.
   const attrs = [
     `class="fig"`,
     `data-fig="${esc(fig.kind)}"`,
@@ -48,7 +44,6 @@ function figure(fig, n, { hero = false } = {}) {
     `<img class="fig-poster" src="${esc(fig.poster)}" alt="" width="${w}" height="${h}" ` +
     `loading="${hero ? 'eager' : 'lazy'}"${hero ? ' fetchpriority="high"' : ''} decoding="async"></div>` +
     `<figcaption><strong>${esc(fig.stat)}</strong> <em>${esc(fig.caption)}</em>` +
-    (draggable ? ` <span class="fig-hint">${DRAG_HINT}</span>` : '') +
     `</figcaption></figure>`
   );
 }
