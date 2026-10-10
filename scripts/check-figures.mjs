@@ -4,7 +4,7 @@
 // browser, so this drives the built page in Chromium and prints PASS/FAIL per promise. Exit code 1 on
 // any FAIL. Usage: npm run check [-- --no-build] [-- --swiftshader] [-- --only=tracks,static]
 import { chromium } from 'playwright';
-import { build, GPU_ARGS, startPreview } from './lib/preview.mjs';
+import { build, GPU_ARGS, startPreview, root } from './lib/preview.mjs';
 import { content } from '../src/content.js';
 import { deskProgress, stageFor } from '../src/figures/track-math.js';
 import { gradeFor } from '../src/figures/howpolluted/grades.js';
@@ -17,6 +17,10 @@ const only = ([...argv].find((a) => a.startsWith('--only=')) || '').slice(7).spl
 // kind to KIND_COUNT and CANVASES) as its demo lands.
 const WEBGL_IDS = ['iceberg-0', 'ring-0', 'howpolluted-0', 'archer-0', 'terrarium-0'];
 const KIND_COUNT = { iceberg: 1, ring: 1, howpolluted: 1, archer: 1, terrarium: 1 }; // WebGL figures per kind: one fallback log each
+// The capture figures (clips, no WebGL of their own) fall back too: both under ?static=1 and reduced
+// motion, and bcwc also without WebGL2, since its live stage frames a WebGL site (env.js).
+const STILLED = { ...KIND_COUNT, bcwc: 1, bttr: 1 };
+const NO_GL2 = { ...KIND_COUNT, bcwc: 1 };
 const CANVASES = { iceberg: 2, ring: 1, howpolluted: 2, archer: 1, terrarium: 4 }; // the iceberg's scene plus its 2D overlay; the globe plus the 2D litter scene; the jar plus its river and two brains
 // Kinds that hold a WebGL context once live (env.js WEIGHTS > 0), whether their demo has landed or not.
 const WEBGL_KINDS = ['iceberg', 'ring', 'terrarium', 'howpolluted', 'archer'];
@@ -361,7 +365,7 @@ async function checkStatic(browser, url) {
   // The shown poster of every figure: its single poster, or a track's current stage still (the others
   // sit under it at opacity 0 until their stage comes up; checkTracks walks them).
   const SHOWN = 'img.fig-poster:not(.fig-poster--morph):not(.fig-poster--under):not(.fig-still), img.fig-still.is-on';
-  const name = 'fallback ?static=1: no canvases, every poster and current stage still loaded and shown, one "fallback: forced" per WebGL figure';
+  const name = 'fallback ?static=1: no canvases, every poster and current stage still loaded and shown, one "fallback: forced" per WebGL and capture figure';
   await step(name, async () => {
     let canv = 0;
     await scrollThrough(page, 500, 120, async () => {
@@ -375,7 +379,7 @@ async function checkStatic(browser, url) {
     );
     const per = fallbackLogs(t.logs, 'forced');
     const bad = posters.filter((p) => !p.ok).map((p) => p.src);
-    report(name, canv === 0 && bad.length === 0 && posters.length === 8 && sameCounts(per, KIND_COUNT), `canvases ${canv}, posters ${posters.length} (bad: ${bad.join(', ') || 'none'}), logs ${JSON.stringify(per)}`);
+    report(name, canv === 0 && bad.length === 0 && posters.length === 8 && sameCounts(per, STILLED), `canvases ${canv}, posters ${posters.length} (bad: ${bad.join(', ') || 'none'}), logs ${JSON.stringify(per)}`);
   });
   report('fallback ?static=1: no page errors', t.errors.length === 0, t.errors.join(' | '));
   await t.close();
@@ -392,7 +396,7 @@ async function checkNoWebGL2(url) {
         canv = Math.max(canv, await page.evaluate(() => document.querySelectorAll('figure.fig canvas').length));
       });
       const per = fallbackLogs(t.logs, 'no-webgl2');
-      report('fallback --disable-webgl2: no canvases and one "fallback: no-webgl2" per WebGL figure', canv === 0 && sameCounts(per, KIND_COUNT), `canvases ${canv}, logs ${JSON.stringify(per)}`);
+      report('fallback --disable-webgl2: no canvases and one "fallback: no-webgl2" per WebGL figure', canv === 0 && sameCounts(per, NO_GL2), `canvases ${canv}, logs ${JSON.stringify(per)}`);
     });
     await t.close();
   } finally {
@@ -441,7 +445,7 @@ async function checkContextLoss(browser, url) {
 async function checkReduced(browser, url) {
   const t = await open(browser, url, { reducedMotion: 'reduce' });
   const { page } = t;
-  await step('reduced motion: no canvases or iframes anywhere, one "fallback: reduced-motion" per WebGL figure', async () => {
+  await step('reduced motion: no canvases or iframes anywhere, one "fallback: reduced-motion" per WebGL and capture figure', async () => {
     let canv = 0;
     let frames = 0;
     await scrollThrough(page, 300, 120, async () => {
@@ -450,7 +454,7 @@ async function checkReduced(browser, url) {
       frames = Math.max(frames, r.f);
     });
     const per = fallbackLogs(t.logs, 'reduced-motion');
-    report('reduced motion: no canvases or iframes anywhere, one "fallback: reduced-motion" per WebGL figure', canv === 0 && frames === 0 && sameCounts(per, KIND_COUNT), `canvases ${canv}, iframes ${frames}, logs ${JSON.stringify(per)}`);
+    report('reduced motion: no canvases or iframes anywhere, one "fallback: reduced-motion" per WebGL figure', canv === 0 && frames === 0 && sameCounts(per, STILLED), `canvases ${canv}, iframes ${frames}, logs ${JSON.stringify(per)}`);
   });
   await step('reduced motion: the hero poster cross-fades to the under-water one past half the hero, and back', async () => {
     const sel = figSel('iceberg-0');
@@ -1447,6 +1451,273 @@ async function checkTerrarium(browser, url) {
   }
 }
 
+/* ── BTTRURSLF (plan 5, spec 5.2): tabs, scrubbed clips, flippable cards, real stats, no source shipped ── */
+
+async function checkBttr(browser, url) {
+  const t = await open(browser, url);
+  const { page } = t;
+  const origin = new URL(url).origin;
+  const foreign = [];
+  page.on('request', (r) => {
+    const u = r.url();
+    if (/^https?:/.test(u) && new URL(u).origin !== origin) foreign.push(u);
+  });
+  await page.evaluate(trackHelpers, STICKY_TOP);
+  const id = 'bttrurslf';
+
+  const tabs = 'bttr: each tab jumps to its first stage and is the selected tab there';
+  await step(tabs, async () => {
+    await page.evaluate((id) => window.__jump(window.__stageY(id, 0)), id);
+    await twoFrames(page);
+    const out = [];
+    const starts = await page.$$eval(`#${id} .fig-tabs button[data-stage]`, (bs) => bs.map((b) => Number(b.dataset.stage)));
+    for (const [j, s] of starts.entries()) {
+      await page.locator(`#${id} .fig-tabs button[data-stage="${s}"]`).click();
+      await page.waitForFunction(([id, s]) => document.getElementById(id).dataset.stage === String(s), [id, s], { timeout: 4000 }).catch(() => {});
+      const r = await page.evaluate(([id, j]) => ({
+        stage: document.getElementById(id).dataset.stage,
+        sel: [...document.querySelectorAll(`#${id} .fig-tabs [role="tab"]`)].map((b) => b.getAttribute('aria-selected')).indexOf('true'),
+        shown: [...document.querySelectorAll(`#${id} .fig-stages li`)].filter((li) => !li.hidden).map((li) => Number(li.dataset.tab)),
+      }), [id, j]);
+      out.push({ s, j, ok: r.stage === String(s) && r.sel === j && r.shown.every((k) => k === j), r });
+    }
+    const bad = out.filter((o) => !o.ok);
+    report(tabs, starts.length === 6 && bad.length === 0, bad.map((o) => `tab ${o.j} -> ${JSON.stringify(o.r)}`).join('; ') || `${starts.length} tabs`);
+  });
+
+  const scrub = 'bttr: scrolling within a stage scrubs its clip';
+  await step(scrub, async () => {
+    const seek = async (f) => {
+      await page.evaluate(([id, f]) => window.__jump(window.__stageY(id, 4) + (f - 0.5) * (window.__track(id).pad / (window.__track(id).n - 1))), [id, f]);
+      await page.waitForFunction((id) => document.querySelector(`#${id} video.is-on.is-ready`), id, { timeout: 15000 });
+      await sleep(600);
+      return page.evaluate((id) => document.querySelector(`#${id} video.is-on`).currentTime, id);
+    };
+    const a = await seek(0.2);
+    const b = await seek(0.45);
+    report(scrub, b > a + 0.2, `currentTime ${a.toFixed(2)} -> ${b.toFixed(2)} s`);
+  });
+
+  const flip = 'bttr: at the end of Appearance a puzzle card flips on hover';
+  await step(flip, async () => {
+    await page.evaluate((id) => window.__jump(window.__stageY(id, 2) + 0.4 * (window.__track(id).pad / (window.__track(id).n - 1))), id);
+    const card = page.locator(`#${id} .bp-card`).nth(2);
+    await card.waitFor({ state: 'visible', timeout: 15000 });
+    await card.hover();
+    await sleep(700);
+    const r = await card.evaluate((b) => ({ pressed: b.getAttribute('aria-pressed'), tf: getComputedStyle(b.querySelector('.bp-face--open')).transform }));
+    await page.mouse.move(2, 2);
+    report(flip, r.pressed === 'true' && r.tf !== 'none', `aria-pressed ${r.pressed}, open face transform ${r.tf}`);
+  });
+
+  const stats = 'bttr: the Stats tab shows real numbers (or a visible TODO) with when and how they were counted';
+  await step(stats, async () => {
+    await page.locator(`#${id} .fig-tabs button[data-stage="14"]`).click();
+    await page.waitForFunction((id) => !document.querySelector(`#${id} .bs`)?.hidden, id, { timeout: 5000 });
+    const txt = await page.locator(`#${id} .bs`).innerText();
+    const ok = (/\d+\s*\n?\s*accounts?/.test(txt) && /As of \d{4}-\d{2}-\d{2}/.test(txt)) || /\[TODO: account count\]/.test(txt);
+    report(stats, ok && /screens you can open/.test(txt) && /automated tests/.test(txt), txt.replace(/\s+/g, ' ').slice(0, 140));
+  });
+
+  report('bttr: no request leaves this site (no BTTRURSLF server, no AI)', foreign.length === 0, foreign.slice(0, 3).join(' | '));
+  report('bttr: no page errors', t.errors.length === 0, t.errors.join(' | '));
+  await t.close();
+
+  // A phone: the tab row scrolls inside the plate, a tab tap jumps there, the page never scrolls sideways.
+  const pt = await open(browser, url, PHONE_OPTS);
+  const phone = 'bttr 390x844: tabs scroll inside the plate, a tapped tab jumps to its stage, no sideways page scroll';
+  await step(phone, async () => {
+    await pt.page.evaluate(trackHelpers, STICKY_TOP);
+    await pt.page.evaluate((id) => document.getElementById(id).querySelector('figure').scrollIntoView({ block: 'center', behavior: 'instant' }), id);
+    await twoFrames(pt.page);
+    const row = await pt.page.$eval(`#${id} .fig-tabs`, (r) => ({ sw: r.scrollWidth, cw: r.clientWidth }));
+    const tab = pt.page.locator(`#${id} .fig-tabs button[data-stage="12"]`);
+    await tab.scrollIntoViewIfNeeded();
+    await tab.tap();
+    await pt.page.waitForFunction((id) => document.getElementById(id).dataset.stage === '12', id, { timeout: 4000 }).catch(() => {});
+    const r = await pt.page.evaluate((id) => ({ stage: document.getElementById(id).dataset.stage, sw: document.documentElement.scrollWidth, iw: innerWidth }), id);
+    report(phone, row.sw > row.cw && r.stage === '12' && r.sw <= r.iw, `tab row ${row.sw}/${row.cw}, stage ${r.stage}, page ${r.sw}/${r.iw}`);
+  });
+  await pt.close();
+
+  // A slow network: jumping into a clip that has not arrived shows the stage's still and never errors.
+  const st = await open(browser, url);
+  const slow = 'bttr slow network: a jump into an unloaded clip keeps the still on and throws nothing';
+  await step(slow, async () => {
+    const cdp = await st.context.newCDPSession(st.page);
+    await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 400, downloadThroughput: 40 * 1024, uploadThroughput: 40 * 1024 });
+    await st.page.evaluate(trackHelpers, STICKY_TOP);
+    await st.page.evaluate((id) => window.__jump(window.__stageY(id, 5)), id);
+    await sleep(1500);
+    const r = await st.page.evaluate((id) => {
+      const v = document.querySelector(`#${id} video.is-on`);
+      const still = document.querySelector(`#${id} .fig-still.is-on`);
+      return { stage: document.getElementById(id).dataset.stage, still: !!still && Number(still.dataset.stage), ready: !!v && v.classList.contains('is-ready') };
+    }, id);
+    report(slow, r.stage === '5' && r.still === 5 && st.errors.length === 0, `${JSON.stringify(r)}${st.errors.length ? ', errors: ' + st.errors.join(' | ') : ''}`);
+  });
+  await st.close();
+}
+
+// The built site carries recorded pixels and numbers only: none of BTTRURSLF's selectors, storage keys
+// or code. These strings appear in the capture script, which stays out of dist/.
+async function checkNoSource() {
+  const { readdirSync, readFileSync, statSync } = await import('node:fs');
+  const path = await import('node:path');
+  const dist = path.join(root, 'dist');
+  const hits = [];
+  const walk = (d) => {
+    for (const f of readdirSync(d)) {
+      const p = path.join(d, f);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.(js|css|html|json)$/.test(f)) {
+        const s = readFileSync(p, 'utf8');
+        for (const needle of ['mer__ask', 'shop-hub', 'bttrurslf:settings', '__shopHub', 'SUPABASE_SERVICE_ROLE_KEY']) if (s.includes(needle)) hits.push(`${path.relative(dist, p)}: ${needle}`);
+        if (/eyJ[A-Za-z0-9_-]{20,}/.test(s)) hits.push(`${path.relative(dist, p)}: a JWT-shaped string`);
+      }
+    }
+  };
+  walk(dist);
+  report('dist: no BTTRURSLF selectors, storage keys or secrets ship', hits.length === 0, hits.slice(0, 4).join('; '));
+}
+
+/* ── BC Window Coverings (plan 6, spec 5.1): the frame never traps scrolling and keeps the budget ── */
+
+const BCWC = process.env.BCWC_DIR || 'C:/Users/Warren/Downloads/Projects/bcwc';
+
+async function startBcwc() {
+  const { existsSync } = await import('node:fs');
+  if (!existsSync(BCWC + '/dist/index.html')) return null;
+  const { spawn } = await import('node:child_process');
+  const port = 4380;
+  const child = spawn(process.execPath, [BCWC + '/node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: BCWC, stdio: 'ignore' });
+  const stop = () => child.exitCode == null && child.kill();
+  process.once('exit', stop);
+  for (let i = 0; i < 100; i++) {
+    try {
+      if ((await fetch(`http://127.0.0.1:${port}/products`)).ok) return { origin: `http://127.0.0.1:${port}`, stop };
+    } catch {}
+    await sleep(200);
+  }
+  stop();
+  return null;
+}
+
+async function checkBcwc(browser, url) {
+  const id = 'bcwc';
+  const pageFor = async (q, opts) => {
+    const t = await open(browser, url + q, opts);
+    await t.page.evaluate(trackHelpers, STICKY_TOP);
+    return t;
+  };
+  const toStage = async (page, i, f = 0.5) => {
+    await page.evaluate(([id, i, f]) => window.__jump(window.__stageY(id, i) + (f - 0.5) * (window.__track(id).pad / Math.max(1, window.__track(id).n - 1))), [id, i, f]);
+    await page.waitForFunction(([id, i]) => document.getElementById(id).dataset.stage === String(i), [id, i], { timeout: 4000 }).catch(() => {});
+  };
+  const wheelScrolls = async (page, sel) => {
+    const box = await page.locator(sel).boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    const y0 = await page.evaluate(() => scrollY);
+    await page.mouse.wheel(0, 200);
+    await sleep(500);
+    const y1 = await page.evaluate(() => scrollY);
+    await page.evaluate((y) => window.__jump(y), y0);
+    return { moved: y1 !== y0, y0, y1 };
+  };
+
+  // Today: no deployed URL, so no iframe and a visible TODO.
+  const t0 = await pageFor('');
+  const todo = 'bcwc without a live URL: no iframe at the last stage, and the TODO shows';
+  await step(todo, async () => {
+    await toStage(t0.page, 4);
+    await waitLive(t0.page, 'bcwc-0');
+    await sleep(500);
+    const r = await t0.page.evaluate((id) => ({ frames: document.querySelectorAll(`#${id} iframe`).length, note: document.querySelector(`#${id} .bw-note`)?.textContent || '', bar: document.querySelector(`#${id} .bw-url`)?.textContent || '' }), id);
+    report(todo, r.frames === 0 && /\[TODO/.test(r.note) && /\[TODO/.test(r.bar), JSON.stringify(r));
+  });
+  const scrub = 'bcwc: scrolling within the time-of-day stage scrubs its clip';
+  await step(scrub, async () => {
+    const at = async (f) => {
+      await toStage(t0.page, 2, f);
+      await t0.page.waitForFunction((id) => document.querySelector(`#${id} video.is-on.is-ready`), id, { timeout: 15000 });
+      await sleep(500);
+      return t0.page.evaluate((id) => document.querySelector(`#${id} video.is-on`).currentTime, id);
+    };
+    const a = await at(0.2);
+    const b = await at(0.45);
+    report(scrub, b > a + 0.2, `currentTime ${a.toFixed(2)} -> ${b.toFixed(2)} s`);
+  });
+  report('bcwc without a live URL: no page errors', t0.errors.length === 0, t0.errors.join(' | '));
+  await t0.close();
+
+  const srv = await startBcwc();
+  if (!srv) {
+    report('bcwc live frame: SKIP (bcwc/dist not found, or its preview did not start)', true);
+    return;
+  }
+  try {
+    for (const [label, opts] of [['1440x900', {}], ['390x844', PHONE_OPTS]]) {
+      const t = await pageFor('?bcwc=' + encodeURIComponent(srv.origin), opts);
+      const { page } = t;
+      const live = `bcwc ${label}: the live frame attaches at the last stage within the budget`;
+      await step(live, async () => {
+        await toStage(page, 4);
+        await page.waitForSelector(`#${id} iframe.bw-frame.is-loaded`, { timeout: 30000 });
+        const w = await page.evaluate(() => window.__figWeight());
+        report(live, w <= 3, `budget weight ${w}`);
+      });
+      const guard = `bcwc ${label}: the wheel scrolls the page over the frame until clicked in, and again after letting go`;
+      await step(guard, async () => {
+        const before = await wheelScrolls(page, `#${id} .bw-view`);
+        await page.locator(`#${id} .bw-cover`).click();
+        const engaged = await page.evaluate((id) => document.querySelector(`#${id} iframe`).style.pointerEvents === 'auto', id);
+        await page.keyboard.press('Escape').catch(() => {});
+        await page.evaluate(() => document.body.focus());
+        await page.keyboard.press('Escape');
+        await page.mouse.move(2, 2); // leaving the plate lets go too
+        await sleep(200);
+        const released = await page.evaluate((id) => document.querySelector(`#${id} iframe`).style.pointerEvents === 'none' && !document.querySelector(`#${id} .bw-cover`).hidden, id);
+        const after = await wheelScrolls(page, `#${id} .bw-view`);
+        report(guard, before.moved && engaged && released && after.moved, `before ${before.y0}->${before.y1}, engaged ${engaged}, released ${released}, after ${after.y0}->${after.y1}`);
+      });
+      report(`bcwc ${label}: no page errors`, t.errors.length === 0, t.errors.join(' | '));
+      await t.close();
+    }
+
+    // The frame is weight 2: scrolling fast from Work to Projects and back never holds more than 3.
+    const tb = await pageFor('?bcwc=' + encodeURIComponent(srv.origin));
+    const budget = 'bcwc: fast scrolling between the live frame and the projects keeps the budget weight at most 3';
+    await step(budget, async () => {
+      await toStage(tb.page, 4);
+      await tb.page.waitForSelector(`#${id} iframe`, { timeout: 30000 });
+      let worst = 0;
+      const ys = await tb.page.evaluate(() => [window.__stageY('bcwc', 4), window.__stageY('terrarium', 2), window.__stageY('howpolluted', 1), window.__stageY('archer-hero', 1)]);
+      for (let k = 0; k < 4; k++) {
+        for (const y of [...ys, ...ys.slice().reverse()]) {
+          await tb.page.evaluate((y) => window.__jump(y), y);
+          await sleep(120);
+          worst = Math.max(worst, await tb.page.evaluate(() => window.__figWeight()), (await gl(tb.page)).alive);
+        }
+      }
+      report(budget, worst <= 3, `worst weight or live contexts ${worst}`);
+    });
+    await tb.close();
+
+    // A deploy that is down: the frame says so and gives its weight back.
+    const td = await pageFor('?bcwc=' + encodeURIComponent('http://127.0.0.1:9'));
+    const down = 'bcwc: a live site that does not load says so within 12 s and gives the budget back';
+    await step(down, async () => {
+      await toStage(td.page, 4);
+      await td.page.waitForFunction((id) => /did not load/.test(document.querySelector(`#${id} .bw-note`)?.textContent || ''), id, { timeout: 15000 });
+      const r = await td.page.evaluate((id) => ({ frames: document.querySelectorAll(`#${id} iframe`).length, w: window.__figWeight() }), id);
+      report(down, r.frames === 0 && r.w <= 3, JSON.stringify(r));
+    });
+    await td.close();
+  } finally {
+    srv.stop();
+  }
+}
+
 /* ── run ── */
 
 if (!argv.has('--no-build')) build();
@@ -1483,6 +1754,9 @@ try {
     howpolluted: () => checkHowPolluted(browser, url),
     archer: () => checkArcher(browser, url),
     terrarium: () => checkTerrarium(browser, url),
+    bttr: () => checkBttr(browser, url),
+    bcwc: () => checkBcwc(browser, url),
+    nosource: () => checkNoSource(),
   };
   for (const [name, run] of Object.entries(checks)) if (!only.length || only.includes(name)) await run();
 } finally {

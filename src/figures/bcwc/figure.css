@@ -98,7 +98,11 @@
   justify-content: center;
   padding: 0 0 18px;
   border: 0;
-  background: transparent;
+  /* Not fully transparent, and its own layer above the frame: the browser hit-tests the out-of-process
+     iframe's layer for wheel scrolling, so the cover must win that test or the first wheel is lost. */
+  background: rgba(23, 25, 28, 0.001);
+  z-index: 1;
+  will-change: transform;
   cursor: pointer;
 }
 

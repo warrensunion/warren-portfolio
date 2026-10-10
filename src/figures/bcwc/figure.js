@@ -86,6 +86,11 @@ export async function create(stage, ctx) {
   async function attach() {
     if (frame || !liveUrl) return;
     const seq = ++claimSeq;
+    // An unreachable site would still fire the iframe's load (with the browser's error page), so ask
+    // first: an opaque no-cors answer means it is up; a network error means it is not.
+    const up = await fetch(liveUrl + '/products', { mode: 'no-cors', cache: 'no-store' }).then(() => true, () => false);
+    if (seq !== claimSeq) return;
+    if (!up) return fail('The live site did not load.');
     const ok = await ctx.claim(2);
     if (!ok || seq !== claimSeq || ctx.stage() !== LIVE) {
       if (ok) ctx.unclaim();
