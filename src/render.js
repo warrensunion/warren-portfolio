@@ -105,7 +105,8 @@ function touch(c, s, next) {
   return (
     `<div class="touch"><div class="touch-text">` +
     `<p class="lede">${c.touch.line}</p>` +
-    `<p class="touch-email"><button type="button" class="email-btn email-btn--big" data-copy-email>${esc(c.email)}</button></p>` +
+    `<p class="touch-email"><button type="button" class="email-btn email-btn--big" data-copy-email>${esc(c.email)}</button>` +
+    `<span class="copy-status copy-status--inline" data-copy-status role="status" aria-live="polite"></span></p>` +
     `<p class="hint">${esc(c.touch.hint)}</p>` +
     linkList(c.links, 'inline-links') +
     `</div><div class="touch-side"><p>${esc(c.touch.projectsLine)}</p>` +

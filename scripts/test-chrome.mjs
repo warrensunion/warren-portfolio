@@ -2,7 +2,7 @@
 // guard is a pure function tested with plain objects instead of a DOM.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { shouldCopyOnKey } from '../src/chrome/copyEmail.js';
+import { shouldCopyOnKey, pickStatus } from '../src/chrome/copyEmail.js';
 
 test('e and E trigger copy', () => {
   assert.equal(shouldCopyOnKey({ key: 'e' }), true);
@@ -26,4 +26,12 @@ test('typing targets do not', () => {
   }
   assert.equal(shouldCopyOnKey({ key: 'e', target: { isContentEditable: true } }), false);
   assert.equal(shouldCopyOnKey({ key: 'e', target: { tagName: 'BODY' } }), true);
+});
+
+test('pickStatus prefers the first visible region, else the first', () => {
+  const a = { id: 'a' }, b = { id: 'b' };
+  assert.equal(pickStatus([a, b], (el) => el === b), b);
+  assert.equal(pickStatus([a, b], () => true), a);
+  assert.equal(pickStatus([a, b], () => false), a);
+  assert.equal(pickStatus([], () => true), null);
 });

@@ -92,6 +92,11 @@ main > *,
   white-space: nowrap;
 }
 
+.copy-status--inline {
+  position: static;
+  margin-left: 14px;
+}
+
 /* Hero: asymmetric 5/12 + 7/12. On wide screens the track is tall and Fig. 1 sticks while
    the reader scrolls, which is what drives the iceberg's camera below the waterline. */
 .hero {
