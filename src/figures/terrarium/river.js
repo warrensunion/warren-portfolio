@@ -1,4 +1,4 @@
-// Ported from terrarium src/ui/river.js at 7612a40 (Warren's own project). Changes: reduced motion comes in as an option (no env.js); setHistory(samples) loads a whole recorded history and setPlayhead(u) draws it up to u (0..1), with the labels read at the playhead; labels in the site's mono face.
+// Ported from terrarium src/ui/river.js at 7612a40 (Warren's own project). Changes: reduced motion comes in as an option (no env.js); setHistory(samples) loads a whole recorded history and setPlayhead(u) draws it up to u (0..1), with the labels read at the playhead; labels in the site's mono face, with a wider gutter for it.
 /**
  * The species river: the whole history of speciation in one glance. A
  * streamgraph reads as a river of lineages that branch, swell and run dry,
@@ -12,7 +12,7 @@
  */
 const SAMPLE_EVERY = 120; // ticks
 const KEEP = 300; // samples
-const GUTTER = 84; // css px on the right for the three labels
+const GUTTER = 128; // css px on the right for the three labels (the mono face is wider)
 const FONT = '500 11px "IBM Plex Mono", ui-monospace, monospace';
 
 /** @param {HTMLCanvasElement} canvas @param {{ reducedMotion?:boolean }} [opts] */

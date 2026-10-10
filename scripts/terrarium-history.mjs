@@ -2,9 +2,9 @@
 // forward. So the history is recorded here, in Node, from the same seed, count and CPU sensor the jar's
 // worker uses (the sim is deterministic on the CPU, scripts/test-terrarium.mjs pins it): a census every
 // 120 steps for 3,600 steps, in the shape the river takes. It also picks the lineage the brain stage
-// features: the oldest living member of the most numerous species at the end, followed back through its
-// first parents to a gen-0 founder, whose genome at birth is kept so the figure can show the brain the
-// line started with beside the one it has now.
+// features: the most numerous species at the end and its member furthest down its line (highest
+// generation, then oldest), followed back through its first parents to a gen-0 founder, whose genome at
+// birth is kept so the figure can show the brain the line started with beside the one it has now.
 // Usage: node scripts/terrarium-history.mjs   (writes public/terrarium/history.json)
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -32,7 +32,8 @@ export function recordHistory({ seed, count, params, steps, every } = HISTORY_CO
   const end = samples[samples.length - 1];
   const top = [...end.species].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
   const members = w.creatures.filter((c) => c.species === top[0]);
-  const member = members.sort((a, b) => b.age - a.age || a.id - b.id)[0];
+  // the member furthest down its line: the highest generation, then the oldest
+  const member = members.sort((a, b) => b.generation - a.generation || b.age - a.age || a.id - b.id)[0];
   let root = member.id;
   for (let p = w.parentOf.get(root); p !== undefined; p = w.parentOf.get(p)) root = p;
   if (!founders.has(root)) throw new Error(`lineage of ${member.id} ends at ${root}, not a gen-0 founder`);

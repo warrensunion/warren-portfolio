@@ -14,9 +14,9 @@ const ARGS = argv.has('--swiftshader') ? [] : GPU_ARGS;
 const only = ([...argv].find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
 // The live WebGL figures on the page today. Each later plan appends its track figure's id here (and its
 // kind to KIND_COUNT and CANVASES) as its demo lands.
-const WEBGL_IDS = ['iceberg-0', 'ring-0'];
-const KIND_COUNT = { iceberg: 1, ring: 1 }; // WebGL figures per kind: one fallback log each
-const CANVASES = { iceberg: 2, ring: 1 }; // the iceberg's WebGL scene plus its 2D overlay
+const WEBGL_IDS = ['iceberg-0', 'ring-0', 'terrarium-0'];
+const KIND_COUNT = { iceberg: 1, ring: 1, terrarium: 1 }; // WebGL figures per kind: one fallback log each
+const CANVASES = { iceberg: 2, ring: 1, terrarium: 4 }; // the iceberg's WebGL scene plus its 2D overlay; the jar plus its river and two brains
 // Kinds that hold a WebGL context once live (env.js WEIGHTS > 0), whether their demo has landed or not.
 const WEBGL_KINDS = ['iceberg', 'ring', 'terrarium', 'howpolluted', 'archer'];
 const DESK = { width: 1440, height: 900 };
@@ -1027,6 +1027,194 @@ async function checkTracks(browser, url) {
   }
 }
 
+/* ── terrarium (plan 4) ── */
+
+// The Terrarium track: a live, seeded jar whose stages are driven by scroll. ?debug=1 exposes
+// window.__terra = { gen(), pop(), species(), azimuth(), pickFirst() } for these checks.
+const shown = (page, sel) =>
+  page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return false;
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    return cs.visibility !== 'hidden' && cs.display !== 'none' && Number(cs.opacity) > 0.9 && r.width > 0 && r.height > 0;
+  }, sel);
+
+async function checkTerrarium(browser, url) {
+  const ID = 'terrarium-0';
+  const at = (page, i) => page.evaluate((i) => window.__jump(window.__stageY('terrarium', i)), i);
+  const readoutGen = (page) =>
+    page.evaluate(() => {
+      const m = (document.querySelector('#terrarium .fig-readout')?.textContent || '').match(/^gen (\d+), (\d+) alive, (\d+) species$/);
+      return m ? Number(m[1]) : null;
+    });
+
+  {
+    const t = await open(browser, url + '?debug=1');
+    const { page } = t;
+    await page.evaluate(trackHelpers, STICKY_TOP);
+
+    const n1 = 'terrarium: at stage 1 the generation rises above 5 within 6 s';
+    await step(n1, async () => {
+      await at(page, 1);
+      await waitLive(page, ID);
+      await page.waitForFunction(() => window.__terra && window.__terra.pop() > 0, null, { timeout: 15000 });
+      const g0 = await page.evaluate(() => window.__terra.gen());
+      const t0 = Date.now();
+      await page.waitForFunction(() => window.__terra.gen() > 5, null, { timeout: 6000 }).catch(() => {});
+      const g1 = await page.evaluate(() => window.__terra.gen());
+      report(n1, g1 > 5, `gen ${g0} -> ${g1} in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+    });
+
+    const n2 = 'terrarium: at stage 2 the river is shown and its canvas is drawn';
+    await step(n2, async () => {
+      await at(page, 2);
+      await sleep(900);
+      const vis = await shown(page, '#terrarium .tr-river');
+      const px = await page.evaluate(() => {
+        const c = document.querySelector('#terrarium .tr-river canvas');
+        if (!c || !c.width) return 0;
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        let n = 0;
+        for (let i = 3; i < d.length; i += 4) if (d[i] > 40) n++;
+        return n / (c.width * c.height);
+      });
+      report(n2, vis && px > 0.05, `shown ${vis}, ${(px * 100).toFixed(1)}% of its pixels painted`);
+    });
+
+    const n3 = 'terrarium: at stage 3 the brain view is shown';
+    await step(n3, async () => {
+      await at(page, 3);
+      await page.waitForFunction(() => document.querySelector('#terrarium .tr-brain.is-open'), null, { timeout: 3000 }).catch(() => {});
+      await sleep(600);
+      report(n3, await shown(page, '#terrarium .tr-brain'), '');
+    });
+
+    const n4 = 'terrarium: at stage 4 a drag turns the jar and a click on a creature opens its brain';
+    await step(n4, async () => {
+      await at(page, 4);
+      await page.waitForFunction(() => !document.querySelector('#terrarium .tr-brain.is-open'), null, { timeout: 3000 }).catch(() => {});
+      await sleep(600);
+      const box = await page.locator('#terrarium .fig-stage').boundingBox();
+      const a0 = await page.evaluate(() => window.__terra.azimuth());
+      const y = box.y + box.height * 0.3;
+      await page.mouse.move(box.x + box.width * 0.35, y);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width * 0.6, y, { steps: 8 });
+      await page.mouse.up();
+      await sleep(300);
+      const a1 = await page.evaluate(() => window.__terra.azimuth());
+      const brainAfterDrag = await shown(page, '#terrarium .tr-brain');
+      const p = await page.evaluate(() => window.__terra.pickFirst());
+      if (!p) return report(n4, false, `azimuth ${a0.toFixed(3)} -> ${a1.toFixed(3)}, no creature to click`);
+      await page.mouse.click(p.x, p.y);
+      await page.waitForFunction(() => document.querySelector('#terrarium .tr-brain.is-open'), null, { timeout: 3000 }).catch(() => {});
+      await sleep(500);
+      const open = await shown(page, '#terrarium .tr-brain');
+      report(n4, Math.abs(a1 - a0) > 0.05 && !brainAfterDrag && open, `azimuth ${a0.toFixed(3)} -> ${a1.toFixed(3)}, a drag opened the brain: ${brainAfterDrag}; clicked creature ${p.id} at ${Math.round(p.x)},${Math.round(p.y)}: brain ${open ? 'open' : 'closed'}`);
+    });
+
+    const n5 = 'terrarium: a click on the river overlay opens nothing and does not turn the jar';
+    await step(n5, async () => {
+      await page.locator('#terrarium .tr-brain-close').click();
+      await page.waitForFunction(() => !document.querySelector('#terrarium .tr-brain.is-open'), null, { timeout: 3000 });
+      await sleep(500);
+      const box = await page.locator('#terrarium .tr-river').boundingBox();
+      const a0 = await page.evaluate(() => window.__terra.azimuth());
+      for (const fx of [0.2, 0.5, 0.8]) {
+        await page.mouse.click(box.x + box.width * fx, box.y + box.height * 0.5);
+        await sleep(150);
+      }
+      // a drag across the river is the river's, not the jar's
+      await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.5);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.5, { steps: 6 });
+      await page.mouse.up();
+      await sleep(400);
+      const open = await page.evaluate(() => !!document.querySelector('#terrarium .tr-brain.is-open'));
+      const a1 = await page.evaluate(() => window.__terra.azimuth());
+      // the jar's own idle turn is 0.025 rad/s; a drag across the river would be radians
+      report(n5, !open && Math.abs(a1 - a0) < 0.02 && (await shown(page, '#terrarium .tr-river')), `brain ${open ? 'opened' : 'closed'}, azimuth ${a0.toFixed(3)} -> ${a1.toFixed(3)}`);
+    });
+
+    const n6 = 'terrarium: a wheel over the jar scrolls the page';
+    await step(n6, async () => {
+      const box = await page.locator('#terrarium .fig-stage').boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.3);
+      const y0 = await page.evaluate(() => scrollY);
+      await page.mouse.wheel(0, 240);
+      await sleep(500);
+      const y1 = await page.evaluate(() => scrollY);
+      report(n6, y1 > y0, `scrollY ${y0} -> ${y1}`);
+    });
+
+    const n7 = 'terrarium: scrolling back to stage 0 resets the world to gen 0 or 1';
+    await step(n7, async () => {
+      await at(page, 2);
+      await sleep(300);
+      const before = await page.evaluate(() => window.__terra.gen());
+      await at(page, 0);
+      await page.waitForFunction(() => window.__terra.gen() <= 1, null, { timeout: 4000 }).catch(() => {});
+      const after = await page.evaluate(() => window.__terra.gen());
+      report(n7, before > 1 && after <= 1, `gen ${before} -> ${after}`);
+    });
+    report('terrarium: no page errors', t.errors.length === 0, t.errors.join(' | '));
+    reportConsole('terrarium: no console errors or WebGL/context warnings', t.logs);
+    await t.close();
+  }
+
+  {
+    const t = await open(browser, url + '?debug=1');
+    const { page } = t;
+    await page.evaluate(trackHelpers, STICKY_TOP);
+    const n8 = 'terrarium: jumping straight to stage 4 on a fresh load, the readout gen is the live world\'s';
+    await step(n8, async () => {
+      await at(page, 4);
+      await waitLive(page, ID);
+      await page.waitForFunction(() => /^gen \d+/.test(document.querySelector('#terrarium .fig-readout')?.textContent || ''), null, { timeout: 5000 });
+      let r = null;
+      let g = null;
+      for (let i = 0; i < 8; i++) {
+        r = await readoutGen(page);
+        g = await page.evaluate(() => window.__terra.gen());
+        if (r === g) break;
+        await sleep(150);
+      }
+      const text = await page.evaluate(() => document.querySelector('#terrarium .fig-readout').textContent);
+      report(n8, r != null && r === g && g <= 3, `readout "${text}", __terra.gen() ${g}`);
+    });
+    report('terrarium (fresh stage 4): no page errors', t.errors.length === 0, t.errors.join(' | '));
+    await t.close();
+  }
+
+  {
+    // A worker that cannot start (CSP, an old browser) falls back through the host's error path.
+    const init = () => {
+      window.Worker = function () {
+        throw new Error('Worker blocked by the check');
+      };
+    };
+    const t = await open(browser, url, {}, { init });
+    const { page } = t;
+    await page.evaluate(trackHelpers, STICKY_TOP);
+    const n9 = 'terrarium: with Worker throwing, one "fallback: error" and the stage stills show';
+    await step(n9, async () => {
+      await at(page, 1);
+      await page.waitForFunction(() => document.querySelector('#terrarium figure')?.dataset.fallback === 'error', null, { timeout: 15000 }).catch(() => {});
+      await sleep(800);
+      const lines = t.logs.filter((l) => l.text === '[fig:terrarium] fallback: error').length;
+      const s = await page.evaluate(() => {
+        const f = document.querySelector('#terrarium figure');
+        const on = f.querySelector('.fig-still.is-on');
+        return { canvases: f.querySelectorAll('canvas').length, live: f.classList.contains('is-live'), still: !!on && getComputedStyle(on).opacity === '1' && on.complete && on.naturalWidth > 0 };
+      });
+      report(n9, lines === 1 && s.canvases === 0 && !s.live && s.still, `${lines} fallback lines, ${s.canvases} canvases, live ${s.live}, still shown ${s.still}`);
+    });
+    report('terrarium (no worker): no page errors', t.errors.length === 0, t.errors.join(' | '));
+    await t.close();
+  }
+}
+
 /* ── run ── */
 
 if (!argv.has('--no-build')) build();
@@ -1060,6 +1248,7 @@ try {
     phonedenied: () => checkPhoneDenied(browser, url),
     resize: () => checkResize(browser, url),
     tracks: () => checkTracks(browser, url),
+    terrarium: () => checkTerrarium(browser, url),
   };
   for (const [name, run] of Object.entries(checks)) if (!only.length || only.includes(name)) await run();
 } finally {

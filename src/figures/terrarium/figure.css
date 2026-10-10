@@ -1,0 +1,126 @@
+/* The Terrarium track's overlays (figure.js). They sit in a layer placed exactly over the stage, not in
+   it, so the stage keeps its one WebGL canvas. The palette is the source's: moss ink panels, fog text. The
+   layer itself never takes input; an overlay takes its own only while it is open. */
+.tr-layer {
+  position: absolute;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  --tr-ink: rgba(20, 36, 31, 0.86);
+  --tr-fog: rgb(201, 216, 210);
+}
+
+.tr-label {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--tr-fog);
+  opacity: 0.82;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tr-box {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tr-box canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The species river: slides up over the lower 32% of the plate. */
+.tr-river {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 32%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px 8px;
+  background: var(--tr-ink);
+  opacity: 0;
+  transform: translateY(100%);
+  transition:
+    transform 0.5s cubic-bezier(0.215, 0.61, 0.355, 1),
+    opacity 0.4s ease;
+}
+
+.tr-river.is-open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* The brain view: the line's founder beside the creature now (or one creature, at stage 4). */
+.tr-brain {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  padding: 12px 14px 10px;
+  background: rgba(20, 36, 31, 0.9);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.tr-brain.is-stacked {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.tr-brain[data-mode='one'] {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.tr-brain[data-mode='one'] .tr-col--then {
+  display: none;
+}
+
+.tr-brain.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tr-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.tr-brain-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--tr-fog);
+  cursor: pointer;
+}
+
+.tr-brain[data-mode='one'] .tr-brain-close {
+  display: grid;
+}
+
+.tr-brain-close:hover {
+  background: rgba(201, 216, 210, 0.12);
+}

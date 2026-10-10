@@ -109,6 +109,28 @@ html:not(.js) .fig-hint,
   .fig[data-fig='ring'] .fig-stage {
     aspect-ratio: 390 / 360;
   }
+
+  /* A track's readout describes its stage and can outrun a phone-width head: it takes its own line
+     rather than running over the title. */
+  .fig--track .fig-head {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  /* Terrarium's river and brain overlays are placed over the stage from the figure (figure.js), so the
+     figure must be their containing block; at 860 and up it already is, being sticky. */
+  .fig[data-fig='terrarium'] {
+    position: relative;
+  }
+}
+
+/* A phone-width Terrarium plate is taller than wide, so the two brains of its brain stage can stack
+   with room for their labels. Set here, not in the figure's lazy CSS, so the plate never changes shape
+   when the demo loads. */
+@media (max-width: 599px) {
+  .fig[data-fig='terrarium'] .fig-stage {
+    aspect-ratio: 4 / 5;
+  }
 }
 
 /* Live scenes sit over the poster and stay invisible until their first frame is drawn, so a slow
