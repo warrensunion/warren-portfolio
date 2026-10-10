@@ -6,8 +6,9 @@ const ACCENT = '#1f5f78';
 
 // A track figure walks through stages as the visitor scrolls (spec section 3). Each stage has a still:
 // the poster under reduced motion and ?static=1, and the first paint before the demo loads.
-const trackFig = (slug, kind, { title, caption, alt, size = [1280, 800], data = {}, stages, tabs }) => ({
+const trackFig = (slug, kind, { title, caption, hint, alt, size = [1280, 800], data = {}, stages, tabs }) => ({
   kind,
+  hint: hint || null,
   title,
   stat: '[TODO: stat]',
   caption,
@@ -179,7 +180,10 @@ export const content = {
           tags: ['Lua', 'Roblox Studio'],
           fig: trackFig('archer-hero', 'archer', {
             title: 'A stage to play',
-            caption: 'A short sample rebuilt in three.js for this page, with its own models. Click to play.',
+            caption: 'A short sample rebuilt in three.js for this page, with its own models.',
+            // In the markup from the start, so the plate never grows when the game goes live; the host hides
+            // it under a lasting fallback, when there is nothing to play.
+            hint: 'Click to play. WASD or arrows move, mouse turns, Q dodges, E rains arrows. Esc lets go.',
             alt: 'A low-poly archer on a dirt path through a green valley, shooting at enemies with health bars.',
             data: { roblox: 'https://www.roblox.com/games/126065886236053/archer-game' },
             stages: [['Valley'], ['Auto-aim'], ['Boss'], ['Your turn']],

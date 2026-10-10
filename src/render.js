@@ -122,7 +122,9 @@ function trackFigure(fig, n, id) {
     tabs +
     `<ol class="fig-stages" aria-label="Stages">${steps}</ol>` +
     `<div class="fig-stage" id="${esc(id)}-stage" role="img" aria-label="${esc(fig.alt || fig.title)}">${stills}</div>` +
-    `<figcaption><strong>${esc(fig.stat)}</strong> <em>${esc(fig.caption)}</em></figcaption></figure>`
+    `<figcaption><strong>${esc(fig.stat)}</strong> <em>${esc(fig.caption)}</em>` +
+    (fig.hint ? ` <span class="fig-hint">${esc(fig.hint)}</span>` : '') +
+    `</figcaption></figure>`
   );
 }
 

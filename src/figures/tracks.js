@@ -121,6 +121,8 @@ export function initTracks(root, { reduced = false } = {}) {
     for (const t of tracks) {
       const text = t.el.querySelector('.track-text');
       if (text) ro.observe(text);
+      // A figure can grow its own chrome once live (a hint line in the caption); re-measure it then.
+      if (t.fig) ro.observe(t.fig);
     }
   }
 
