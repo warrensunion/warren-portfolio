@@ -38,3 +38,24 @@ test('assets: every copied file exists and SOURCE.txt names 80f6d06', () => {
   assert.equal(FILES.filter((f) => f.startsWith('art/trash/')).length, 24);
   assert.match(readFileSync(path.join(root, 'public/howpolluted/SOURCE.txt'), 'utf8'), /80f6d06/);
 });
+
+// A 4x2 equirectangular mask: x = 0 at lon -180, y = 0 at lat +90; only pixel (1, 0) is land (white).
+const { groundAt } = await import('../src/figures/howpolluted/mask.js');
+const MASK = (() => {
+  const data = new Uint8ClampedArray(4 * 2 * 4);
+  for (let i = 3; i < data.length; i += 4) data[i] = 255;
+  data.set([255, 255, 255, 255], (0 * 4 + 1) * 4);
+  return { width: 4, height: 2, data };
+})();
+
+test('mask: equirectangular lookup', () => {
+  assert.equal(groundAt(MASK, 45, -45), 'land');
+  assert.equal(groundAt(MASK, -45, -45), 'water');
+});
+
+test('mask: wraps longitude and clamps the poles', () => {
+  assert.equal(groundAt(MASK, 45, 315), groundAt(MASK, 45, -45));
+  assert.doesNotThrow(() => groundAt(MASK, 95, 0));
+  assert.doesNotThrow(() => groundAt(MASK, -90, 180));
+  assert.equal(groundAt(MASK, 45, -225), groundAt(MASK, 45, 135));
+});

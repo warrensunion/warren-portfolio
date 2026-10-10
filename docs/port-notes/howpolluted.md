@@ -28,3 +28,19 @@ source path and carry the changes over by hand.
 
 Size: 2,738,130 bytes (2.6 MiB; `du -sh` says 2.8M with block rounding), under the 3 MB budget. All of it
 is fetched only by the figure, after it is near the viewport. The art is Warren's own; the fonts are OFL.
+
+## Land mask lookup (`src/figures/howpolluted/mask.js`, new)
+
+`groundAt(mask, lat, lon)` reads one pixel of `globe/land-mask.png` (1024x512, about 0.35° per pixel) and
+says land when red > 127. At the demo point, Richmond BC (49.17, -123.14), it reads pixel (161, 116), which
+is **water**: at this resolution the mask's coastline puts the point in the Strait of Georgia (the land
+pixels are one or two to the east and south). Checked on 2026-10-10 with sharp:
+
+```
+node --input-type=module -e "import sharp from 'sharp'; import { groundAt } from './src/figures/howpolluted/mask.js'; const { data, info } = await sharp('public/howpolluted/globe/land-mask.png').ensureAlpha().raw().toBuffer({ resolveWithObject: true }); console.log(groundAt({ width: info.width, height: info.height, data }, 49.17, -123.14))"
+-> water
+```
+
+So the demo's honest ground is water, and the figure shows the water scene (6% demo slick, "Moderate")
+and says `ground: water, from the land mask`. The figure takes whatever the mask says at run time; it never
+hard-codes the ground.
