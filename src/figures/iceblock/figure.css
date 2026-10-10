@@ -1,0 +1,65 @@
+/* Ice figures: the label layer over the canvas, and the stage's touch rule. The hub's labels were
+   white with a dark halo on its grey fog; on paper they are plain ink, and the scramble's solid and
+   inverted cells are ink blocks. The layer fades in with the canvas (.is-live) so a label never
+   floats over the poster. touch-action pan-y: a horizontal drag turns the block, a vertical one
+   still scrolls the page on a phone. */
+
+.fig[data-fig='iceblock'] .fig-stage {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.ib-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.fig.is-live .ib-hud.is-placed {
+  opacity: 1;
+}
+
+.ib-lines {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+}
+
+.ib-ln {
+  fill: none;
+  stroke: var(--ink);
+  stroke-opacity: 0.7;
+  stroke-width: 1;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.ib-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: pre;
+  font-variant-numeric: tabular-nums;
+}
+
+.ib-label i.is-b,
+.ib-label i.is-i {
+  font-style: normal;
+  background: var(--ink);
+  color: transparent;
+}
+
+.ib-label i.is-i {
+  color: var(--plate);
+}
