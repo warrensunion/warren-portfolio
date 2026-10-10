@@ -1,0 +1,367 @@
+/* Page geometry after yuzeli.ca's measurements (spec section 2): one left-aligned 1180px column,
+   text on the left and figure plates on the right, hairlines between sections. Below 860px it
+   collapses to a single column with 20px gutters and must never scroll sideways at 390px. */
+
+.bar-in,
+main > *,
+.foot-in {
+  width: min(var(--measure), 100% - 2 * var(--gutter));
+  margin-inline: auto;
+}
+
+/* Top bar. Task 2 toggles .is-scrolled from an IntersectionObserver sentinel. */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: var(--bar-h);
+  background: var(--paper);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.bar.is-scrolled {
+  border-bottom-color: var(--hair);
+}
+
+.bar-in {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.bar-name {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 560;
+  font-size: 18px;
+  letter-spacing: -0.005em;
+}
+
+.bar-nav {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  position: relative;
+}
+
+.bar-links,
+.inline-links,
+.foot-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+}
+
+.bar-links a {
+  color: var(--ink-2);
+  text-decoration: none;
+  font-size: 16px;
+}
+
+.bar-links a:hover {
+  color: var(--ink);
+}
+
+.email-btn {
+  padding: 5px 10px;
+  border: 1px solid var(--hair);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.email-btn:hover {
+  border-color: rgba(23, 25, 28, 0.32);
+  background: var(--plate);
+}
+
+.copy-status {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Hero: asymmetric 5/12 + 7/12. On wide screens the track is tall and Fig. 1 sticks while
+   the reader scrolls, which is what drives the iceberg's camera below the waterline. */
+.hero {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  column-gap: var(--col-gap);
+  align-items: start;
+  padding-top: 88px;
+  padding-bottom: 96px;
+}
+
+.hero-text {
+  padding-top: 24px;
+}
+
+.hero h1 {
+  font-size: var(--fs-name);
+  font-weight: 500;
+  font-variation-settings: 'opsz' 60;
+  letter-spacing: -0.02em;
+  line-height: 0.94;
+  margin-bottom: 40px;
+}
+
+.lede {
+  font-size: var(--fs-lede);
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 30em;
+}
+
+.bio {
+  margin-top: 16px;
+  color: var(--ink-3);
+  font-size: var(--fs-body);
+}
+
+@media (min-width: 860px) {
+  .hero {
+    min-height: 160svh;
+  }
+
+  .hero-fig {
+    position: sticky;
+    top: 76px;
+  }
+}
+
+/* Sections and entries */
+.section {
+  border-top: 1px solid var(--hair);
+  padding-top: 112px;
+  padding-bottom: 32px;
+}
+
+.section h2 {
+  font-size: var(--fs-h2);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  column-gap: var(--col-gap);
+  align-items: start;
+  padding: 56px 0 79px;
+}
+
+.entry-text > * + * {
+  margin-top: 16px;
+}
+
+.entry-text p {
+  color: var(--ink-2);
+}
+
+.entry h3 {
+  font-size: var(--fs-h3);
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.entry h3 a {
+  color: var(--ink);
+}
+
+.entry-text .meta {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  color: var(--ink-3);
+}
+
+.entry-text .tags {
+  margin-top: 24px;
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+/* Contests list */
+.contest-list {
+  border-top: 1px solid var(--hair);
+}
+
+.contest-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.contest-name {
+  color: var(--ink);
+}
+
+.contest-meta {
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  color: var(--ink-3);
+  align-self: center;
+}
+
+/* Get in touch */
+.touch {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  column-gap: var(--col-gap);
+  align-items: start;
+  padding: 56px 0 48px;
+}
+
+.touch-text > * + * {
+  margin-top: 16px;
+}
+
+.touch-email {
+  margin-top: 28px;
+}
+
+.email-btn--big {
+  padding: 10px 16px;
+  font-size: 16px;
+}
+
+.hint {
+  font-size: var(--fs-caption);
+  font-style: italic;
+  color: var(--ink-3);
+}
+
+.inline-links {
+  margin-top: 28px;
+}
+
+.touch-side {
+  color: var(--ink-2);
+}
+
+.touch-projects {
+  margin-top: 12px;
+  border-top: 1px solid var(--hair);
+}
+
+.touch-projects li {
+  border-bottom: 1px solid var(--hair);
+}
+
+.touch-projects a {
+  display: block;
+  padding: 12px 0;
+  font-size: var(--fs-h3);
+  color: var(--ink);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.touch-projects a:hover,
+.touch-projects a:focus-visible {
+  color: var(--accent);
+}
+
+.touch-fig {
+  padding-bottom: 96px;
+}
+
+/* Footer */
+.foot {
+  border-top: 1px solid var(--hair);
+}
+
+.foot-in {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px 32px;
+  padding: 36px 0 56px;
+  font-size: 15px;
+  color: var(--ink-3);
+}
+
+.foot-links a {
+  color: var(--ink-2);
+}
+
+/* Phone and narrow tablet: one column, figure under text. */
+@media (max-width: 859px) {
+  .hero,
+  .entry,
+  .touch {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero {
+    padding-top: 48px;
+    padding-bottom: 64px;
+  }
+
+  .hero-text {
+    padding-top: 0;
+  }
+
+  .hero h1 {
+    margin-bottom: 24px;
+  }
+
+  .hero-fig,
+  .entry-fig {
+    margin-top: 40px;
+  }
+
+  .section {
+    padding-top: 72px;
+  }
+
+  .entry,
+  .touch {
+    padding: 32px 0 56px;
+  }
+
+  .touch-side {
+    margin-top: 40px;
+  }
+
+  .touch-fig {
+    padding-bottom: 64px;
+  }
+}
+
+/* Too narrow for the address in the bar: the contact section keeps its own copy button. */
+@media (max-width: 599px) {
+  .bar-nav .email-btn {
+    display: none;
+  }
+
+  .bar-nav,
+  .bar-links {
+    gap: 4px 16px;
+  }
+
+  .bar-links a {
+    font-size: 15px;
+  }
+}
