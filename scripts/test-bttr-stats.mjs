@@ -65,3 +65,26 @@ test('stats: no JWT-shaped secret in src, public or dist', () => {
   }
   assert.deepEqual(bad, []);
 });
+
+test('stats: a count whose anchor is missing is null, never 0', async () => {
+  const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs');
+  const dir = mkdtempSync(path.join(tmpdir(), 'bttr-repo-'));
+  for (const d of ['src/screens/a', 'server', 'scripts']) mkdirSync(path.join(dir, d), { recursive: true });
+  writeFileSync(path.join(dir, 'src/main.js'), 'const nothing = {};\n');
+  writeFileSync(path.join(dir, 'server/guard.js'), 'export const RENAMED = {};\n');
+  writeFileSync(path.join(dir, 'scripts/test-a.mjs'), "test('x', () => {});\n");
+  const r = countRepo(dir);
+  assert.equal(r.routes, null);
+  assert.equal(r.apiRoutes, null);
+  assert.equal(r.tests, 1);
+});
+
+test('stats panel: any missing number shows as a visible TODO, never a 0', async () => {
+  const { statRows } = await import('../src/figures/bttr/stats.js');
+  const rows = statRows({ accounts: null, routes: null, apiRoutes: 31, tests: null, testFiles: 15, methods: { accounts: 'a', routes: 'r', apiRoutes: 'p', tests: 't' } });
+  assert.match(rows[0].n, /\[TODO/);
+  assert.match(rows[1].n, /\[TODO/);
+  assert.equal(rows[2].n, '31');
+  assert.match(rows[3].n, /\[TODO/);
+  assert.ok(rows.every((r) => r.n !== '0'));
+});

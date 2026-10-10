@@ -5,14 +5,18 @@
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const fmt = (n) => Number(n).toLocaleString('en-US');
 
+// A number that could not be measured is null and shows as a TODO, never as a made-up 0.
+const num = (n, todo) => (Number.isFinite(n) && n > 0 ? fmt(n) : `[TODO: ${todo}]`);
+
 export function statRows(s) {
+  const m = s.methods || {};
   return [
     s.accounts != null
-      ? { n: fmt(s.accounts), what: s.accounts === 1 ? 'account' : 'accounts', how: `As of ${s.accountsAsOf}. ${s.methods.accounts}` }
-      : { n: '[TODO: account count]', what: '', how: s.methods?.accounts || '' },
-    { n: fmt(s.routes), what: 'screens you can open', how: s.methods.routes },
-    { n: fmt(s.apiRoutes), what: 'server routes, each rate limited', how: s.methods.apiRoutes },
-    { n: fmt(s.tests), what: `automated tests in ${fmt(s.testFiles)} files`, how: s.methods.tests },
+      ? { n: fmt(s.accounts), what: s.accounts === 1 ? 'account' : 'accounts', how: `As of ${s.accountsAsOf}. ${m.accounts}` }
+      : { n: '[TODO: account count]', what: '', how: m.accounts || '' },
+    { n: num(s.routes, 'screen count'), what: 'screens you can open', how: m.routes || '' },
+    { n: num(s.apiRoutes, 'server route count'), what: 'server routes, each rate limited', how: m.apiRoutes || '' },
+    { n: num(s.tests, 'test count'), what: s.testFiles > 0 ? `automated tests in ${fmt(s.testFiles)} files` : 'automated tests', how: m.tests || '' },
   ];
 }
 

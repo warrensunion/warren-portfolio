@@ -48,18 +48,21 @@ const literalKeys = (text, prefix) => (text.match(new RegExp(`^\\s*'${prefix}[^'
 export function countRepo(repo) {
   const main = readFileSync(path.join(repo, 'src/main.js'), 'utf8');
   const guard = readFileSync(path.join(repo, 'server/guard.js'), 'utf8');
-  const routesBlock = guard.slice(guard.indexOf('export const ROUTES'));
+  // A table that cannot be found counts as unknown (null), never as 0: the page then shows a TODO.
+  const at = guard.indexOf('export const ROUTES');
+  const table = at === -1 ? '' : guard.slice(at, guard.indexOf('\n};', at) + 1);
+  const nz = (n) => (n > 0 ? n : null);
   const scriptsDir = path.join(repo, 'scripts');
   const testFiles = readdirSync(scriptsDir).filter((f) => /^test-.*\.mjs$/.test(f));
   const tests = testFiles.reduce((n, f) => n + (readFileSync(path.join(scriptsDir, f), 'utf8').match(/\btest\(/g) || []).length, 0);
   const screensDir = path.join(repo, 'src/screens');
   const screens = readdirSync(screensDir).filter((f) => statSync(path.join(screensDir, f)).isDirectory()).length;
   return {
-    routes: literalKeys(main, '/') + expansions(main),
-    apiRoutes: literalKeys(routesBlock.slice(0, routesBlock.indexOf('\n};')), '/api/') + expansions(routesBlock.slice(0, routesBlock.indexOf('\n};'))),
-    testFiles: testFiles.length,
-    tests,
-    screens,
+    routes: nz(literalKeys(main, '/') + expansions(main)),
+    apiRoutes: table ? nz(literalKeys(table, '/api/') + expansions(table)) : null,
+    testFiles: nz(testFiles.length),
+    tests: nz(tests),
+    screens: nz(screens),
   };
 }
 
