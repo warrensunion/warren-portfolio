@@ -59,3 +59,88 @@ test('mask: wraps longitude and clamps the poles', () => {
   assert.doesNotThrow(() => groundAt(MASK, -90, 180));
   assert.equal(groundAt(MASK, 45, -225), groundAt(MASK, 45, 135));
 });
+
+// The demo model: the pile the visitor cleans up. Real manifest sprites, so sizes are the art's own.
+const { createModel } = await import('../src/figures/howpolluted/model.js');
+const manifest = JSON.parse(readFileSync(path.join(root, 'public/howpolluted/art/manifest.json'), 'utf8'));
+const ART = Object.entries(manifest)
+  .filter(([k]) => k.startsWith('trash/'))
+  .map(([file, m]) => ({ file, ...m }));
+const RECT = { w: 1000, top: 300, bottom: 700 };
+const landModel = () => {
+  const m = createModel({ ground: 'land', sprites: ART, value: 9 });
+  m.layout(RECT);
+  return m;
+};
+
+test('model: the planned pile starts within 3% of the demo value', () => {
+  const m = landModel();
+  assert.ok(Math.abs(m.coverage() - 9) <= 0.27, `got ${m.coverage()}`);
+  assert.equal(m.grade().grade, 'Mildly poor');
+});
+
+test('model: picking lowers coverage and can improve the grade', () => {
+  const m = landModel();
+  let guard = 0;
+  while (m.coverage() >= 8 && guard++ < 500) {
+    const it = m.items().at(-1);
+    assert.ok(m.pickAt(it.cx, it.cy), `nothing picked at ${it.cx},${it.cy}`);
+  }
+  assert.ok(m.coverage() < 8);
+  assert.equal(m.grade().grade, 'Moderate');
+});
+
+test('model: removing every piece gives Good and coverage 0', () => {
+  const m = landModel();
+  let guard = 0;
+  while (m.items().length && guard++ < 2000) {
+    const it = m.items()[0];
+    m.pickAt(it.cx, it.cy);
+  }
+  assert.equal(m.items().length, 0);
+  assert.equal(m.coverage(), 0);
+  assert.equal(m.grade().grade, 'Good');
+  assert.equal(m.pickAt(500, 500), false);
+});
+
+test('model: a flick stays inside the ground band and still counts', () => {
+  const m = landModel();
+  const before = m.coverage();
+  const it = m.items()[3];
+  const id = m.grabAt(it.cx, it.cy);
+  assert.notEqual(id, null);
+  m.drag(id, it.cx + 10, it.cy - 5);
+  m.release(id, 5000, -3000);
+  for (let i = 0; i < 300; i++) m.step(1 / 60);
+  const moved = m.items().find((x) => x.id === id);
+  assert.ok(moved.x >= 0 && moved.x <= RECT.w && moved.y >= RECT.top && moved.y <= RECT.bottom, `at ${moved.x},${moved.y}`);
+  assert.equal(m.coverage(), before);
+  assert.equal(m.moving(), false);
+});
+
+test('model: removing then replaying keeps coverage', () => {
+  const m = landModel();
+  for (let k = 0; k < 5; k++) {
+    const it = m.items().at(-1);
+    m.pickAt(it.cx, it.cy);
+  }
+  const n = m.items().length;
+  const c = m.coverage();
+  m.layout(RECT);
+  assert.equal(m.items().length, n);
+  assert.ok(Math.abs(m.coverage() - c) < 1e-9);
+  m.reset();
+  assert.ok(m.items().length > n);
+});
+
+test('model: a resize keeps relative places and coverage within 0.5%', () => {
+  const m = landModel();
+  const c0 = m.coverage();
+  const a = m.items().map((it) => [it.id, it.x / 1000, (it.y - 300) / 400]);
+  m.layout({ w: 800, top: 240, bottom: 560 });
+  assert.ok(Math.abs(m.coverage() - c0) <= 0.5, `${c0} -> ${m.coverage()}`);
+  const b = new Map(m.items().map((it) => [it.id, [it.x / 800, (it.y - 240) / 320]]));
+  for (const [id, nx, ny] of a) {
+    assert.ok(Math.abs(b.get(id)[0] - nx) < 1e-9 && Math.abs(b.get(id)[1] - ny) < 1e-9);
+  }
+});
