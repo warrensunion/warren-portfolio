@@ -40,6 +40,27 @@ async function open(browser, url, opts = {}, { init } = {}) {
   // The page scrolls smoothly; the checks need to be where they asked to be at once.
   await context.addInitScript(() => {
     window.__jump = (y) => window.scrollTo({ top: y, left: 0, behavior: 'instant' });
+    // Every WebGL context the page ever makes, so the budget is counted in contexts the browser still
+    // holds (not lost), not in canvases: a destroy that drops its canvas but skips loseContext() leaks.
+    const made = new Set();
+    const get = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+      const ctx = get.call(this, type, ...rest);
+      if (ctx && /^(webgl2?|experimental-webgl)$/.test(type)) made.add(ctx);
+      return ctx;
+    };
+    window.__glAlive = () => [...made].filter((c) => !c.isContextLost()).length;
+    // A context only ever adds to the count when it is made, so sampling at each creation catches a
+    // spike that sits between two scroll-step samples.
+    window.__glPeak = 0;
+    const note = () => (window.__glPeak = Math.max(window.__glPeak, window.__glAlive()));
+    HTMLCanvasElement.prototype.getContext = ((wrapped) =>
+      function (...args) {
+        const before = made.size;
+        const ctx = wrapped.apply(this, args);
+        if (made.size !== before) note();
+        return ctx;
+      })(HTMLCanvasElement.prototype.getContext);
   });
   if (init) await context.addInitScript(init);
   const page = await context.newPage();
@@ -116,6 +137,16 @@ const canvasCounts = (page) =>
     ),
   );
 const liveCount = (counts) => Object.values(counts).filter((n) => n > 0).length;
+// WebGL contexts the page holds right now (made and not lost), and the most it ever held at once.
+const gl = (page) => page.evaluate(() => ({ alive: window.__glAlive(), peak: window.__glPeak }));
+// Console output that means trouble: any error, or a warning about WebGL or a context. The host's own
+// "fallback: context-lost" line is info, so the context-loss check's expected log never counts.
+const consoleProblems = (logs) =>
+  logs.filter((l) => l.type === 'error' || (l.type === 'warning' && /WebGL|context/i.test(l.text))).map((l) => `${l.type}: ${l.text}`);
+function reportConsole(name, logs) {
+  const bad = consoleProblems(logs);
+  report(name, bad.length === 0, bad.slice(0, 4).join(' | '));
+}
 
 const fallbackLogs = (logs, reason) => {
   const per = {};
@@ -183,12 +214,16 @@ async function checkLive(browser, url) {
 async function checkBudget(browser, url) {
   const t = await open(browser, url);
   const { page } = t;
-  await step('budget: at most 3 live WebGL figures at every 200 px step, top to bottom and back', async () => {
+  await step('budget: at most 3 live WebGL figures and 3 WebGL contexts at every 200 px step, top to bottom and back', async () => {
     let worst = 0;
     let where = 0;
+    let worstGl = 0;
+    let whereGl = 0;
     const each = async (y) => {
       const n = liveCount(await canvasCounts(page));
       if (n > worst) [worst, where] = [n, y];
+      const g = await gl(page);
+      if (g.alive > worstGl) [worstGl, whereGl] = [g.alive, y];
     };
     await scrollThrough(page, 200, 150, each);
     await sleep(1500);
@@ -200,11 +235,13 @@ async function checkBudget(browser, url) {
       await sleep(150);
       await each(y);
     }
-    report('budget: at most 3 live WebGL figures at every 200 px step, top to bottom and back', worst <= 3, `max ${worst} at ${where}`);
+    const { peak } = await gl(page);
+    report('budget: at most 3 live WebGL figures and 3 WebGL contexts at every 200 px step, top to bottom and back', worst <= 3 && worstGl <= 3 && peak <= 3, `figures max ${worst} at ${where}; contexts max ${worstGl} at ${whereGl}, peak at any creation ${peak}`);
   });
   report('budget: no page errors while scrolling', t.errors.length === 0, t.errors.join(' | '));
   const bad = t.logs.filter((l) => /fallback: error/.test(l.text));
   report('budget: no figure failed while scrolling', bad.length === 0, bad.map((l) => l.text).join(' | '));
+  reportConsole('budget: no console errors or WebGL/context warnings', t.logs);
   await t.close();
 }
 
@@ -231,6 +268,11 @@ async function checkRaces(browser, url) {
       if (s.live && !n) problems.push(`${s.id} live without a canvas`);
     }
     if (liveCount(counts) > 3) problems.push(`${liveCount(counts)} live figures`);
+    // Each live figure holds exactly one WebGL context; any more alive is a leak (a canvas dropped
+    // without loseContext(), or a cancelled build that kept its context).
+    const g = await gl(page);
+    if (g.alive !== liveCount(counts)) problems.push(`${g.alive} WebGL contexts alive for ${liveCount(counts)} live figures`);
+    if (g.peak > 3) problems.push(`context peak ${g.peak}`);
     const f0 = await frames(page, id);
     await sleep(500);
     const f1 = await frames(page, id);
@@ -255,6 +297,7 @@ async function checkRaces(browser, url) {
     await settle('the hero', 'iceberg-0');
   });
   report('races: no page errors and no failed figures', t.errors.length === 0 && !t.logs.some((l) => /fallback: error/.test(l.text)), t.errors.join(' | '));
+  reportConsole('races: no console errors or WebGL/context warnings', t.logs);
   await t.close();
 }
 
@@ -315,7 +358,9 @@ async function checkContextLoss(browser, url) {
       return { canvases: f.querySelectorAll('canvas').length, hidden: p.getAttribute('aria-hidden'), opacity: getComputedStyle(p).opacity, fb: f.dataset.fallback || '' };
     }, sel);
     const logged = t.logs.filter((l) => l.text === '[fig:iceberg] fallback: context-lost').length;
-    report('context loss: the hero goes back to its poster and logs context-lost', s.canvases === 0 && s.hidden == null && s.opacity === '1' && s.fb === 'context-lost' && logged === 1, JSON.stringify({ ...s, logged }));
+    const alive = (await gl(page)).alive;
+    const holders = liveCount(await canvasCounts(page));
+    report('context loss: the hero goes back to its poster and logs context-lost', s.canvases === 0 && s.hidden == null && s.opacity === '1' && s.fb === 'context-lost' && logged === 1 && alive === holders, JSON.stringify({ ...s, logged, contextsAlive: alive, figuresHolding: holders }));
   });
   await step('context loss: the hero comes back live after the 5 s cooldown', async () => {
     await page.waitForFunction((sel) => document.querySelector(sel).classList.contains('is-live'), sel, { timeout: 15000 });
@@ -324,9 +369,12 @@ async function checkContextLoss(browser, url) {
     const f1 = await frames(page, 'iceberg-0');
     const s = await page.evaluate((sel) => ({ fb: document.querySelector(sel).dataset.fallback || '', canvases: document.querySelectorAll(sel + ' canvas').length }), sel);
     const px = await pixelSpread(page, 'iceberg-0');
-    report('context loss: the hero comes back live after the 5 s cooldown', f1 > f0 && s.fb === '' && s.canvases === CANVASES.iceberg && px.distinct > 8, `frames ${f0} -> ${f1}, ${s.canvases} canvases, fallback "${s.fb}", ${px.distinct} colours`);
+    const alive = (await gl(page)).alive;
+    const holders = liveCount(await canvasCounts(page));
+    report('context loss: the hero comes back live after the 5 s cooldown', f1 > f0 && s.fb === '' && s.canvases === CANVASES.iceberg && px.distinct > 8 && alive === holders, `frames ${f0} -> ${f1}, ${s.canvases} canvases, fallback "${s.fb}", ${px.distinct} colours, ${alive} contexts for ${holders} figures`);
   });
   report('context loss: no page errors', t.errors.length === 0, t.errors.join(' | '));
+  reportConsole('context loss: no console errors or WebGL/context warnings', t.logs);
   await t.close();
 }
 
@@ -420,6 +468,12 @@ async function checkReduced(browser, url) {
 
 async function checkEmail(browser, url) {
   const email = content.email;
+  const statuses = (page) => page.evaluate(() => [...document.querySelectorAll('[data-copy-status]')].map((s) => s.textContent).join('|'));
+  const quiet = (page) =>
+    page.evaluate(() => {
+      document.querySelectorAll('[data-copy-status]').forEach((s) => (s.textContent = ''));
+      window.getSelection().removeAllRanges();
+    });
   {
     const t = await open(browser, url, { permissions: ['clipboard-read', 'clipboard-write'] });
     const { page } = t;
@@ -440,6 +494,40 @@ async function checkEmail(browser, url) {
       const clip = await page.evaluate(() => navigator.clipboard.readText());
       report('email: pressing e anywhere copies it', /Copied/.test(status) && clip === email, `status "${status}", clipboard "${clip}"`);
     });
+    const negName = 'email: e with Ctrl, Meta or Alt, a held (repeat) e, and e typed in an input or a contenteditable do not copy';
+    await step(negName, async () => {
+      await sleep(1800);
+      await page.evaluate(() => {
+        const i = document.createElement('input');
+        i.id = '__chk-input';
+        const d = document.createElement('div');
+        d.id = '__chk-edit';
+        d.contentEditable = 'true';
+        d.textContent = 'note';
+        document.body.append(i, d);
+      });
+      const cases = [
+        ['Control+e', () => page.keyboard.press('Control+e')],
+        ['Meta+e', () => page.keyboard.press('Meta+e')],
+        ['Alt+e', () => page.keyboard.press('Alt+e')],
+        ['repeat', () => page.evaluate(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'e', repeat: true, bubbles: true })))],
+        ['input', async () => (await page.focus('#__chk-input'), page.keyboard.press('e'))],
+        ['contenteditable', async () => (await page.focus('#__chk-edit'), page.keyboard.press('e'))],
+      ];
+      const out = [];
+      for (const [name, act] of cases) {
+        await page.click('h1');
+        await page.evaluate(() => navigator.clipboard.writeText('x'));
+        await quiet(page);
+        await act();
+        await sleep(200);
+        const clip = await page.evaluate(() => navigator.clipboard.readText());
+        const status = await statuses(page);
+        out.push({ name, ok: clip === 'x' && status.replace(/\|/g, '') === '', clip, status });
+      }
+      const bad = out.filter((o) => !o.ok);
+      report(negName, bad.length === 0, bad.length ? bad.map((o) => `${o.name}: clipboard "${o.clip}", status "${o.status}"`).join('; ') : out.map((o) => o.name).join(', ') + ': clipboard kept, no status');
+    });
     await t.close();
   }
   {
@@ -449,12 +537,24 @@ async function checkEmail(browser, url) {
     };
     const t = await open(browser, url, {}, { init: deny });
     const { page } = t;
-    await step('email: a denied clipboard says "Press Ctrl+C to copy" and selects the address', async () => {
+    const keyName = 'email: a denied clipboard, from the e key, says "Press Ctrl+C to copy" and selects the address';
+    await step(keyName, async () => {
+      await page.click('h1');
+      await quiet(page);
+      await page.keyboard.press('e');
+      await sleep(150);
+      const status = await statuses(page);
+      const sel = await page.evaluate(() => String(window.getSelection()));
+      report(keyName, status.split('|').includes('Press Ctrl+C to copy') && sel === email, `status "${status}", selection "${sel}"`);
+    });
+    const btnName = 'email: a denied clipboard, from the button, says "Press Ctrl+C to copy" and selects the address';
+    await step(btnName, async () => {
+      await quiet(page);
       await page.click('.bar [data-copy-email]');
       await sleep(150);
       const status = await page.textContent('.bar [data-copy-status]');
       const sel = await page.evaluate(() => String(window.getSelection()));
-      report('email: a denied clipboard says "Press Ctrl+C to copy" and selects the address', status === 'Press Ctrl+C to copy' && sel === email, `status "${status}", selection "${sel}"`);
+      report(btnName, status === 'Press Ctrl+C to copy' && sel === email, `status "${status}", selection "${sel}"`);
     });
     await t.close();
   }
@@ -500,24 +600,56 @@ function misalignment(s, chars) {
   return Math.hypot(g.x - s.text[0], g.y - s.text[1]);
 }
 
+// Every live figure's canvases must cover its stage exactly, with a backing store at a pixel ratio the
+// figures use (1, 1.5 or 2, never above the device's), so a resize that skipped a figure shows up here.
+function canvasFit(page) {
+  return page.evaluate(() => {
+    const out = [];
+    for (const f of document.querySelectorAll('figure.fig.is-live')) {
+      const st = f.querySelector('.fig-stage');
+      const sr = st.getBoundingClientRect();
+      for (const c of st.querySelectorAll('canvas.fig-canvas')) {
+        const r = c.getBoundingClientRect();
+        const off = Math.max(Math.abs(r.left - sr.left), Math.abs(r.top - sr.top), Math.abs(r.width - sr.width), Math.abs(r.height - sr.height));
+        const ratios = [1, 1.5, 2].filter((k) => k <= devicePixelRatio + 1e-6);
+        const backingOk = ratios.some((k) => Math.abs(c.width - c.clientWidth * k) <= 2 && Math.abs(c.height - c.clientHeight * k) <= 2);
+        out.push({ id: f.dataset.figId, off, backingOk, backing: `${c.width}x${c.height} for ${c.clientWidth}x${c.clientHeight}` });
+      }
+    }
+    return out;
+  });
+}
+
 async function checkResize(browser, url) {
-  const id = 'iceblock-0';
-  const chars = content.sections[0].entries[0].fig.data.label.length;
+  const blocks = content.sections.slice(0, 3).map((sec, i) => ({ id: 'iceblock-' + i, chars: sec.entries[0].fig.data.label.length }));
   const t = await open(browser, url, { viewport: PHONE, deviceScaleFactor: 2, hasTouch: true });
   const { page } = t;
-  await step('resize 390 <-> 844 wide: ice block labels stay within 8 px of the block anchor', async () => {
-    const out = [];
+  const labels = [];
+  const fits = [];
+  const widths = [];
+  await step('resize 390 <-> 844 wide', async () => {
     for (const vp of [PHONE, { width: 844, height: 390 }, PHONE]) {
       await page.setViewportSize(vp);
       await sleep(300);
-      await scrollToFig(page, id);
-      await waitLive(page, id);
-      await sleep(1500); // the label's lag settles
-      const s = await labelState(page, id);
-      out.push({ w: vp.width, stage: s && s.w, off: misalignment(s, chars) });
+      for (const { id, chars } of blocks) {
+        await scrollToFig(page, id);
+        await waitLive(page, id);
+        await sleep(1500); // the label's lag settles
+        const s = await labelState(page, id);
+        labels.push({ at: `${vp.width} ${id}`, stage: s && s.w, off: misalignment(s, chars) });
+        for (const c of await canvasFit(page)) fits.push({ at: vp.width, ...c });
+      }
+      for (const where of [0, 0.5, 1]) {
+        await page.evaluate((k) => window.__jump((document.documentElement.scrollHeight - innerHeight) * k), where);
+        await sleep(400);
+        widths.push({ at: vp.width, where, ...(await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth }))) });
+      }
     }
-    report('resize 390 <-> 844 wide: ice block labels stay within 8 px of the block anchor', out.every((o) => o.off <= 8), out.map((o) => `${o.w} wide (stage ${o.stage}): ${o.off === Infinity ? 'misplaced' : o.off.toFixed(1) + ' px'}`).join(', '));
   });
+  report('resize 390 <-> 844 wide: every ice block label stays within 8 px of its block anchor', labels.length === 9 && labels.every((o) => o.off <= 8), labels.map((o) => `${o.at} (stage ${o.stage}): ${o.off === Infinity ? 'misplaced' : o.off.toFixed(1) + ' px'}`).join(', '));
+  const badFit = fits.filter((f) => !(f.off <= 1) || !f.backingOk);
+  report('resize 390 <-> 844 wide: every live canvas covers its stage within 1 px with a matching backing store', fits.length > 0 && badFit.length === 0, badFit.length ? badFit.slice(0, 4).map((f) => `${f.at} ${f.id}: off ${f.off.toFixed(1)} px, ${f.backing}`).join('; ') : `${fits.length} canvas samples across ${new Set(fits.map((f) => f.id)).size} figures`);
+  report('resize 390 <-> 844 wide: no horizontal scroll at 844 and after returning to 390', widths.length === 9 && widths.every((w) => w.sw <= w.iw), widths.map((w) => `${w.at}@${w.where}: ${w.sw}/${w.iw}`).join(', '));
   report('resize: no page errors', t.errors.length === 0, t.errors.join(' | '));
   await t.close();
 }
