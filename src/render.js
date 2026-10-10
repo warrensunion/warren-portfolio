@@ -55,9 +55,9 @@ function figure(fig, n, { hero = false } = {}) {
 function header(c) {
   return (
     `<header class="bar"><div class="bar-in">` +
-    `<a class="bar-name" href="#top">${esc(c.name)}</a>` +
+    `<a class="bar-name" href="#top" translate="no">${esc(c.name)}</a>` +
     `<nav class="bar-nav" aria-label="Links">${linkList(c.links, 'bar-links')}` +
-    `<button type="button" class="email-btn" data-copy-email>${esc(c.email)}</button>` +
+    `<button type="button" class="email-btn" data-copy-email translate="no">${esc(c.email)}</button>` +
     `<span class="copy-status" data-copy-status role="status" aria-live="polite"></span>` +
     `</nav></div></header>`
   );
@@ -66,7 +66,7 @@ function header(c) {
 function hero(c, next) {
   return (
     `<div class="hero" id="top"><div class="hero-text">` +
-    `<h1>${esc(c.name)}</h1>` +
+    `<h1 translate="no">${esc(c.name)}</h1>` +
     c.bio.map((p) => `<p class="lede">${p}</p>`).join('') +
     `</div><div class="hero-fig">${figure(c.hero.fig, next(), { hero: true })}</div></div>`
   );
@@ -79,7 +79,7 @@ function entry(e, next) {
     `<h3>${title}</h3>` +
     `<p class="meta"><span>${esc(e.role)}</span><span>${esc(e.dates)}</span></p>` +
     e.body.map((p) => `<p>${p}</p>`).join('') +
-    `<p class="tags">${esc(e.tags.join(', '))}</p>` +
+    `<p class="tags" translate="no">${esc(e.tags.join(', '))}</p>` +
     `</div><div class="entry-fig">${figure(e.fig, next())}</div></article>`
   );
 }
@@ -108,7 +108,7 @@ function touch(c, s, next) {
   return (
     `<div class="touch"><div class="touch-text">` +
     `<p class="lede">${c.touch.line}</p>` +
-    `<p class="touch-email"><button type="button" class="email-btn email-btn--big" data-copy-email>${esc(c.email)}</button>` +
+    `<p class="touch-email"><button type="button" class="email-btn email-btn--big" data-copy-email translate="no">${esc(c.email)}</button>` +
     `<span class="copy-status copy-status--inline" data-copy-status role="status" aria-live="polite"></span></p>` +
     `<p class="hint">${esc(c.touch.hint)}</p>` +
     linkList(c.links, 'inline-links') +

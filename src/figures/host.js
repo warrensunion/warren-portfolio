@@ -98,6 +98,10 @@ export function initFigures(root, { loaders, env } = {}) {
     if (reason !== 'context-lost') {
       setupUnderPoster(s);
       setupMorphPosters(s);
+      // A still cannot be turned: drop the drag figure's tab stop and its "drag or use arrow keys" hint,
+      // so neither the keyboard nor the caption promises something the poster cannot do.
+      if (s.fig.hasAttribute('tabindex')) s.fig.removeAttribute('tabindex');
+      s.fig.querySelector('.fig-hint')?.setAttribute('hidden', '');
     }
   }
 

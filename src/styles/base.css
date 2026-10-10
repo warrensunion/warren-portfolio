@@ -8,6 +8,7 @@
 }
 
 html {
+  -webkit-tap-highlight-color: rgba(31, 95, 120, 0.14); /* the accent, faint: a tap shows where it landed */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-padding-top: calc(var(--bar-h) + 16px);
@@ -81,6 +82,13 @@ a:hover {
 button {
   font: inherit;
   color: inherit;
+}
+
+/* No double-tap-to-zoom wait on the things people tap. */
+a,
+button,
+[tabindex] {
+  touch-action: manipulation;
 }
 
 :focus-visible {

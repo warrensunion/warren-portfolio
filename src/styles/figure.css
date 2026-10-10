@@ -21,9 +21,11 @@
 
 .fig-n {
   color: var(--ink-3);
+  white-space: nowrap; /* "Fig. 6" never breaks between its word and number */
 }
 
 .fig-t {
+  min-width: 0; /* a long title wraps inside the head instead of pushing the readout out */
   color: var(--ink);
   font-weight: 500;
 }
