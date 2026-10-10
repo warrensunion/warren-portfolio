@@ -73,7 +73,7 @@ try {
       const fig = hero.querySelector('figure');
       const desk = matchMedia('(min-width: 860px)').matches;
       const y = desk
-        ? hero.offsetTop + (hero.offsetHeight - innerHeight) / 2
+        ? hero.offsetTop + (hero.offsetHeight - innerHeight) / 2 + 24 // just past the half-way line
         : (fig.getBoundingClientRect().top + scrollY) / 2; // heroProgress 0.5 on the phone
       scrollTo({ top: Math.max(0, y), behavior: 'instant' });
     });
