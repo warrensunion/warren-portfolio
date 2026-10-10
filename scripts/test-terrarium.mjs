@@ -57,3 +57,59 @@ test('history: is under 200 kB', () => {
   const size = statSync(HISTORY).size;
   assert.ok(size < 200 * 1024, `${size} bytes`);
 });
+
+// The worker's message handling, run in Node: handle(msg, post) is what the worker's onmessage calls.
+test('worker: init then step returns a frame with pop > 0', async () => {
+  const { handle } = await import('../src/figures/terrarium/worker.js');
+  const out = [];
+  const post = (m) => out.push(m);
+  handle({ type: 'init', seed: SEED, count: 160, params: PARAMS }, post);
+  await handle({ type: 'step', n: 1 }, post);
+  const f = out.find((m) => m.type === 'frame');
+  assert.ok(f, 'a frame came back');
+  assert.equal(f.tick, 1);
+  assert.ok(f.stats.population > 0 && f.creatures.length > 0, `pop ${f.stats.population}`);
+  assert.equal(f.births.length, f.stats.population, 'the first frame carries every creature as a birth');
+  assert.ok(!out.some((m) => m.type === 'error'), JSON.stringify(out.filter((m) => m.type === 'error')));
+});
+
+test('worker: backlog divides steps', async () => {
+  const { handle } = await import('../src/figures/terrarium/worker.js');
+  const out = [];
+  const post = (m) => out.push(m);
+  handle({ type: 'init', seed: SEED, count: 160, params: PARAMS }, post);
+  // Four requests of 16 queue up before the first is served: each runs 16 / 4 steps.
+  const runs = [1, 2, 3, 4].map(() => handle({ type: 'step', n: 16 }, post));
+  await Promise.all(runs);
+  const ticks = out.filter((m) => m.type === 'frame').map((m) => m.tick);
+  assert.deepEqual(ticks, [4, 8, 12, 16]);
+  // With the backlog gone, a request runs in full again.
+  await handle({ type: 'step', n: 16 }, post);
+  assert.equal(out.filter((m) => m.type === 'frame').pop().tick, 32);
+});
+
+test('worker: reset starts the same world again from the seed', async () => {
+  const { handle } = await import('../src/figures/terrarium/worker.js');
+  const out = [];
+  const post = (m) => out.push(m);
+  handle({ type: 'init', seed: SEED, count: 160, params: PARAMS }, post);
+  await handle({ type: 'step', n: 30 }, post);
+  const a = out.pop();
+  handle({ type: 'reset' }, post);
+  await handle({ type: 'step', n: 30 }, post);
+  const b = out.pop();
+  assert.equal(b.tick, 30);
+  assert.equal(b.stats.population, a.stats.population);
+  assert.deepEqual(b.stats.species, a.stats.species);
+  // Every creature of the old world is reported dead, so the jar can drop it.
+  assert.ok(b.deaths.length >= a.stats.population, `${b.deaths.length} deaths for ${a.stats.population} alive`);
+});
+
+test('worker: a step before init is an error, not an empty jar', async () => {
+  const mod = await import('../src/figures/terrarium/worker.js?fresh');
+  const out = [];
+  await mod.handle({ type: 'step', n: 1 }, (m) => out.push(m));
+  assert.equal(out.length, 1);
+  assert.equal(out[0].type, 'error');
+  assert.equal(out[0].request, 'step');
+});
