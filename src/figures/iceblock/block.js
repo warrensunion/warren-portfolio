@@ -49,8 +49,10 @@ const INK = '#17191c';
 // Ink line opacities on paper (normal blending): edges carry the shape, the wire and the fog lines
 // stay behind it.
 const EDGE_A = 0.26;
-const WIRE_A = 0.2;
-const DOT_A = 0.3;
+// Wire and dots sit over the frozen art: below the brief's .18 floor (controller ruling, review r1),
+// and the wire also clears where it faces the camera, over the object's middle.
+const WIRE_A = 0.16;
+const DOT_A = 0.14;
 const LINE_A = 0.3;
 
 const FROST_VERT = /* glsl */ `
@@ -85,6 +87,7 @@ const FROST_FRAG = /* glsl */ `
   uniform float uAlpha;
   uniform vec3 uMilk;
   uniform vec3 uDeep;
+  uniform vec4 uWin;  // the object's window, as the ice's (WINDOW_PARS)
   varying vec3 vPos;
   varying vec3 vN;
   varying vec3 vView;
@@ -119,11 +122,15 @@ const FROST_FRAG = /* glsl */ `
       float hl = smoothstep(r * 0.35, 0.0, length(f - o - vec2(-0.35, 0.35) * r));
       milk += smoothstep(r, r * 0.8, d) * 0.18 + hl * (0.6 + 0.4 * hash3(c + 4.0));
     }
+    // Over the object the shell thins (review r1: on paper, thin art such as the bow was lost under
+    // the milk and the dark patches); the skin and the block's outline keep all of it.
+    float win = smoothstep(0.55, 1.1, length((vPos.xy - vec2(uWin.w, uWin.z)) / uWin.xy));
+    milk *= mix(0.45, 1.0, win);
     milk = clamp(milk, 0.0, 0.92);
     // Deep patches: the thick, dark blue-grey of igloo's ice, away from the frost.
     float deep = smoothstep(0.35, 0.85, fbm(p * 0.9 + 5.0)) * (1.0 - low) * 0.55;
     float facing = clamp(dot(normalize(vN), normalize(vView)), 0.0, 1.0);
-    deep *= facing;
+    deep *= facing * mix(0.3, 1.0, win);
     float a = milk + deep * (1.0 - milk);
     vec3 col = (uMilk * milk + uDeep * deep * (1.0 - milk)) / max(a, 1e-3);
     gl_FragColor = vec4(col, a * uAlpha);
@@ -197,7 +204,9 @@ const WIRE_FRAG = /* glsl */ `
   uniform float uOpacity;
   varying float vFace;
   void main() {
-    gl_FragColor = vec4(uColor, uOpacity * smoothstep(0.12, 0.55, vFace));
+    // Face-on (the middle, over the object) fades out too, so the net rings the art instead of
+    // covering it.
+    gl_FragColor = vec4(uColor, uOpacity * smoothstep(0.12, 0.4, vFace) * smoothstep(0.92, 0.6, vFace));
     #include <colorspace_fragment>
   }
 `;
@@ -339,6 +348,9 @@ export class IceBlock {
       map: objectTexture,
       color: new THREE.Color(2.5, 2.52, 2.56),
       alphaTest: 0.35,
+      // Coverage from alpha under MSAA: the bow's string and arrow are a pixel wide on a phone
+      // (low tier, dpr 1) and a hard alpha test broke them into dashes (review r1).
+      alphaToCoverage: true,
       side: THREE.DoubleSide,
     });
     const oy = shape.objectY;
@@ -364,7 +376,7 @@ export class IceBlock {
       map: objectTexture,
       color: new THREE.Color(1.15, 1.16, 1.2),
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.8, // 0.4 in the hub: on paper fog thin art (the bow) was lost behind the milk
       depthWrite: false,
       side: THREE.DoubleSide,
     });
@@ -388,6 +400,7 @@ export class IceBlock {
         uAlpha: { value: 1 },
         uMilk: { value: new THREE.Color('#eef2f8') },
         uDeep: { value: new THREE.Color('#2a2e38') },
+        uWin: { value: new THREE.Vector4(ow * 0.5, oh * 0.5, oy, shape.objectX) },
       },
       vertexShader: FROST_VERT,
       fragmentShader: FROST_FRAG,

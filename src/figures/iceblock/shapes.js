@@ -2,7 +2,7 @@
 // only the three hulls the portfolio uses (face, physique, knowledge) and the helpers they need came
 // across; hygiene's extruded notches, hair, fashion and sociability (and the multi-hull and own-mesh
 // paths only they used) are gone. The hull recipes and seeds are unchanged, so each block is the
-// same crystal it is in the hub.
+// same crystal it is in the hub; only face's objectBox is wider (2.5, not 2.1) so the thin bow has room.
 
 /**
  * The ice shapes, grown procedurally from art-src/shop/gen/ice-<area>.png.
@@ -109,7 +109,8 @@ const SHAPES = {
     for (const p of pts) p.x *= 1 + (p.y / 4) * 0.12;
     chips(r, pts, 9, 0.1);
     facets(r, pts, 26);
-    return { pts, objectBox: [2.1, 2.9], frostLow: 0.75, tilt: 0.05 };
+    // objectBox 2.1 wide in the hub; the bow (square art, thin) needs the room (review r1).
+    return { pts, objectBox: [2.5, 2.9], frostLow: 0.75, tilt: 0.05 };
   },
   // Squat block tilted ~17 deg, flat top, a clean diagonal break through it:
   // the break is a bright crack plane drawn inside (a split into two hulls
