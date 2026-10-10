@@ -579,7 +579,11 @@ const WATER_FRAG = /* glsl */ `
       vec3 tir = mix(uWaterTop, uWaterDeep, 0.35) * (1.15 + 0.5 * length(g));
       vec3 under = mix(tir, mix(uFog, uWaterTop, 0.35), window);
       under += vec3(0.08, 0.12, 0.13) * smoothstep(0.02, 0.12, length(g) - 0.06);
-      gl_FragColor = vec4(underwater(under, vWorld - vec3(0.0, 0.05, 0.0)), 1.0);
+      vec3 seen = underwater(under, vWorld - vec3(0.0, 0.05, 0.0));
+      // Added for the posters (Task 9b): the surface's far edge meets the glacier's deep face, which
+      // shows deepWater(); without this blend the two met as a hard tonal step across the frame.
+      seen = mix(seen, deepWater(normalize(vWorld - cameraPosition)), smoothstep(-20.0, -58.0, vWorld.z));
+      gl_FragColor = vec4(seen, 1.0);
       #include <colorspace_fragment>
       return;
     }

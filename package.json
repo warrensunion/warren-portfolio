@@ -10,7 +10,10 @@
     "test": "node --test scripts/test-*.mjs",
     "art": "node scripts/prepare-art.mjs",
     "posters": "node scripts/posters.mjs",
-    "check": "node scripts/check-figures.mjs"
+    "check": "node scripts/check-figures.mjs",
+    "shoot": "node scripts/shoot.mjs",
+    "perf": "node scripts/perf.mjs",
+    "lighthouse": "node scripts/lighthouse.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

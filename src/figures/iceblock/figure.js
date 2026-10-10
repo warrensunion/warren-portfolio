@@ -27,11 +27,12 @@ const ENV_TINT = '#dfe3e7';
 const SEED_INDEX = { face: 0, physique: 1, knowledge: 6 };
 // The block sits right of and below the plate's centre (world units) so its label has room top-left.
 const OFFSET = [0.85, -0.22];
-// A phone-size stage (under 480 css px, labelPx's breakpoint) frames the block closer and further right,
-// so the frozen object is not a few dozen px wide (review r2); the label keeps the top-left corner.
+// A phone-size stage (under 480 css px, labelPx's breakpoint) frames the block closer, so the frozen
+// object is not a few dozen px wide (review r2). x stays near the desktop offset: at 1.1 the widest hull
+// (the flag's) ran off the stage's right edge at 390 px (Task 9b shots). The label keeps the top-left.
 const COMPACT_W = 480;
 const COMPACT_Z = 10.5;
-const COMPACT_OFFSET = [1.1, -0.3];
+const COMPACT_OFFSET = [0.8, -0.3];
 const LABEL_DELAY = 200; // ms after the first frame: the canvas is half faded in when the label starts
 
 export async function create(el, ctx) {
