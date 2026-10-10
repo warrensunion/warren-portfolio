@@ -57,6 +57,8 @@ try {
     });
     await page.goto(server.url, { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
+    // The pointer rests in the bottom-left gutter, off every stage and link, so no hover is shot.
+    await page.mouse.move(2, vp.height - 2);
     const shot = async (name, opts = {}) => {
       const file = path.join(outDir, `${tag}-${name}.png`);
       await page.screenshot({ path: file, ...opts });

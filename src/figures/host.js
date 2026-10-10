@@ -180,10 +180,15 @@ export function initFigures(root, { loaders, env } = {}) {
   let loaded = false;
   let stirred = false;
   const STIR = ['pointermove', 'pointerdown', 'wheel', 'touchstart', 'keydown'];
+  // The build starts from an idle callback after that first input, never inside its handler, so the
+  // visitor's first click or key is answered before any scene work begins.
+  const idle = (fn, timeout) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout }) : setTimeout(fn, timeout * 0.75));
   const onStir = () => {
     for (const t of STIR) removeEventListener(t, onStir, true);
-    stirred = true;
-    settle();
+    idle(() => {
+      stirred = true;
+      settle();
+    }, 500);
   };
   for (const t of STIR) addEventListener(t, onStir, { capture: true, passive: true });
   function settle() {
@@ -200,8 +205,7 @@ export function initFigures(root, { loaders, env } = {}) {
       loaded = true;
       settle();
     };
-    if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2000 });
-    else setTimeout(go, 1500);
+    idle(go, 2000);
   };
   if (document.readyState === 'complete') whenIdle();
   else addEventListener('load', whenIdle, { once: true });

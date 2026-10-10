@@ -301,6 +301,18 @@ async function checkRaces(browser, url) {
   await t.close();
 }
 
+// Under a lasting fallback a drag figure is a still: no tab stop, and its drag hint is not shown.
+async function stillBlocks(page, name) {
+  const r = await page.evaluate(() =>
+    [...document.querySelectorAll('figure.fig[data-fig="iceblock"]')].map((f) => {
+      const hint = f.querySelector('.fig-hint');
+      return { id: f.dataset.figId, tab: f.hasAttribute('tabindex'), hint: !!hint && hint.getClientRects().length > 0 };
+    }),
+  );
+  const bad = r.filter((x) => x.tab || x.hint).map((x) => x.id + (x.tab ? ' tabindex' : '') + (x.hint ? ' hint shown' : ''));
+  report(name, r.length === 3 && bad.length === 0, `${r.length} ice block figures${bad.length ? ', bad: ' + bad.join(', ') : ', no tabindex, hints hidden'}`);
+}
+
 async function checkStatic(browser, url) {
   const t = await open(browser, url + '?static=1');
   const { page } = t;
@@ -317,6 +329,7 @@ async function checkStatic(browser, url) {
     const bad = posters.filter((p) => !p.ok).map((p) => p.src);
     report('fallback ?static=1: no canvases, every poster loaded and shown, one "fallback: forced" per WebGL figure', canv === 0 && bad.length === 0 && posters.length === 6 && sameCounts(per, KIND_COUNT), `canvases ${canv}, posters ${posters.length} (bad: ${bad.join(', ') || 'none'}), logs ${JSON.stringify(per)}`);
   });
+  await step('fallback ?static=1: ice block figures have no tab stop and no drag hint', () => stillBlocks(page, 'fallback ?static=1: ice block figures have no tab stop and no drag hint'));
   report('fallback ?static=1: no page errors', t.errors.length === 0, t.errors.join(' | '));
   await t.close();
 }
@@ -392,6 +405,7 @@ async function checkReduced(browser, url) {
     const per = fallbackLogs(t.logs, 'reduced-motion');
     report('reduced motion: no canvases or scrambled labels anywhere, one "fallback: reduced-motion" per WebGL figure', canv === 0 && labels === 0 && sameCounts(per, KIND_COUNT), `canvases ${canv}, label cells ${labels}, logs ${JSON.stringify(per)}`);
   });
+  await step('reduced motion: ice block figures have no tab stop and no drag hint', () => stillBlocks(page, 'reduced motion: ice block figures have no tab stop and no drag hint'));
   await step('reduced motion: the hero poster cross-fades to the under-water one past half the hero, and back', async () => {
     const sel = figSel('iceberg-0');
     const read = () =>

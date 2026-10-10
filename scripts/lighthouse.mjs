@@ -44,6 +44,11 @@ try {
           `TBT ${run.tbt.toFixed(0)} ms  CLS ${run.cls.toFixed(3)}  SI ${run.si.toFixed(0)} ms`,
       );
       if (run.lcpEl) console.log(`       LCP element: ${run.lcpEl.slice(0, 120)}`);
+      // Where the blocking time came from: every long task, start ms after navigation +duration, by script.
+      const long = (a['long-tasks']?.details?.items || [])
+        .map((t) => `${Math.round(t.startTime)}+${Math.round(t.duration)} ${String(t.url).split('/').pop() || 'page'}`)
+        .join(', ');
+      console.log(`       long tasks: ${long || 'none'}`);
     } finally {
       await chrome.close();
     }

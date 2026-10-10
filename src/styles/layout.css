@@ -151,6 +151,10 @@ main > *,
   border-top: 1px solid var(--hair);
   padding-top: 112px;
   padding-bottom: 32px;
+  /* Jumping to a section (the bio links, #work) lands its rule exactly under the bar's own hairline,
+     so the two read as one rule instead of two 16 px apart. base.css pads scrolling by bar + 16 px;
+     -17 px puts the 1 px rule on the bar's bottom pixel, where the bar covers it. */
+  scroll-margin-top: -17px;
 }
 
 .section h2 {

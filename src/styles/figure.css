@@ -81,6 +81,11 @@
   margin-top: 2px;
 }
 
+/* The host hides the hint under a lasting fallback; display: block above would beat the UA rule. */
+.fig-hint[hidden] {
+  display: none;
+}
+
 /* Hero plate must fit under the sticky bar inside a 900px-tall laptop viewport. */
 @media (min-width: 860px) {
   .fig[data-fig='iceberg'] .fig-stage {

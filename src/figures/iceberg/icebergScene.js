@@ -4,7 +4,8 @@
 // gone because the figure only ever shows the end state; bloom and its composer are gone (renderer.render,
 // with the sRGB conversion moved into each shader) to fit a figure's budget; and a scroll-driven depth
 // (setDepth) takes the camera under the waterline, which needed a double-sided surface and a sky that
-// knows when a ray is in the water. Constructor options { dpr, tier } choose the quality up front.
+// knows when a ray is in the water. Constructor options { dpr, tier } choose the quality up front. The
+// polygon diagram follows the hover only, not the idle pulse (see diagram()).
 /**
  * The WebGL half of the Ascent intro: an iceberg in water in front of a
  * glacier wall, in igloo.inc's world (BUILD_ICEBERG.md, measured in
@@ -1415,7 +1416,10 @@ export class IcebergScene {
     const list = [];
     for (let i = 0; i < B.length; i++) {
       const b = B[i];
-      if (M.target[i] / b.dMax < 0.15 || M.d[i] / b.dMax < 0.1) continue;
+      // Changed for the page: only blocks the cursor opens carry a vertex (hoverT, not target). The
+      // idle pulse lifts the lowest blocks past the threshold too, and on a page at rest that drew a
+      // lone numbered + on the berg's foot that read as a stray mark.
+      if (M.hoverT[i] / b.dMax < 0.15 || M.d[i] / b.dMax < 0.1) continue;
       const a = b.anchor;
       const tx = cam.x - a[0];
       const ty = cam.y - a[1];
