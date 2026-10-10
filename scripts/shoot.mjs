@@ -2,7 +2,7 @@
 // 1920x1080, 390x844), so they are taken from the built page as visitors get it, with every figure
 // in frame either live (first frame drawn) or deliberately on its poster, never mid-fade or blank.
 // Output: design/shots/<w>x<h>-<name>.png (top, hero half sunk, each section, its figure when the
-// section is taller than the screen, and the full page).
+// section is taller than the screen, each track at its first and last stage, and the full page).
 // Usage: npm run shoot [-- --no-build] [-- --only=1440x900]
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
@@ -27,9 +27,12 @@ async function settle(page, extraMs) {
       [...document.querySelectorAll('figure.fig[data-fig]')].every((f) => {
         const r = f.getBoundingClientRect();
         if (r.bottom <= 0 || r.top >= innerHeight) return true;
-        if (!(f.classList.contains('is-live') || f.dataset.fallback)) return false;
-        // A poster on screen (lazy) must have arrived, or the shot shows an empty plate.
-        return [...f.querySelectorAll('img.fig-poster')].every((i) => i.complete && i.naturalWidth > 0);
+        // The host stamps data-fig-id on every figure it manages; one without it (a track figure whose
+        // demo has not landed) is its stage stills alone, so only its images need to have arrived.
+        if (f.dataset.figId && !(f.classList.contains('is-live') || f.dataset.fallback)) return false;
+        // A poster on screen (lazy) must have arrived, or the shot shows an empty plate. Of a track's
+        // stage stills, the one on is the one shown.
+        return [...f.querySelectorAll('img.fig-poster:not(.fig-still), img.fig-still.is-on')].every((i) => i.complete && i.naturalWidth > 0);
       }),
     null,
     { timeout: 45000 },
@@ -102,6 +105,43 @@ try {
         );
         await settle(page, id === 'contact' ? 4000 : 1500);
         await shot(id + '-fig');
+      }
+    }
+
+    // Each track at its first and last stage. Desktop: the rail's top at the sticky line (stage 0) and
+    // the end of the pinned stretch (last stage). Phone: no pin, so the figure in view, then its last
+    // stage button tapped.
+    const ids = await page.evaluate(() => [...document.querySelectorAll('article.track[data-track]')].map((t) => t.id));
+    const desk = vp.width >= 860;
+    for (const id of ids) {
+      if (desk) {
+        const at = (last) =>
+          jump(
+            page,
+            ([id, last]) => {
+              const el = document.getElementById(id);
+              const rail = el.querySelector('.track-rail').getBoundingClientRect();
+              const fig = el.querySelector('figure').getBoundingClientRect();
+              const pad = Math.max(0, rail.height - fig.height);
+              scrollTo({ top: rail.top + scrollY - 96 + (last ? pad : 0), behavior: 'instant' });
+            },
+            [id, last],
+          );
+        await at(false);
+        await settle(page, 900);
+        await shot(`${id}-first`);
+        await at(true);
+        await settle(page, 900);
+        await shot(`${id}-last`);
+      } else {
+        await jump(page, (id) => document.querySelector(`#${id} figure`).scrollIntoView({ block: 'center', behavior: 'instant' }), id);
+        // The figure centred is already past the start of its phone range: tap stage 0 for the first shot.
+        await page.locator(`#${id} .fig-stages button[data-stage="0"]`).click();
+        await settle(page, 900);
+        await shot(`${id}-first`);
+        await page.locator(`#${id} .fig-stages button[data-stage]`).last().click();
+        await settle(page, 900);
+        await shot(`${id}-last`);
       }
     }
 

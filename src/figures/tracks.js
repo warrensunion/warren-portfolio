@@ -108,7 +108,22 @@ export function initTracks(root, { reduced = false } = {}) {
     });
     for (const t of tracks) io.observe(t.el);
   }
+  // Where the page must sit for track t to be at progress p, under the layout in force now.
+  function offsetFor(t, p) {
+    if (mq.matches) return t.rail.getBoundingClientRect().top + scrollY - TOP + p * pad(t);
+    const f = t.fig.getBoundingClientRect();
+    const start = 0.85 * innerHeight;
+    const end = 0.45 * innerHeight - f.height / 2;
+    return f.top + scrollY - (start - p * (start - end));
+  }
+
+  // Crossing 860 px swaps the layout under the visitor: the rails' pinned stretches appear or vanish, so
+  // the page changes height by thousands of px and the old scrollY (often clamped) lands somewhere else
+  // entirely. The change fires before this frame's rAF measures, so t.p is still the old progress: put
+  // the visitor back at that progress through the track they were inside, once, with an instant jump.
   mq.addEventListener?.('change', () => {
+    const cur = tracks.find((t) => t.fig && t.visible && t.p > 0 && t.p < 1);
+    if (cur) scrollTo({ top: Math.max(0, offsetFor(cur, cur.p)), left: scrollX, behavior: 'instant' });
     for (const t of tracks) measure(t);
   });
 

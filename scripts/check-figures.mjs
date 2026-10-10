@@ -2,19 +2,28 @@
 // stop off screen, posters and a logged reason whenever a scene is not allowed, recovery from a lost
 // context, a still page under reduced motion) and the email copy and phone layout only hold in a real
 // browser, so this drives the built page in Chromium and prints PASS/FAIL per promise. Exit code 1 on
-// any FAIL. Usage: npm run check [-- --no-build] [-- --swiftshader]
+// any FAIL. Usage: npm run check [-- --no-build] [-- --swiftshader] [-- --only=tracks,static]
 import { chromium } from 'playwright';
 import { build, GPU_ARGS, startPreview } from './lib/preview.mjs';
-import { labelGeometry } from '../src/figures/iceblock/label.js';
 import { content } from '../src/content.js';
+import { deskProgress, stageFor } from '../src/figures/track-math.js';
 
 const argv = new Set(process.argv.slice(2));
 const ARGS = argv.has('--swiftshader') ? [] : GPU_ARGS;
-const WEBGL_IDS = ['iceberg-0', 'iceblock-0', 'iceblock-1', 'iceblock-2', 'ring-0'];
-const KIND_COUNT = { iceberg: 1, iceblock: 3, ring: 1 };
-const CANVASES = { iceberg: 2, iceblock: 1, ring: 1 }; // the iceberg's WebGL scene plus its 2D overlay
+// --only=tracks,budget runs just those checks (names in `checks` at the bottom).
+const only = ([...argv].find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
+// The live WebGL figures on the page today. Each later plan appends its track figure's id here (and its
+// kind to KIND_COUNT and CANVASES) as its demo lands.
+const WEBGL_IDS = ['iceberg-0', 'ring-0'];
+const KIND_COUNT = { iceberg: 1, ring: 1 }; // WebGL figures per kind: one fallback log each
+const CANVASES = { iceberg: 2, ring: 1 }; // the iceberg's WebGL scene plus its 2D overlay
+// Kinds that hold a WebGL context once live (env.js WEIGHTS > 0), whether their demo has landed or not.
+const WEBGL_KINDS = ['iceberg', 'ring', 'terrarium', 'howpolluted', 'archer'];
 const DESK = { width: 1440, height: 900 };
+const WIDE = { width: 1920, height: 1080 };
 const PHONE = { width: 390, height: 844 };
+const PHONE_OPTS = { viewport: PHONE, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
+const STICKY_TOP = 96; // layout.css: the track text and figure stick here
 
 let fails = 0;
 let passes = 0;
@@ -129,12 +138,14 @@ function pixelSpread(page, id) {
 
 // Per WebGL figure: how many canvases it holds right now.
 const canvasCounts = (page) =>
-  page.evaluate(() =>
-    Object.fromEntries(
-      [...document.querySelectorAll('figure.fig[data-fig-id]')]
-        .filter((f) => ['iceberg', 'iceblock', 'ring'].includes(f.dataset.fig))
-        .map((f) => [f.dataset.figId, f.querySelectorAll('canvas').length]),
-    ),
+  page.evaluate(
+    (kinds) =>
+      Object.fromEntries(
+        [...document.querySelectorAll('figure.fig[data-fig-id]')]
+          .filter((f) => kinds.includes(f.dataset.fig))
+          .map((f) => [f.dataset.figId, f.querySelectorAll('canvas').length]),
+      ),
+    WEBGL_KINDS,
   );
 const liveCount = (counts) => Object.values(counts).filter((n) => n > 0).length;
 // WebGL contexts the page holds right now (made and not lost), and the most it ever held at once.
@@ -189,20 +200,8 @@ async function checkLive(browser, url) {
     report('live: contests-0 draws its SVG chart', true);
   });
 
-  // The static markup has no tab stop on a drag figure; the host adds one once its scene has been live.
-  await step('live: every ice block that went live is a tab stop with its drag hint shown', async () => {
-    const r = await page.evaluate(() =>
-      [...document.querySelectorAll('figure.fig[data-fig="iceblock"]')].map((f) => {
-        const hint = f.querySelector('.fig-hint');
-        return { id: f.dataset.figId, tab: f.getAttribute('tabindex'), hint: !!hint && hint.getClientRects().length > 0 };
-      }),
-    );
-    const bad = r.filter((x) => x.tab !== '0' || !x.hint);
-    report('live: every ice block that went live is a tab stop with its drag hint shown', r.length === 3 && bad.length === 0, r.map((x) => `${x.id} tabindex ${x.tab}, hint ${x.hint ? 'shown' : 'hidden'}`).join(', '));
-  });
-
   await step('off-screen: a figure just below the viewport stops counting frames for 1 s', async () => {
-    const id = 'iceblock-1';
+    const id = 'ring-0'; // the hero sits at the page top, so it can never be below the viewport
     await scrollToFig(page, id);
     await waitLive(page, id);
     await page.evaluate((sel) => {
@@ -226,16 +225,23 @@ async function checkLive(browser, url) {
 async function checkBudget(browser, url) {
   const t = await open(browser, url);
   const { page } = t;
-  await step('budget: at most 3 live WebGL figures and 3 WebGL contexts at every 200 px step, top to bottom and back', async () => {
+  const name = 'budget: at most 3 live WebGL figures, 3 WebGL contexts and a host weight of 3 at every 200 px step, top to bottom and back';
+  await step(name, async () => {
     let worst = 0;
     let where = 0;
     let worstGl = 0;
     let whereGl = 0;
+    let worstW = 0;
+    let whereW = 0;
+    let badW = null;
     const each = async (y) => {
       const n = liveCount(await canvasCounts(page));
       if (n > worst) [worst, where] = [n, y];
       const g = await gl(page);
       if (g.alive > worstGl) [worstGl, whereGl] = [g.alive, y];
+      const w = await page.evaluate(() => (typeof window.__figWeight === 'function' ? window.__figWeight() : NaN));
+      if (!Number.isFinite(w)) badW = badW ?? `__figWeight() gave ${w} at ${y}`;
+      else if (w > worstW) [worstW, whereW] = [w, y];
     };
     await scrollThrough(page, 200, 150, each);
     await sleep(1500);
@@ -248,7 +254,7 @@ async function checkBudget(browser, url) {
       await each(y);
     }
     const { peak } = await gl(page);
-    report('budget: at most 3 live WebGL figures and 3 WebGL contexts at every 200 px step, top to bottom and back', worst <= 3 && worstGl <= 3 && peak <= 3, `figures max ${worst} at ${where}; contexts max ${worstGl} at ${whereGl}, peak at any creation ${peak}`);
+    report(name, worst <= 3 && worstGl <= 3 && peak <= 3 && worstW <= 3 && !badW, `figures max ${worst} at ${where}; contexts max ${worstGl} at ${whereGl}, peak at any creation ${peak}; weight max ${worstW} at ${whereW}${badW ? '; ' + badW : ''}`);
   });
   report('budget: no page errors while scrolling', t.errors.length === 0, t.errors.join(' | '));
   const bad = t.logs.filter((l) => /fallback: error/.test(l.text));
@@ -305,7 +311,6 @@ async function checkRaces(browser, url) {
       await page.evaluate((y) => window.__jump(y), Math.round(y));
       await sleep(25);
     }
-    await settle('the middle ice block', 'iceblock-1');
     await settle('the hero', 'iceberg-0');
   });
   report('races: no page errors and no failed figures', t.errors.length === 0 && !t.logs.some((l) => /fallback: error/.test(l.text)), t.errors.join(' | '));
@@ -313,34 +318,36 @@ async function checkRaces(browser, url) {
   await t.close();
 }
 
-// Under a lasting fallback a drag figure is a still: no tab stop, and its drag hint is not shown.
-async function stillBlocks(page, name) {
-  const r = await page.evaluate(() =>
-    [...document.querySelectorAll('figure.fig[data-fig="iceblock"]')].map((f) => {
-      const hint = f.querySelector('.fig-hint');
-      return { id: f.dataset.figId, tab: f.hasAttribute('tabindex'), hint: !!hint && hint.getClientRects().length > 0 };
-    }),
-  );
-  const bad = r.filter((x) => x.tab || x.hint).map((x) => x.id + (x.tab ? ' tabindex' : '') + (x.hint ? ' hint shown' : ''));
-  report(name, r.length === 3 && bad.length === 0, `${r.length} ice block figures${bad.length ? ', bad: ' + bad.join(', ') : ', no tabindex, hints hidden'}`);
-}
-
-// Without JavaScript the page is the static markup: no drag figure is a tab stop and no drag hint shows.
+// Without JavaScript the page is the static markup and reads like a document: every track lays all its
+// stage stills out in flow, one under the other, with nothing to walk them (no stage buttons), and every
+// other figure keeps its poster.
 async function checkNoJS(browser, url) {
   const context = await browser.newContext({ viewport: DESK, deviceScaleFactor: 1, javaScriptEnabled: false });
   try {
     const page = await context.newPage();
     await page.goto(url, { waitUntil: 'load' });
-    const name = 'no JavaScript: ice block figures have no tab stop and no drag hint, every figure keeps its poster';
+    const name = 'no JavaScript: every track shows all its stage stills in flow with the stage buttons hidden, every figure keeps its poster';
     await step(name, async () => {
       // Locators, not $$eval: they run in Playwright's own world, so they work with page JS off.
-      const blocks = [];
-      for (const f of await page.locator('figure.fig[data-fig="iceblock"]').all()) {
-        blocks.push({ tab: (await f.getAttribute('tabindex')) !== null, hint: await f.locator('.fig-hint').isVisible() });
+      const out = [];
+      const tracks = await page.locator('article.track[data-track]').all();
+      for (const t of tracks) {
+        const id = await t.getAttribute('id');
+        const n = Number(/--stages:\s*(\d+)/.exec((await t.getAttribute('style')) || '')?.[1]);
+        const stills = await t.locator('.fig-still[data-stage]').all();
+        const boxes = [];
+        for (const s of stills) {
+          // Boxes are viewport-relative even off screen, so the page stays put and they compare.
+          boxes.push({ box: await s.boundingBox(), opacity: await s.evaluate((e) => getComputedStyle(e).opacity) });
+        }
+        // In flow: each still has a size, is opaque, and starts below the one before it.
+        const flowed = boxes.every((b, i) => b.box && b.box.height > 20 && b.opacity === '1' && (i === 0 || b.box.y >= boxes[i - 1].box.y + boxes[i - 1].box.height - 1));
+        const buttons = await t.locator('.fig-stages').isVisible();
+        out.push({ id, ok: stills.length === n && n > 0 && flowed && !buttons, why: `${stills.length}/${n} stills${flowed ? '' : ', not in flow'}${buttons ? ', stage buttons shown' : ''}` });
       }
-      const posters = await page.locator('img.fig-poster').count();
-      const bad = blocks.filter((b) => b.tab || b.hint).length;
-      report(name, blocks.length === 3 && bad === 0 && posters >= 6, `${blocks.length} ice blocks, ${bad} with a tab stop or a shown hint, ${posters} posters`);
+      const posters = await page.locator('img.fig-poster:not(.fig-still)').count();
+      const bad = out.filter((o) => !o.ok);
+      report(name, tracks.length === 5 && bad.length === 0 && posters >= 3, `${tracks.length} tracks${bad.length ? ', bad: ' + bad.map((o) => `${o.id} ${o.why}`).join('; ') : ', every still in flow'}; ${posters} other posters`);
     });
   } finally {
     await context.close();
@@ -350,20 +357,25 @@ async function checkNoJS(browser, url) {
 async function checkStatic(browser, url) {
   const t = await open(browser, url + '?static=1');
   const { page } = t;
-  await step('fallback ?static=1: no canvases, every poster loaded and shown, one "fallback: forced" per WebGL figure', async () => {
+  // The shown poster of every figure: its single poster, or a track's current stage still (the others
+  // sit under it at opacity 0 until their stage comes up; checkTracks walks them).
+  const SHOWN = 'img.fig-poster:not(.fig-poster--morph):not(.fig-poster--under):not(.fig-still), img.fig-still.is-on';
+  const name = 'fallback ?static=1: no canvases, every poster and current stage still loaded and shown, one "fallback: forced" per WebGL figure';
+  await step(name, async () => {
     let canv = 0;
     await scrollThrough(page, 500, 120, async () => {
       canv = Math.max(canv, await page.evaluate(() => document.querySelectorAll('figure.fig canvas').length));
     });
-    await page.waitForFunction(() => [...document.querySelectorAll('img.fig-poster:not(.fig-poster--morph):not(.fig-poster--under)')].every((i) => i.complete), null, { timeout: 15000 });
-    const posters = await page.evaluate(() =>
-      [...document.querySelectorAll('img.fig-poster:not(.fig-poster--morph):not(.fig-poster--under)')].map((i) => ({ src: i.getAttribute('src'), ok: i.naturalWidth > 0 && getComputedStyle(i).opacity === '1' && i.getBoundingClientRect().height > 0 })),
+    await page.waitForFunction((sel) => [...document.querySelectorAll(sel)].every((i) => i.complete), SHOWN, { timeout: 15000 });
+    await sleep(600); // a stage still that just came on is past its 400 ms fade
+    const posters = await page.evaluate(
+      (sel) => [...document.querySelectorAll(sel)].map((i) => ({ src: i.getAttribute('src'), ok: i.naturalWidth > 0 && getComputedStyle(i).opacity === '1' && i.getBoundingClientRect().height > 0 })),
+      SHOWN,
     );
     const per = fallbackLogs(t.logs, 'forced');
     const bad = posters.filter((p) => !p.ok).map((p) => p.src);
-    report('fallback ?static=1: no canvases, every poster loaded and shown, one "fallback: forced" per WebGL figure', canv === 0 && bad.length === 0 && posters.length === 6 && sameCounts(per, KIND_COUNT), `canvases ${canv}, posters ${posters.length} (bad: ${bad.join(', ') || 'none'}), logs ${JSON.stringify(per)}`);
+    report(name, canv === 0 && bad.length === 0 && posters.length === 8 && sameCounts(per, KIND_COUNT), `canvases ${canv}, posters ${posters.length} (bad: ${bad.join(', ') || 'none'}), logs ${JSON.stringify(per)}`);
   });
-  await step('fallback ?static=1: ice block figures have no tab stop and no drag hint', () => stillBlocks(page, 'fallback ?static=1: ice block figures have no tab stop and no drag hint'));
   report('fallback ?static=1: no page errors', t.errors.length === 0, t.errors.join(' | '));
   await t.close();
 }
@@ -428,18 +440,17 @@ async function checkContextLoss(browser, url) {
 async function checkReduced(browser, url) {
   const t = await open(browser, url, { reducedMotion: 'reduce' });
   const { page } = t;
-  await step('reduced motion: no canvases or scrambled labels anywhere, one "fallback: reduced-motion" per WebGL figure', async () => {
+  await step('reduced motion: no canvases or iframes anywhere, one "fallback: reduced-motion" per WebGL figure', async () => {
     let canv = 0;
-    let labels = 0;
+    let frames = 0;
     await scrollThrough(page, 300, 120, async () => {
-      const r = await page.evaluate(() => ({ c: document.querySelectorAll('figure.fig canvas').length, l: document.querySelectorAll('.ib-label, .ib-label i').length }));
+      const r = await page.evaluate(() => ({ c: document.querySelectorAll('figure.fig canvas').length, f: document.querySelectorAll('figure.fig iframe').length }));
       canv = Math.max(canv, r.c);
-      labels = Math.max(labels, r.l);
+      frames = Math.max(frames, r.f);
     });
     const per = fallbackLogs(t.logs, 'reduced-motion');
-    report('reduced motion: no canvases or scrambled labels anywhere, one "fallback: reduced-motion" per WebGL figure', canv === 0 && labels === 0 && sameCounts(per, KIND_COUNT), `canvases ${canv}, label cells ${labels}, logs ${JSON.stringify(per)}`);
+    report('reduced motion: no canvases or iframes anywhere, one "fallback: reduced-motion" per WebGL figure', canv === 0 && frames === 0 && sameCounts(per, KIND_COUNT), `canvases ${canv}, iframes ${frames}, logs ${JSON.stringify(per)}`);
   });
-  await step('reduced motion: ice block figures have no tab stop and no drag hint', () => stillBlocks(page, 'reduced motion: ice block figures have no tab stop and no drag hint'));
   await step('reduced motion: the hero poster cross-fades to the under-water one past half the hero, and back', async () => {
     const sel = figSel('iceberg-0');
     const read = () =>
@@ -474,12 +485,15 @@ async function checkReduced(browser, url) {
   await step('reduced motion: the ring cross-fades to each project still on link hover/focus, and back', async () => {
     const sel = figSel('ring-0');
     await scrollToFig(page, 'ring-0');
-    await page.waitForFunction((sel) => [...document.querySelectorAll(sel + ' .fig-poster--morph')].every((i) => i.complete && i.naturalWidth > 0) && document.querySelectorAll(sel + ' .fig-poster--morph').length === 3, sel, { timeout: 10000 });
+    // One still per project link in the contact copy.
+    const n = await page.evaluate(() => document.querySelectorAll('[data-morph]').length);
+    const vec = (on) => Array.from({ length: n }, (_, k) => (k === on ? 1 : 0)).join(',');
+    await page.waitForFunction(([sel, n]) => [...document.querySelectorAll(sel + ' .fig-poster--morph')].every((i) => i.complete && i.naturalWidth > 0) && document.querySelectorAll(sel + ' .fig-poster--morph').length === n, [sel, n], { timeout: 10000 });
     const op = () => page.evaluate((sel) => [...document.querySelectorAll(sel + ' .fig-poster--morph')].map((i) => getComputedStyle(i).opacity).join(','), sel);
     const dur = await page.evaluate((sel) => getComputedStyle(document.querySelector(sel + ' .fig-poster--morph')).transitionDuration, sel);
     const out = [];
     const rest = await op();
-    for (const i of [0, 1, 2]) {
+    for (let i = 0; i < n; i++) {
       await page.hover(`[data-morph="${i}"]`);
       await sleep(700);
       out.push(`hover ${i}: ${await op()}`);
@@ -490,7 +504,7 @@ async function checkReduced(browser, url) {
     await page.focus('[data-morph="1"]');
     await sleep(700);
     const focus1 = await op();
-    await page.hover('[data-morph="2"]'); // hover wins over focus
+    await page.hover(`[data-morph="${n - 1}"]`); // hover wins over focus
     await sleep(700);
     const both = await op();
     await page.mouse.move(5, 5); // leaving shows the focused link's still again
@@ -500,15 +514,16 @@ async function checkReduced(browser, url) {
     await sleep(700);
     const blurred = await op();
     const ok =
-      rest === '0,0,0' &&
-      out.join('|') === 'hover 0: 1,0,0|hover 1: 0,1,0|hover 2: 0,0,1' &&
-      left === '0,0,0' &&
-      focus1 === '0,1,0' &&
-      both === '0,0,1' &&
-      backToFocus === '0,1,0' &&
-      blurred === '0,0,0' &&
+      n >= 3 &&
+      rest === vec(-1) &&
+      out.join('|') === Array.from({ length: n }, (_, i) => `hover ${i}: ${vec(i)}`).join('|') &&
+      left === vec(-1) &&
+      focus1 === vec(1) &&
+      both === vec(n - 1) &&
+      backToFocus === vec(1) &&
+      blurred === vec(-1) &&
       dur === '0.4s';
-    report('reduced motion: the ring cross-fades to each project still on link hover/focus, and back', ok, `rest ${rest}; ${out.join('; ')}; left ${left}; focus 1 ${focus1}; hover 2 + focus 1 ${both}; leave ${backToFocus}; blur ${blurred}; ${dur}`);
+    report('reduced motion: the ring cross-fades to each project still on link hover/focus, and back', ok, `rest ${rest}; ${out.join('; ')}; left ${left}; focus 1 ${focus1}; hover ${n - 1} + focus 1 ${both}; leave ${backToFocus}; blur ${blurred}; ${dur}`);
   });
   report('reduced motion: no page errors', t.errors.length === 0, t.errors.join(' | '));
   await t.close();
@@ -637,7 +652,7 @@ async function checkPhoneDenied(browser, url) {
 }
 
 async function checkPhone(browser, url) {
-  const t = await open(browser, url, { viewport: PHONE, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const t = await open(browser, url, PHONE_OPTS);
   const { page } = t;
   await step('390x844: no horizontal scroll at top, middle and bottom', async () => {
     const out = [];
@@ -653,27 +668,6 @@ async function checkPhone(browser, url) {
   });
   report('390x844: no page errors', t.errors.length === 0, t.errors.join(' | '));
   await t.close();
-}
-
-// The label is laid out from the block's live anchor (the leader's last point). Recomputing the layout
-// from that anchor and the stage's current width must land on the label's actual position.
-async function labelState(page, id) {
-  return page.evaluate((sel) => {
-    const st = document.querySelector(sel + ' .fig-stage');
-    const ln = st.querySelector('.ib-ln');
-    const lab = st.querySelector('.ib-label');
-    if (!ln || !lab) return null;
-    const pts = ln.getAttribute('points').split(' ').map((p) => p.split(',').map(Number));
-    const m = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(lab.style.transform);
-    return { w: st.clientWidth, h: st.clientHeight, anchor: pts[2], text: m ? [Number(m[1]), Number(m[2])] : null, px: parseFloat(lab.style.fontSize) };
-  }, figSel(id));
-}
-function misalignment(s, chars) {
-  if (!s || !s.text) return Infinity;
-  const g = labelGeometry({ anchor: { x: s.anchor[0], y: s.anchor[1] }, w: s.w, chars });
-  const inside = s.anchor[0] >= 0 && s.anchor[0] <= s.w && s.anchor[1] >= 0 && s.anchor[1] <= s.h;
-  if (!inside || g.px !== s.px) return Infinity;
-  return Math.hypot(g.x - s.text[0], g.y - s.text[1]);
 }
 
 // Every live figure's canvases must cover its stage exactly, with a backing store at a pixel ratio the
@@ -697,22 +691,18 @@ function canvasFit(page) {
 }
 
 async function checkResize(browser, url) {
-  const blocks = content.sections.slice(0, 3).map((sec, i) => ({ id: 'iceblock-' + i, chars: sec.entries[0].fig.data.label.length }));
   const t = await open(browser, url, { viewport: PHONE, deviceScaleFactor: 2, hasTouch: true });
   const { page } = t;
-  const labels = [];
   const fits = [];
   const widths = [];
   await step('resize 390 <-> 844 wide', async () => {
     for (const vp of [PHONE, { width: 844, height: 390 }, PHONE]) {
       await page.setViewportSize(vp);
       await sleep(300);
-      for (const { id, chars } of blocks) {
+      for (const id of WEBGL_IDS) {
         await scrollToFig(page, id);
         await waitLive(page, id);
-        await sleep(1500); // the label's lag settles
-        const s = await labelState(page, id);
-        labels.push({ at: `${vp.width} ${id}`, stage: s && s.w, off: misalignment(s, chars) });
+        await sleep(600);
         for (const c of await canvasFit(page)) fits.push({ at: vp.width, ...c });
       }
       for (const where of [0, 0.5, 1]) {
@@ -722,12 +712,313 @@ async function checkResize(browser, url) {
       }
     }
   });
-  report('resize 390 <-> 844 wide: every ice block label stays within 8 px of its block anchor', labels.length === 9 && labels.every((o) => o.off <= 8), labels.map((o) => `${o.at} (stage ${o.stage}): ${o.off === Infinity ? 'misplaced' : o.off.toFixed(1) + ' px'}`).join(', '));
   const badFit = fits.filter((f) => !(f.off <= 1) || !f.backingOk);
   report('resize 390 <-> 844 wide: every live canvas covers its stage within 1 px with a matching backing store', fits.length > 0 && badFit.length === 0, badFit.length ? badFit.slice(0, 4).map((f) => `${f.at} ${f.id}: off ${f.off.toFixed(1)} px, ${f.backing}`).join('; ') : `${fits.length} canvas samples across ${new Set(fits.map((f) => f.id)).size} figures`);
   report('resize 390 <-> 844 wide: no horizontal scroll at 844 and after returning to 390', widths.length === 9 && widths.every((w) => w.sw <= w.iw), widths.map((w) => `${w.at}@${w.where}: ${w.sw}/${w.iw}`).join(', '));
   report('resize: no page errors', t.errors.length === 0, t.errors.join(' | '));
   await t.close();
+}
+
+/* ── tracks (spec 3 and 9) ── */
+
+// In-page helpers, installed per page. Every track's geometry is read fresh from rects, and the stage
+// offset is the same formula tracks.js scrolls a stage button to (railDocTop - 96 + pad * i / (n - 1)).
+function trackHelpers(top) {
+  const q = (id) => {
+    const el = document.getElementById(id);
+    const rail = el.querySelector('.track-rail');
+    const fig = rail.querySelector('figure');
+    const n = el.querySelectorAll('.fig-stages button[data-stage]').length;
+    const rr = rail.getBoundingClientRect();
+    const pad = Math.max(0, rr.height - fig.getBoundingClientRect().height);
+    return { el, rail, fig, n, pad, railTop: rr.top, railDocTop: rr.top + scrollY };
+  };
+  window.__track = q;
+  window.__trackIds = () => [...document.querySelectorAll('article.track[data-track]')].map((t) => t.id);
+  window.__stageY = (id, i) => {
+    const t = q(id);
+    return t.railDocTop - top + (t.n > 1 ? (t.pad * i) / (t.n - 1) : 0);
+  };
+  window.__stillState = (id) => {
+    const el = document.getElementById(id);
+    const on = [...el.querySelectorAll('.fig-still.is-on')].map((s) => Number(s.dataset.stage));
+    return { stage: el.dataset.stage, on };
+  };
+}
+
+const twoFrames = (page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+
+// Desktop: walk one track in 40 px steps from a viewport above its rail to a viewport below it, all in
+// one evaluate (an instant scrollTo then a rect read is a fresh layout, sticky offsets included). Three
+// phases by where the track's content box is: before the text reaches 96 it sits at the content top;
+// while pinned it is at 96; once its bottom meets the content bottom it rides that bottom out. And it
+// never overlaps the next track's text.
+function walkTrack(page, id) {
+  return page.evaluate(
+    ([id, top]) => {
+      const { el, rail, fig } = window.__track(id);
+      const text = el.querySelector('.track-text');
+      const all = [...document.querySelectorAll('article.track[data-track]')];
+      const next = all[all.indexOf(el) + 1]?.querySelector('.track-text') || null;
+      const cs = getComputedStyle(el);
+      const pt = parseFloat(cs.paddingTop);
+      const pb = parseFloat(cs.paddingBottom);
+      const r0 = rail.getBoundingClientRect();
+      const from = Math.max(0, scrollY + r0.top - innerHeight);
+      const to = scrollY + r0.bottom + innerHeight;
+      const n = { before: 0, pinned: 0, after: 0, samples: 0 };
+      const bad = [];
+      let lastY = -1;
+      for (let y = from; y <= to; y += 40) {
+        window.__jump(y);
+        if (scrollY === lastY) continue; // clamped at the page end
+        lastY = scrollY;
+        n.samples++;
+        const t = el.getBoundingClientRect();
+        const tx = text.getBoundingClientRect();
+        const f = fig.getBoundingClientRect();
+        const cTop = t.top + pt;
+        const cBottom = t.bottom - pb;
+        const figOn = f.bottom > 0 && f.top < innerHeight;
+        if (cTop > top + 1) {
+          n.before++;
+          if (Math.abs(tx.top - cTop) > 1) bad.push(`y ${y}: before pin, text top ${tx.top.toFixed(1)} vs content top ${cTop.toFixed(1)}`);
+        } else if (tx.bottom < cBottom - 1) {
+          if (figOn) {
+            n.pinned++;
+            if (Math.abs(tx.top - top) > 1) bad.push(`y ${y}: pinned, text top ${tx.top.toFixed(1)}`);
+          }
+        } else {
+          n.after++;
+          if (Math.abs(tx.bottom - cBottom) > 1) bad.push(`y ${y}: released, text bottom ${tx.bottom.toFixed(1)} vs content bottom ${cBottom.toFixed(1)}`);
+        }
+        if (next && next.getBoundingClientRect().top < tx.bottom - 0.5) bad.push(`y ${y}: overlaps the next track's text by ${(tx.bottom - next.getBoundingClientRect().top).toFixed(1)} px`);
+      }
+      return { n, bad };
+    },
+    [id, STICKY_TOP],
+  );
+}
+
+const noSideways = (page) =>
+  page.evaluate(async () => {
+    const out = [];
+    for (const k of [0, 0.5, 1]) {
+      window.__jump((document.documentElement.scrollHeight - innerHeight) * k);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      out.push({ k, sw: document.documentElement.scrollWidth, iw: innerWidth });
+    }
+    return out;
+  });
+
+// Jump to each stage's offset in each track and read the stills back: exactly one on, the stage's own.
+async function walkStages(page, ids) {
+  const bad = [];
+  let count = 0;
+  for (const id of ids) {
+    const n = await page.evaluate((id) => window.__track(id).n, id);
+    for (let i = 0; i < n; i++) {
+      await page.evaluate(([id, i]) => window.__jump(window.__stageY(id, i)), [id, i]);
+      // Its rAF loop runs while the track is on screen; the observer may need a frame to say so.
+      await page.waitForFunction(([id, i]) => document.getElementById(id).dataset.stage === String(i), [id, i], { timeout: 1500 }).catch(() => {});
+      const s = await page.evaluate((id) => window.__stillState(id), id);
+      count++;
+      if (!(s.stage === String(i) && s.on.length === 1 && s.on[0] === i)) bad.push(`${id} stage ${i}: data-stage ${s.stage}, on [${s.on}]`);
+    }
+  }
+  return { bad, count };
+}
+
+async function checkTracks(browser, url) {
+  for (const [label, opts] of [
+    ['1440x900', { viewport: DESK }],
+    ['1920x1080', { viewport: WIDE }],
+    ['390x844', PHONE_OPTS],
+  ]) {
+    const desk = opts.viewport.width >= 860;
+    const t = await open(browser, url, opts);
+    const { page } = t;
+    await page.evaluate(trackHelpers, STICKY_TOP);
+    const ids = await page.evaluate(() => window.__trackIds());
+    if (desk) {
+      for (const id of ids) {
+        const name = `tracks ${label}: ${id} text sticks at 96 while its figure is pinned, releases with the content bottom, never overlaps the next`;
+        await step(name, async () => {
+          const r = await walkTrack(page, id);
+          report(name, r.bad.length === 0 && r.n.pinned > 0 && r.n.after > 0, r.bad.length ? r.bad.slice(0, 3).join('; ') + (r.bad.length > 3 ? ` (+${r.bad.length - 3} more)` : '') : `${r.n.samples} samples: ${r.n.before} before, ${r.n.pinned} pinned, ${r.n.after} released`);
+        });
+      }
+      const plate = `tracks ${label}: every pinned track figure (plate) fits on screen at its first, middle and last stage`;
+      await step(plate, async () => {
+        const out = [];
+        for (const id of ids) {
+          const n = await page.evaluate((id) => window.__track(id).n, id);
+          for (const i of [...new Set([0, Math.floor((n - 1) / 2), n - 1])]) {
+            await page.evaluate(([id, i]) => window.__jump(window.__stageY(id, i)), [id, i]);
+            const r = await page.evaluate((id) => {
+              const f = window.__track(id).fig.getBoundingClientRect();
+              return { top: f.top, bottom: f.bottom, vh: innerHeight };
+            }, id);
+            out.push({ at: `${id}@${i}`, ...r, ok: Math.abs(r.top - STICKY_TOP) <= 1 && r.bottom <= r.vh });
+          }
+        }
+        const bad = out.filter((o) => !o.ok);
+        report(plate, bad.length === 0, bad.length ? bad.map((o) => `${o.at}: ${o.top.toFixed(0)}..${o.bottom.toFixed(0)} of ${o.vh}`).join('; ') : out.map((o) => `${o.at} bottom ${o.bottom.toFixed(0)}`).join(', '));
+      });
+    } else {
+      const name = `tracks ${label}: every track text is static with its figure below it`;
+      await step(name, async () => {
+        const r = await page.evaluate((ids) =>
+          ids.map((id) => {
+            const { el, fig } = window.__track(id);
+            const tx = el.querySelector('.track-text');
+            return { id, pos: getComputedStyle(tx).position, below: fig.getBoundingClientRect().top >= tx.getBoundingClientRect().bottom };
+          }),
+        ids);
+        const bad = r.filter((o) => o.pos !== 'static' || !o.below);
+        report(name, r.length === 5 && bad.length === 0, bad.length ? bad.map((o) => `${o.id}: ${o.pos}, figure ${o.below ? 'below' : 'not below'}`).join('; ') : `${r.length} tracks`);
+      });
+    }
+    const side = `tracks ${label}: no horizontal scroll at top, middle and bottom`;
+    await step(side, async () => {
+      const w = await noSideways(page);
+      report(side, w.every((o) => o.sw <= o.iw), w.map((o) => `${o.k}: ${o.sw}/${o.iw}`).join(', '));
+    });
+    report(`tracks ${label}: no page errors`, t.errors.length === 0, t.errors.join(' | '));
+    await t.close();
+
+    if (!desk) continue;
+    // ?static=1: no live scene anywhere, the stills alone walk the stages.
+    {
+      const s = await open(browser, url + '?static=1', opts);
+      await s.page.evaluate(trackHelpers, STICKY_TOP);
+      const name = `tracks ${label} ?static=1: at each stage's scroll offset exactly one still is on, that stage's`;
+      await step(name, async () => {
+        const r = await walkStages(s.page, ids);
+        report(name, r.bad.length === 0 && r.count > 0, r.bad.slice(0, 4).join('; ') || `${r.count} stages across ${ids.length} tracks`);
+      });
+      report(`tracks ${label} ?static=1: no page errors`, s.errors.length === 0, s.errors.join(' | '));
+      await s.close();
+    }
+  }
+
+  // Reduced motion: the stills follow scroll just the same, and a stage button jumps there at once.
+  {
+    const t = await open(browser, url, { reducedMotion: 'reduce' });
+    const { page } = t;
+    await page.evaluate(trackHelpers, STICKY_TOP);
+    const ids = await page.evaluate(() => window.__trackIds());
+    const name = 'tracks reduced motion: at each stage\'s scroll offset exactly one still is on, that stage\'s';
+    await step(name, async () => {
+      const r = await walkStages(page, ids);
+      report(name, r.bad.length === 0 && r.count > 0, r.bad.slice(0, 4).join('; ') || `${r.count} stages across ${ids.length} tracks`);
+    });
+    const click = 'tracks reduced motion: a stage button sets that stage within 2 frames, by an instant (not smooth) jump';
+    await step(click, async () => {
+      const out = [];
+      for (const id of ids) {
+        const n = await page.evaluate((id) => window.__track(id).n, id);
+        for (const i of [n - 1, Math.floor(n / 2)]) {
+          await page.evaluate((id) => window.__jump(window.__stageY(id, 0)), id);
+          await twoFrames(page);
+          const y0 = await page.evaluate(() => scrollY);
+          await page.locator(`#${id} .fig-stages button[data-stage="${i}"]`).click();
+          const y1 = await page.evaluate(() => scrollY);
+          await sleep(50);
+          const y2 = await page.evaluate(() => scrollY);
+          await twoFrames(page);
+          const s = await page.evaluate((id) => window.__stillState(id), id);
+          const ok = y1 !== y0 && y1 === y2 && s.stage === String(i) && s.on.length === 1 && s.on[0] === i;
+          out.push({ at: `${id} -> ${i}`, ok, why: `scrollY ${y0} -> ${y1} -> ${y2}, data-stage ${s.stage}, on [${s.on}]` });
+        }
+      }
+      const bad = out.filter((o) => !o.ok);
+      report(click, bad.length === 0, bad.length ? bad.map((o) => `${o.at}: ${o.why}`).join('; ') : `${out.length} clicks`);
+    });
+    report('tracks reduced motion: no page errors', t.errors.length === 0, t.errors.join(' | '));
+    await t.close();
+  }
+
+  // Loading deep inside a track: the stage matches where the page is on the first read after load and
+  // again once the browser's own scroll to the fragment (or the restored position) has landed. Chrome
+  // runs that scroll with the page's smooth scroll-behavior, so the first read is near the top.
+  {
+    const at = (page, prev) =>
+      page.evaluate(
+        ([top, prev]) => {
+          const el = document.getElementById('howpolluted');
+          const rail = el.querySelector('.track-rail');
+          const fig = rail.querySelector('figure');
+          const rr = rail.getBoundingClientRect();
+          return { stage: el.dataset.stage, railTop: rr.top, pad: Math.max(0, rr.height - fig.getBoundingClientRect().height), n: el.querySelectorAll('.fig-stages button[data-stage]').length, y: scrollY, top, prev };
+        },
+        [STICKY_TOP, prev],
+      );
+    const judge = (r) => {
+      const expect = stageFor(deskProgress({ railTop: r.railTop, pad: r.pad, top: r.top }), r.n, r.prev);
+      const s = Number(r.stage);
+      return { ok: r.stage != null && r.stage !== '' && Number.isInteger(s) && s >= 0 && s < r.n && s === expect, s, txt: `data-stage ${r.stage} (expected ${expect}) at scrollY ${r.y}` };
+    };
+    const landed = async (page) => {
+      let y = -1;
+      for (let i = 0; i < 40; i++) {
+        const ny = await page.evaluate(() => scrollY);
+        if (ny === y && ny > 0) break;
+        y = ny;
+        await sleep(150);
+      }
+      await twoFrames(page);
+    };
+    const t = await open(browser, url + '#howpolluted');
+    const { page } = t;
+    const name = 'tracks deep load (#howpolluted at 1440): data-stage matches the page position right after load and once the fragment scroll lands';
+    await step(name, async () => {
+      const a = judge(await at(page, 0));
+      await landed(page);
+      const b = judge(await at(page, a.s));
+      report(name, a.ok && b.ok, `at load ${a.txt}; landed ${b.txt}`);
+    });
+    const reload = 'tracks deep load (reload at stage 3 of howpolluted at 1440): data-stage matches the page position right after load and once the restored scroll lands';
+    await step(reload, async () => {
+      await page.evaluate(trackHelpers, STICKY_TOP);
+      await page.evaluate(() => window.__jump(window.__stageY('howpolluted', 3)));
+      await sleep(300);
+      await page.reload({ waitUntil: 'load' });
+      const a = judge(await at(page, 0));
+      await landed(page);
+      const b = judge(await at(page, a.s));
+      report(reload, a.ok && b.ok && b.s === 3, `at load ${a.txt}; landed ${b.txt}`);
+    });
+    report('tracks deep load: no page errors', t.errors.length === 0, t.errors.join(' | '));
+    await t.close();
+  }
+
+  // Resizing across 860 mid-track: the phone layout drops the pin, the desktop one takes it back, and
+  // the stage never jumps more than one either way.
+  {
+    const t = await open(browser, url);
+    const { page } = t;
+    await page.evaluate(trackHelpers, STICKY_TOP);
+    const name = 'tracks resize 1440 -> 390 -> 1440 mid-terrarium: text static at 390, sticky at 1440, data-stage within 1';
+    await step(name, async () => {
+      const read = () => page.evaluate(() => ({ stage: Number(document.getElementById('terrarium').dataset.stage), pos: getComputedStyle(document.querySelector('#terrarium .track-text')).position }));
+      await page.evaluate(() => {
+        const t = window.__track('terrarium');
+        window.__jump(t.railDocTop - 96 + t.pad / 2);
+      });
+      await sleep(300);
+      const a = await read();
+      await page.setViewportSize(PHONE);
+      await sleep(400);
+      const b = await read();
+      await page.setViewportSize(DESK);
+      await sleep(400);
+      const c = await read();
+      report(name, b.pos === 'static' && c.pos === 'sticky' && Math.abs(b.stage - a.stage) <= 1 && Math.abs(c.stage - a.stage) <= 1, `1440 stage ${a.stage} (${a.pos}), 390 stage ${b.stage} (${b.pos}), 1440 stage ${c.stage} (${c.pos})`);
+    });
+    report('tracks resize: no page errors', t.errors.length === 0, t.errors.join(' | '));
+    await t.close();
+  }
 }
 
 /* ── run ── */
@@ -749,18 +1040,22 @@ try {
     return r;
   })();
   console.log(`renderer: ${gpu}\n`);
-  await checkLive(browser, url);
-  await checkBudget(browser, url);
-  await checkRaces(browser, url);
-  await checkNoJS(browser, url);
-  await checkStatic(browser, url);
-  await checkNoWebGL2(url);
-  await checkContextLoss(browser, url);
-  await checkReduced(browser, url);
-  await checkEmail(browser, url);
-  await checkPhone(browser, url);
-  await checkPhoneDenied(browser, url);
-  await checkResize(browser, url);
+  const checks = {
+    live: () => checkLive(browser, url),
+    budget: () => checkBudget(browser, url),
+    races: () => checkRaces(browser, url),
+    nojs: () => checkNoJS(browser, url),
+    static: () => checkStatic(browser, url),
+    nowebgl2: () => checkNoWebGL2(url),
+    contextloss: () => checkContextLoss(browser, url),
+    reduced: () => checkReduced(browser, url),
+    email: () => checkEmail(browser, url),
+    phone: () => checkPhone(browser, url),
+    phonedenied: () => checkPhoneDenied(browser, url),
+    resize: () => checkResize(browser, url),
+    tracks: () => checkTracks(browser, url),
+  };
+  for (const [name, run] of Object.entries(checks)) if (!only.length || only.includes(name)) await run();
 } finally {
   await browser.close();
   server.stop();
