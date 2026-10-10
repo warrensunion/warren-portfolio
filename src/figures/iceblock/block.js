@@ -53,6 +53,12 @@ const EDGE_A = 0.26;
 // and the wire also clears where it faces the camera, over the object's middle.
 const WIRE_A = 0.16;
 const DOT_A = 0.14;
+// The unrefracted copy of the object over the ice (the hub's 0.4 lost thin art on paper fog), and
+// how much milk / deep patch is left over the object; a phone-size stage gets more of both.
+const GHOST_A = 0.85;
+const GHOST_COMPACT = 0.97;
+const CLEAR = [0.45, 0.3];
+const CLEAR_COMPACT = [0.2, 0.1];
 const LINE_A = 0.3;
 
 const FROST_VERT = /* glsl */ `
@@ -88,6 +94,7 @@ const FROST_FRAG = /* glsl */ `
   uniform vec3 uMilk;
   uniform vec3 uDeep;
   uniform vec4 uWin;  // the object's window, as the ice's (WINDOW_PARS)
+  uniform vec2 uClear; // what is left of the milk and of the deep patches over the object
   varying vec3 vPos;
   varying vec3 vN;
   varying vec3 vView;
@@ -125,12 +132,12 @@ const FROST_FRAG = /* glsl */ `
     // Over the object the shell thins (review r1: on paper, thin art such as the bow was lost under
     // the milk and the dark patches); the skin and the block's outline keep all of it.
     float win = smoothstep(0.55, 1.1, length((vPos.xy - vec2(uWin.w, uWin.z)) / uWin.xy));
-    milk *= mix(0.45, 1.0, win);
+    milk *= mix(uClear.x, 1.0, win);
     milk = clamp(milk, 0.0, 0.92);
     // Deep patches: the thick, dark blue-grey of igloo's ice, away from the frost.
     float deep = smoothstep(0.35, 0.85, fbm(p * 0.9 + 5.0)) * (1.0 - low) * 0.55;
     float facing = clamp(dot(normalize(vN), normalize(vView)), 0.0, 1.0);
-    deep *= facing * mix(0.3, 1.0, win);
+    deep *= facing * mix(uClear.y, 1.0, win);
     float a = milk + deep * (1.0 - milk);
     vec3 col = (uMilk * milk + uDeep * deep * (1.0 - milk)) / max(a, 1e-3);
     gl_FragColor = vec4(col, a * uAlpha);
@@ -202,11 +209,12 @@ const WIRE_VERT = /* glsl */ `
 const WIRE_FRAG = /* glsl */ `
   uniform vec3 uColor;
   uniform float uOpacity;
+  uniform float uFaceCut; // vFace above which the net is gone (lower on a small stage)
   varying float vFace;
   void main() {
     // Face-on (the middle, over the object) fades out too, so the net rings the art instead of
     // covering it.
-    gl_FragColor = vec4(uColor, uOpacity * smoothstep(0.12, 0.4, vFace) * smoothstep(0.92, 0.6, vFace));
+    gl_FragColor = vec4(uColor, uOpacity * smoothstep(0.12, 0.4, vFace) * smoothstep(uFaceCut, uFaceCut - 0.32, vFace));
     #include <colorspace_fragment>
   }
 `;
@@ -376,7 +384,7 @@ export class IceBlock {
       map: objectTexture,
       color: new THREE.Color(1.15, 1.16, 1.2),
       transparent: true,
-      opacity: 0.8, // 0.4 in the hub: on paper fog thin art (the bow) was lost behind the milk
+      opacity: GHOST_A,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
@@ -401,6 +409,7 @@ export class IceBlock {
         uMilk: { value: new THREE.Color('#eef2f8') },
         uDeep: { value: new THREE.Color('#2a2e38') },
         uWin: { value: new THREE.Vector4(ow * 0.5, oh * 0.5, oy, shape.objectX) },
+        uClear: { value: new THREE.Vector2(CLEAR[0], CLEAR[1]) },
       },
       vertexShader: FROST_VERT,
       fragmentShader: FROST_FRAG,
@@ -525,6 +534,7 @@ export class IceBlock {
       uniforms: {
         uColor: { value: new THREE.Color(INK) },
         uOpacity: { value: WIRE_A },
+        uFaceCut: { value: 0.92 },
         uInvScale2: { value: new THREE.Vector3(1 / (sx * sx), 1 / (sy * sy), 1 / (sz * sz)) },
       },
       vertexShader: WIRE_VERT,
@@ -628,6 +638,18 @@ export class IceBlock {
    * focused), dt (s), motion (0: no wobble, no lean, no tumbling). Returns the turn applied (rad):
    * the orbit's yaw plus the wobble, held inside +-MAX_TURN, which the readout shows.
    */
+  /**
+   * A small stage (a phone column) shows the object a few dozen px wide, where the refracted art
+   * smears into the frost (review r2): the ghost goes near opaque, the shell clears further over
+   * the object and the wire and its dots leave the object's middle entirely.
+   */
+  setCompact(on) {
+    this.ghostMat.opacity = on ? GHOST_COMPACT : GHOST_A;
+    this.frostMat.uniforms.uClear.value.set(...(on ? CLEAR_COMPACT : CLEAR));
+    this.wireMat.uniforms.uFaceCut.value = on ? 0.7 : 0.92;
+    this.dotMat.opacity = on ? 0.06 : DOT_A;
+  }
+
   update({ time, yaw = 0, pitch = 0, pointer, hot, dt, motion }) {
     this.hover += ((hot ? 1 : 0) - this.hover) * (1 - Math.exp(-dt * 8));
     const k = 1 - Math.exp(-dt * 3);

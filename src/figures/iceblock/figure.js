@@ -27,6 +27,11 @@ const ENV_TINT = '#dfe3e7';
 const SEED_INDEX = { face: 0, physique: 1, knowledge: 6 };
 // The block sits right of and below the plate's centre (world units) so its label has room top-left.
 const OFFSET = [0.85, -0.22];
+// A phone-size stage (under 480 css px, labelPx's breakpoint) frames the block closer and further right,
+// so the frozen object is not a few dozen px wide (review r2); the label keeps the top-left corner.
+const COMPACT_W = 480;
+const COMPACT_Z = 10.5;
+const COMPACT_OFFSET = [1.1, -0.3];
 const LABEL_DELAY = 200; // ms after the first frame: the canvas is half faded in when the label starts
 
 export async function create(el, ctx) {
@@ -141,6 +146,11 @@ export async function create(el, ctx) {
     h = Math.max(1, Math.round(ch));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
+    const compact = w < COMPACT_W;
+    camera.position.z = compact ? COMPACT_Z : CAM_Z;
+    const off = compact ? COMPACT_OFFSET : OFFSET;
+    block.root.position.set(off[0], off[1], 0);
+    block.setCompact(compact);
     camera.updateProjectionMatrix();
     background.fit(camera, w, h);
   };
