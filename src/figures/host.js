@@ -119,6 +119,9 @@ export function initFigures(root, { loaders, env } = {}) {
   function reveal(s) {
     tagCanvases(s);
     s.fig.classList.add('is-live');
+    // A drag figure (it carries the drag hint) only becomes a tab stop once there is a scene to turn;
+    // the static markup has none, so the page without JS and the poster never offer one.
+    if (s.fig.querySelector('.fig-hint:not([hidden])') && !s.fig.hasAttribute('tabindex')) s.fig.setAttribute('tabindex', '0');
     s.poster?.setAttribute('aria-hidden', 'true');
   }
 

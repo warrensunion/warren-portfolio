@@ -81,7 +81,10 @@
   margin-top: 2px;
 }
 
-/* The host hides the hint under a lasting fallback; display: block above would beat the UA rule. */
+/* The host hides the hint under a lasting fallback; display: block above would beat the UA rule.
+   Without JavaScript nothing can turn the block, so the hint is not shown at all (index.html marks
+   <html class="js"> from an inline script before first paint, so it never pops in later). */
+html:not(.js) .fig-hint,
 .fig-hint[hidden] {
   display: none;
 }

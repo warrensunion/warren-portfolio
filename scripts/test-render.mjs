@@ -3,6 +3,7 @@
 // into, gap-free Fig. numbers the figure host relies on, and visible TODO markers instead
 // of invented facts.
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { renderPage } from '../src/render.js';
 import { content } from '../src/content.js';
@@ -75,6 +76,15 @@ test('github, linkedin and resume links appear in header and footer', () => {
   }
 });
 
+test('index.html <head> (title, meta description) has no em or en dashes', () => {
+  const head = readFileSync(new URL('../index.html', import.meta.url), 'utf8').match(/<head>([\s\S]*?)<\/head>/)[1];
+  assert.equal(count(head, /[—–]/g), 0);
+  // The description says what the page lists (one website, one game, one Roblox game), no more.
+  assert.doesNotMatch(head, /Websites|Roblox games/);
+  const desc = head.match(/<meta name="description" content="([^"]*)"/);
+  assert.ok(desc && desc[1].length > 0, 'meta description present');
+});
+
 test('no em or en dashes anywhere', () => {
   assert.equal(count(html, /[—–]/g), 0);
 });
@@ -89,7 +99,7 @@ test('placeholders are visible', () => {
 
 test('controller rulings: copy email, live status, morph links, drag hint, under poster', () => {
   const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
-  assert.match(header, new RegExp(`<button[^>]*data-copy-email[^>]*>${content.email}</button>`));
+  assert.match(header, new RegExp(`<button[^>]*data-copy-email[^>]*><span data-email>${content.email}</span></button>`));
   assert.match(html, /data-copy-status[^>]*aria-live="polite"|aria-live="polite"[^>]*data-copy-status/);
   assert.match(html, /Click to copy, or press e anywhere\./);
 
@@ -99,7 +109,9 @@ test('controller rulings: copy email, live status, morph links, drag hint, under
 
   const blocks = [...html.matchAll(/<figure class="fig"[^>]*data-fig="iceblock"[^>]*>/g)];
   assert.equal(blocks.length, 3);
-  for (const b of blocks) assert.match(b[0], /tabindex="0"/);
+  // No tab stop in the static markup: without JS (or as a poster) the block cannot be turned; the host adds it.
+  for (const b of blocks) assert.doesNotMatch(b[0], /tabindex/);
+  assert.equal(count(html, /tabindex=/g), 0);
   assert.equal(count(html, /Drag or use arrow keys to turn it\./g), 3);
 
   assert.match(html, /data-fig="iceberg"[^>]*data-poster-under="\/posters\/iceberg-under\.webp"/);

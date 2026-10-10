@@ -155,6 +155,32 @@ function ringGeo() {
   if (!GEO) GEO = { outer: [...ringPiecesIter(OUTER)], inner: [...ringPiecesIter(INNER)], lines: geodesicLines(SPHERE_R * 1.004, 15) };
   return GEO;
 }
+/**
+ * Builds the shared pieces ahead of new Ring(), a few pieces per task (yield() resolves on a fresh
+ * task), so the ~150 ms lands in slices while the visitor reads instead of in the constructor's one
+ * task. A no-op once built; stops early (leaving GEO unbuilt) when isLive() turns false.
+ */
+export async function prepareRingGeo(yieldTask, isLive = () => true, per = 4) {
+  if (GEO) return;
+  const take = async (opts) => {
+    const out = [];
+    for (const p of ringPiecesIter(opts)) {
+      out.push(p);
+      if (out.length % per === 0) {
+        await yieldTask();
+        if (!isLive()) return null;
+      }
+    }
+    return out;
+  };
+  const outer = await take(OUTER);
+  if (!outer) return;
+  const inner = await take(INNER);
+  if (!inner) return;
+  await yieldTask();
+  if (!isLive() || GEO) return;
+  GEO = { outer, inner, lines: geodesicLines(SPHERE_R * 1.004, 15) };
+}
 const clones = (list) => list.map((p) => ({ ...p, geometry: p.geometry.clone() }));
 
 /* ---- the ring ---------------------------------------------------------------------- */

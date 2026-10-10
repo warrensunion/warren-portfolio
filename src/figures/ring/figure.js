@@ -10,13 +10,13 @@
 // `fig:ready` is reproducible. `posterState: true` is the same as { shape: null }.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { Ring, RING_R, INNER_R, smooth } from './ring.js';
+import { Ring, RING_R, INNER_R, prepareRingGeo, smooth } from './ring.js';
 import { Particles } from './tube.js';
 import { loadShapes, fitInCircle } from './tubeShapes.js';
 import { prepareStone } from './textures.js';
 import { createWork } from './work.js';
 import { bindMorphLinks } from './morphLinks.js';
-import { warmDraws } from '../warm.js';
+import { nextTask, warmDraws } from '../warm.js';
 
 const FOV = 35;
 const TAN = Math.tan(((FOV / 2) * Math.PI) / 180);
@@ -140,6 +140,24 @@ export async function create(el, ctx) {
       if (o.material?.emissive) o.material.emissive.multiply(tint);
       if (o.material?.emissiveIntensity > 3) o.material.emissiveIntensity = 3;
     });
+    // As in the ice block: the room's lit materials link in parallel first (into a float target, as
+    // fromScene draws them) and its faces are then drawn one per task, so fromScene() finds every program
+    // ready. Done in one go, this step was a 150 to 190 ms main-thread task.
+    {
+      const probe = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType });
+      const probeCam = new THREE.PerspectiveCamera(90, 1, 0.1, 100);
+      renderer.setRenderTarget(probe);
+      const ready = renderer.compileAsync(room, probeCam);
+      renderer.setRenderTarget(null);
+      await ready;
+      await warmDraws(room, () => {
+        renderer.setRenderTarget(probe);
+        renderer.render(room, probeCam);
+        renderer.setRenderTarget(null);
+      });
+      probe.dispose();
+      await nextTask();
+    }
     env = pmrem.fromScene(room, 0.04).texture;
     room.traverse((o) => {
       o.geometry?.dispose();
@@ -148,8 +166,12 @@ export async function create(el, ctx) {
     room.dispose?.();
     pmrem.dispose();
 
+    // The stone's swept pieces are the build's other big lump (about 100 ms in one go): made a few per
+    // task first, so new Ring() only clones them, and the particles get a task of their own.
+    await prepareRingGeo(nextTask);
     ring = new Ring({ stone, env });
     scene.add(ring.root);
+    await nextTask();
     parts = new Particles({ shapes: fitted, n, start, k, reduced, settled });
     scene.add(parts.points);
   } catch (err) {

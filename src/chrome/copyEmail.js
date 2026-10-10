@@ -53,7 +53,8 @@ export function initCopyEmail(root, email) {
       await navigator.clipboard.writeText(email);
       say(status, 'Copied', 1600);
     } catch {
-      if (btn) selectText(btn);
+      // Select the address's own span: Firefox and Safari may not select the contents of a <button>.
+      if (btn) selectText(btn.querySelector('[data-email]') || btn);
       say(status, `Press ${isMac ? 'Cmd' : 'Ctrl'}+C to copy`, 4000);
     }
   }

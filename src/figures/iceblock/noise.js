@@ -1,7 +1,7 @@
 // Ported from BTTRURSLF-v2 src/screens/shop/hub/noise.js (the BTTRshop hub). What changed and why:
 // only the seeded rng and the periodic value noise came across, unchanged, because the frost maps
-// (textures.js) are all the ice figures need; the ring stone's maps (stoneData) belong to the hub's
-// ring and its worker, which the portfolio does not have.
+// (textures.js) are all the ice figures need. The ring stone's maps (stoneData) live in the ring
+// figure's own copy, src/figures/ring/noise.js, because each figure folder stands alone.
 
 export function rng(seed) {
   let a = seed >>> 0;

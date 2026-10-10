@@ -29,6 +29,8 @@ function figure(fig, n, { hero = false } = {}) {
   const [w, h] = fig.size || [1200, 900];
   // Single-quoted attribute: only & and ' need escaping, so the JSON stays readable in the source.
   const json = JSON.stringify(fig.data || {}).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
+  // No tabindex here: a poster cannot be turned, so the host adds the tab stop once the scene is live,
+  // and CSS hides the drag hint until a script has marked <html class="js">.
   const draggable = DRAGGABLE.has(fig.kind);
   const attrs = [
     `class="fig"`,
@@ -36,7 +38,6 @@ function figure(fig, n, { hero = false } = {}) {
     `data-fig-data='${json}'`,
     fig.posterUnder ? `data-poster-under="${esc(fig.posterUnder)}"` : '',
     fig.posterMorph ? `data-poster-morph="${esc(fig.posterMorph.join(' '))}"` : '',
-    draggable ? `tabindex="0"` : '',
     `aria-label="Fig. ${n}: ${esc(fig.title)}"`,
   ].filter(Boolean);
   return (
@@ -57,7 +58,7 @@ function header(c) {
     `<header class="bar"><div class="bar-in">` +
     `<a class="bar-name" href="#top" translate="no">${esc(c.name)}</a>` +
     `<nav class="bar-nav" aria-label="Links">${linkList(c.links, 'bar-links')}` +
-    `<button type="button" class="email-btn" data-copy-email translate="no">${esc(c.email)}</button>` +
+    `<button type="button" class="email-btn" data-copy-email translate="no"><span data-email>${esc(c.email)}</span></button>` +
     `<span class="copy-status" data-copy-status role="status" aria-live="polite"></span>` +
     `</nav></div></header>`
   );
@@ -108,7 +109,7 @@ function touch(c, s, next) {
   return (
     `<div class="touch"><div class="touch-text">` +
     `<p class="lede">${c.touch.line}</p>` +
-    `<p class="touch-email"><button type="button" class="email-btn email-btn--big" data-copy-email translate="no">${esc(c.email)}</button>` +
+    `<p class="touch-email"><button type="button" class="email-btn email-btn--big" data-copy-email translate="no"><span data-email>${esc(c.email)}</span></button>` +
     `<span class="copy-status copy-status--inline" data-copy-status role="status" aria-live="polite"></span></p>` +
     `<p class="hint">${esc(c.touch.hint)}</p>` +
     linkList(c.links, 'inline-links') +

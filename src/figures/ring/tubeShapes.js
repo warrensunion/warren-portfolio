@@ -2,7 +2,7 @@
 // picture's silhouette (alpha is coverage, RGB the art's own shading), with a front, a back, a side and
 // a tone per point, every shape the same point count and sorted loosely by height so point i of one shape
 // flies to point i of the next and the new shape fills in from the base up.
-// Kept as it was: grow(), the chamfer distance, the B's cut-line trick (now drawn round Warren's "WS"),
+// Kept as it was: grow(), the chamfer distance, the hub logo's cut-line trick (now run on the initials),
 // the plain-disc fallback and the session cache. Changed, and why:
 //  - grow() is exported and nothing here touches the DOM at load time, so Node tests can import it.
 //  - objects are sampled at 256 px, not 128, and thin art (under 12% coverage, the bow) is thickened by
@@ -12,7 +12,7 @@
 //  - fitInCircle(): the figure stands inside the ring, so each shape is centred and scaled into a circle
 //    instead of standing on a pedestal at y = 0.
 
-// The B; objects fit inside HEIGHT x WIDTH (hub values, kept: fitInCircle rescales afterwards).
+// The logo (the initials) and objects fit inside HEIGHT x WIDTH (hub values, kept: fitInCircle rescales).
 const HEIGHT = 1.95;
 const WIDTH = 1.85;
 const OBJECT_SIDE = 256;
@@ -136,9 +136,10 @@ export function grow({ w, h, data }, kind, n, seed) {
     }
   }
   const dist = distance(mask, w, h);
-  // The B's thin cuts (URSLF, the snowline): transparent pixels a closing of
-  // the mask fills in - not the outside, not the wide counter. cutDist is
-  // each pixel's distance to the nearest of them.
+  // The logo's thin cuts: transparent pixels a closing of the mask fills in
+  // (in the hub, channels cut through its B; in the initials, narrow gaps such
+  // as where two serifs nearly meet), not the outside, not a wide counter.
+  // cutDist is each pixel's distance to the nearest of them.
   let cutDist = null;
   if (kind === 'logo') {
     const R = Math.max(3, Math.round(h * 0.012));
@@ -171,8 +172,8 @@ export function grow({ w, h, data }, kind, n, seed) {
 
   // Front surface height (px) per pixel.
   const zf = new Float32Array(N);
-  const slab = 0.085 * bh; // the B's half-thickness
-  const edgeW = 0.011 * bh; // the dark line beside a cut (~4 px of the 615 px mark)
+  const slab = 0.085 * bh; // the logo's half-thickness
+  const edgeW = 0.011 * bh; // the dark line beside a cut (~4 px of the hub's 615 px mark)
   const bevel = 0.035 * bh;
   for (let i = 0; i < N; i++) {
     if (!cov[i]) continue;
@@ -180,10 +181,11 @@ export function grow({ w, h, data }, kind, n, seed) {
     if (kind === 'logo') {
       const edge = Math.min(1, d / bevel);
       const round = Math.sqrt(1 - (1 - edge) * (1 - edge));
-      // white stands forward, the grey mountain sits back
+      // white stands forward, anything greyer sits back (the initials are
+      // all white, so they come out a flat slab)
       const white = smooth(0.42, 0.75, lum[i]);
       // a hair of relief only: more and the white letters' points hid the
-      // grey gaps between them whenever the B turned (review r1)
+      // gaps between them whenever the logo turned (hub review r1)
       zf[i] = slab * round + (white - 0.5) * 0.008 * bh * round;
     } else {
       const t = Math.min(d, dMax) / dMax;
@@ -197,7 +199,7 @@ export function grow({ w, h, data }, kind, n, seed) {
   const cdf = new Float32Array(N);
   let acc = 0;
   for (let i = 0; i < N; i++) {
-    // The soft fringe only for objects: on the B it filled the snowline gap.
+    // The soft fringe only for objects: on the logo it fills its thin gaps.
     acc += mask[i] ? 1 : kind === 'logo' ? 0 : cov[i] * 0.35;
     cdf[i] = acc;
   }
@@ -227,17 +229,18 @@ export function grow({ w, h, data }, kind, n, seed) {
     const gy = (Z(px, py + 1) - Z(px, py - 1)) * 0.5;
     const L = lum[i];
     let tone;
-    // The B's two tones kept ~2.7x apart (the mark: white ~F0 vs grey ~48).
+    // The logo's tones kept ~2.7x apart (the hub's mark: white ~F0 vs grey ~48;
+    // the all-white initials sit at the top of this range).
     if (kind === 'logo') {
       tone = 0.16 + 0.98 * smooth(0.35, 0.75, L);
-      // The mark's thin cut channels (round URSLF and along the snowline)
-      // are narrower than a dot, so points cannot leave them open: the dots
-      // beside every cut go dark instead, drawing the channel as a line.
+      // The logo's thin cut channels are narrower than a dot, so points
+      // cannot leave them open: the dots beside every cut go dark instead,
+      // drawing the channel as a line.
       const dd = cutDist[i];
       if (dd < edgeW) tone *= 0.34 + 0.66 * smooth(edgeW * 0.35, edgeW, dd);
     }
     else tone = 0.24 + 0.46 * Math.min(1.1, Math.max(0, (L - lo) / (hi - lo)));
-    // Layer: front 46 %, back 34 %, side/inside 20 % - the B 80 / 12 / 8, so
+    // Layer: front 46 %, back 34 %, side/inside 20 %; the logo 80 / 12 / 8, so
     // its face is dense enough that the back never speckles through.
     const r = rand();
     const F = kind === 'logo' ? 0.8 : 0.46;
@@ -285,7 +288,7 @@ export function grow({ w, h, data }, kind, n, seed) {
     nrm[k * 3 + 1] = p.ny;
     nrm[k * 3 + 2] = p.nz;
     // objects carry +4 on their tone: the shader shades them with less
-    // ambient (igloo's relief) and the B with its two tones kept apart
+    // ambient (igloo's relief) and the logo with its tones kept apart
     tone[k] = p.tone + (kind === 'object' ? 4 : 0);
     min[0] = Math.min(min[0], p.x);
     min[1] = Math.min(min[1], p.y);

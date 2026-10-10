@@ -87,7 +87,7 @@ export const content = {
             'Accounts run on Supabase. Gemini sits behind a small server layer so API keys never reach the ' +
               'browser, and face and body scans are measured on the device with MediaPipe. The server guards ' +
               'its routes with a same-origin check, per-route rate limits, a honeypot field and a proof of work. ' +
-              'Playwright scripts screenshot every screen to catch broken layouts. [TODO: one number, such as users or launch date.]',
+              'Playwright scripts screenshot its screens to catch broken layouts. [TODO: one number, such as users or launch date.]',
           ],
           tags: ['JavaScript', 'Vite', 'three.js', 'Supabase', 'Gemini API', 'MediaPipe', 'Playwright'],
           fig: objectFig('summit-flag', {
@@ -95,7 +95,7 @@ export const content = {
             shape: 'physique',
             label: 'BTTRURSLF',
             alt: 'A marble summit flag frozen inside a block of ice.',
-            caption: 'The flag at the top of the BTTRmountain, frozen in ice.',
+            caption: 'A summit flag for BTTRURSLF, frozen in ice.',
           }),
         },
       ],

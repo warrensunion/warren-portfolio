@@ -5,7 +5,8 @@ import { content } from './content.js';
 import { initCopyEmail } from './chrome/copyEmail.js';
 import { initFigures } from './figures/host.js';
 
-document.documentElement.classList.add('js');
+// <html class="js"> is set by an inline script in index.html, before first paint, so CSS that depends
+// on it (the drag hint) never shifts the layout when this module arrives.
 
 initCopyEmail(document, content.email);
 

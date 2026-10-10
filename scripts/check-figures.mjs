@@ -189,6 +189,18 @@ async function checkLive(browser, url) {
     report('live: contests-0 draws its SVG chart', true);
   });
 
+  // The static markup has no tab stop on a drag figure; the host adds one once its scene has been live.
+  await step('live: every ice block that went live is a tab stop with its drag hint shown', async () => {
+    const r = await page.evaluate(() =>
+      [...document.querySelectorAll('figure.fig[data-fig="iceblock"]')].map((f) => {
+        const hint = f.querySelector('.fig-hint');
+        return { id: f.dataset.figId, tab: f.getAttribute('tabindex'), hint: !!hint && hint.getClientRects().length > 0 };
+      }),
+    );
+    const bad = r.filter((x) => x.tab !== '0' || !x.hint);
+    report('live: every ice block that went live is a tab stop with its drag hint shown', r.length === 3 && bad.length === 0, r.map((x) => `${x.id} tabindex ${x.tab}, hint ${x.hint ? 'shown' : 'hidden'}`).join(', '));
+  });
+
   await step('off-screen: a figure just below the viewport stops counting frames for 1 s', async () => {
     const id = 'iceblock-1';
     await scrollToFig(page, id);
@@ -311,6 +323,28 @@ async function stillBlocks(page, name) {
   );
   const bad = r.filter((x) => x.tab || x.hint).map((x) => x.id + (x.tab ? ' tabindex' : '') + (x.hint ? ' hint shown' : ''));
   report(name, r.length === 3 && bad.length === 0, `${r.length} ice block figures${bad.length ? ', bad: ' + bad.join(', ') : ', no tabindex, hints hidden'}`);
+}
+
+// Without JavaScript the page is the static markup: no drag figure is a tab stop and no drag hint shows.
+async function checkNoJS(browser, url) {
+  const context = await browser.newContext({ viewport: DESK, deviceScaleFactor: 1, javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: 'load' });
+    const name = 'no JavaScript: ice block figures have no tab stop and no drag hint, every figure keeps its poster';
+    await step(name, async () => {
+      // Locators, not $$eval: they run in Playwright's own world, so they work with page JS off.
+      const blocks = [];
+      for (const f of await page.locator('figure.fig[data-fig="iceblock"]').all()) {
+        blocks.push({ tab: (await f.getAttribute('tabindex')) !== null, hint: await f.locator('.fig-hint').isVisible() });
+      }
+      const posters = await page.locator('img.fig-poster').count();
+      const bad = blocks.filter((b) => b.tab || b.hint).length;
+      report(name, blocks.length === 3 && bad === 0 && posters >= 6, `${blocks.length} ice blocks, ${bad} with a tab stop or a shown hint, ${posters} posters`);
+    });
+  } finally {
+    await context.close();
+  }
 }
 
 async function checkStatic(browser, url) {
@@ -574,6 +608,34 @@ async function checkEmail(browser, url) {
   }
 }
 
+// At 390 the bar's button is hidden, so a denied copy prompts beside the contact section's button.
+async function checkPhoneDenied(browser, url) {
+  const deny = () => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new DOMException('Write permission denied.', 'NotAllowedError')) }, configurable: true });
+  };
+  const t = await open(browser, url, { viewport: PHONE, deviceScaleFactor: 2, isMobile: true, hasTouch: true }, { init: deny });
+  const { page } = t;
+  const name = '390x844: a denied copy from the contact button prompts inside the viewport, selects the address, no horizontal scroll';
+  await step(name, async () => {
+    const btn = page.locator('.touch-email [data-copy-email]');
+    await btn.scrollIntoViewIfNeeded();
+    await btn.click();
+    await sleep(200);
+    const r = await page.evaluate(() => {
+      const s = document.querySelector('.touch-email [data-copy-status]');
+      const b = document.querySelector('.touch-email [data-copy-email]');
+      const sr = s.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      return { text: s.textContent, left: sr.left, right: sr.right, top: sr.top, btnBottom: br.bottom, sel: String(window.getSelection()), sw: document.documentElement.scrollWidth };
+    });
+    if (process.env.CHECK_SHOT) await page.screenshot({ path: process.env.CHECK_SHOT });
+    const ok = r.text === 'Press Ctrl+C to copy' && r.left >= 0 && r.right <= 390 && r.sw <= 390 && r.sel === content.email;
+    report(name, ok, `status "${r.text}" at x ${r.left.toFixed(0)}..${r.right.toFixed(0)} (${r.top >= r.btnBottom - 1 ? 'own line' : 'beside the button'}), selection "${r.sel}", scrollWidth ${r.sw}`);
+  });
+  report('390x844 denied copy: no page errors', t.errors.length === 0, t.errors.join(' | '));
+  await t.close();
+}
+
 async function checkPhone(browser, url) {
   const t = await open(browser, url, { viewport: PHONE, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const { page } = t;
@@ -690,12 +752,14 @@ try {
   await checkLive(browser, url);
   await checkBudget(browser, url);
   await checkRaces(browser, url);
+  await checkNoJS(browser, url);
   await checkStatic(browser, url);
   await checkNoWebGL2(url);
   await checkContextLoss(browser, url);
   await checkReduced(browser, url);
   await checkEmail(browser, url);
   await checkPhone(browser, url);
+  await checkPhoneDenied(browser, url);
   await checkResize(browser, url);
 } finally {
   await browser.close();
