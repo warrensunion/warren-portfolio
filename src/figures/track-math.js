@@ -31,3 +31,13 @@ export function stageFor(p, n, prev) {
 
 // Px into the rail's pinned stretch where stage i sits.
 export const stageOffset = (i, n, pad) => (n <= 1 ? 0 : (pad * i) / (n - 1));
+
+// Where a stage's clip is (0..1) at track position x = p * (n - 1). Stage s owns the stretch from
+// s - 0.5 to s + 0.5 (half that at either end of the track) and plays its clip over the first 70% of it,
+// so the clip has finished, and holds its last frame, by the time the visitor rests on the stage.
+export function clipT(x, s, n) {
+  const a = Math.max(0, s - 0.5);
+  const b = Math.min(Math.max(0, n - 1), s + 0.5);
+  const span = b > a ? b - a : 1;
+  return clamp01((x - a) / (0.7 * span));
+}

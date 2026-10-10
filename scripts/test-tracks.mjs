@@ -2,7 +2,7 @@
 // rect reads into progress, stage and scroll offsets is pinned here without a browser.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { deskProgress, phoneProgress, stageFor, stageOffset } from '../src/figures/track-math.js';
+import { deskProgress, phoneProgress, stageFor, stageOffset, clipT } from '../src/figures/track-math.js';
 
 const near = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
 
@@ -34,4 +34,22 @@ test('stageOffset centres stage i in the rail', () => {
   assert.equal(stageOffset(2, 5, 3400), 1700);
   assert.equal(stageOffset(0, 1, 3400), 0);
   assert.equal(stageOffset(4, 5, 3400), 3400);
+});
+
+test('clipT: stage 0 plays over x 0..0.35', () => {
+  near(clipT(0.175, 0, 15), 0.5);
+  assert.equal(clipT(0, 0, 15), 0);
+  assert.equal(clipT(0.4, 0, 15), 1);
+});
+
+test('clipT: a middle stage plays from s-0.5 over 0.7 of its window', () => {
+  near(clipT(3, 3, 15), 0.5 / 0.7);
+  assert.equal(clipT(2.5, 3, 15), 0);
+  assert.equal(clipT(3.2, 3, 15), 1);
+});
+
+test('clipT: the last stage ends at 0.7 of its half window', () => {
+  assert.equal(clipT(14, 14, 15), 1);
+  near(clipT(13.675, 14, 15), 0.5);
+
 });
