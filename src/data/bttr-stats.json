@@ -1,0 +1,17 @@
+{
+  "accounts": 2,
+  "accountsAsOf": "2026-10-10",
+  "routes": 32,
+  "apiRoutes": 31,
+  "testFiles": 15,
+  "tests": 539,
+  "screens": 13,
+  "measuredAt": "2026-10-10",
+  "methods": {
+    "accounts": "Rows in the profiles table of its Supabase project, one per account.",
+    "routes": "Entries in the client router table in src/main.js, counting each generated shop route.",
+    "apiRoutes": "Entries in the ROUTES table in server/guard.js, counting each area route it generates.",
+    "tests": "test( calls across its scripts/test-*.mjs files, run with node --test.",
+    "screens": "Folders in src/screens."
+  }
+}
