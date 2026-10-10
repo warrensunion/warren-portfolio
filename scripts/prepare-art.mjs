@@ -12,7 +12,23 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = (f) => path.join(root, 'design/art-src', f);
 const pub = (f) => path.join(root, 'public', f);
-const SLUGS = ['window-blind', 'summit-flag', 'archer-bow'];
+const SLUGS = ['window-blind', 'summit-flag', 'terrarium-jar', 'howpolluted-globe', 'archer-bow'];
+// Plain silhouettes for objects whose marble render Warren has not supplied yet (README, Fill in the
+// TODOs). Drawn in code, not generated art; a real design/art-src/<slug>.png replaces them on the next run.
+const PLACEHOLDER = {
+  'terrarium-jar':
+    '<rect x="300" y="250" width="424" height="560" rx="90" fill="#9aa3a8"/><rect x="390" y="170" width="244" height="110" rx="24" fill="#9aa3a8"/>',
+  'howpolluted-globe':
+    '<circle cx="512" cy="512" r="330" fill="#9aa3a8"/><ellipse cx="512" cy="512" rx="140" ry="330" fill="none" stroke="#6f787d" stroke-width="18"/><line x1="182" y1="512" x2="842" y2="512" stroke="#6f787d" stroke-width="18"/>',
+};
+async function placeholder(slug) {
+  if (existsSync(pub(`objects/${slug}.webp`))) return console.log(`${slug}: placeholder kept`);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${MAX}" height="${MAX}">${PLACEHOLDER[slug]}</svg>`;
+  const png = await sharp(Buffer.from(svg)).png().toBuffer();
+  await sharp(png).webp({ quality: 86, alphaQuality: 100 }).toFile(pub(`objects/${slug}.webp`));
+  await sharp(png).resize(SAMPLE, SAMPLE).png().toFile(pub(`objects/${slug}-sample.png`));
+  console.log(`${slug}: placeholder silhouette written (no design/art-src/${slug}.png yet)`);
+}
 const PLATE = '#fbfbf8';
 const MAX = 1024;
 const SAMPLE = 256;
@@ -109,8 +125,8 @@ async function cutout(slug) {
 async function posters() {
   await mkdir(pub('posters'), { recursive: true });
   const sizes = {
-    iceberg: [1200, 1200], 'iceberg-under': [1200, 1200], ws: [2000, 1040], 'ws-0': [2000, 1040], 'ws-1': [2000, 1040], 'ws-2': [2000, 1040],
-    'window-blind': [1280, 960], 'summit-flag': [1280, 960], 'archer-bow': [1280, 960],
+    iceberg: [1200, 1200], 'iceberg-under': [1200, 1200], ws: [2000, 1040],
+    ...Object.fromEntries([0, 1, 2, 3, 4].map((i) => [`ws-${i}`, [2000, 1040]])),
   };
   for (const [name, [width, height]] of Object.entries(sizes)) {
     if (existsSync(pub(`posters/${name}.webp`))) continue;
@@ -138,6 +154,6 @@ async function resume() {
 }
 
 await mkdir(pub('objects'), { recursive: true });
-for (const s of SLUGS) await cutout(s);
+for (const s of SLUGS) await (existsSync(src(`${s}.png`)) || !PLACEHOLDER[s] ? cutout(s) : placeholder(s));
 await posters();
 await resume();

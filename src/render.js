@@ -85,6 +85,50 @@ function entry(e, next) {
   );
 }
 
+// A track (spec section 3): sticky text beside a rail whose figure walks through stages. Every stage
+// ships a still, so the figure reads without JS, under reduced motion and before its demo loads; stage 0
+// is the one shown at first paint, the rest are lazy.
+function trackFigure(fig, n, id) {
+  const [w, h] = fig.size || [1280, 800];
+  const json = JSON.stringify(fig.data || {}).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
+  const labels = JSON.stringify(fig.stages.map((s) => s.label)).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
+  const steps = fig.stages
+    .map(
+      (s, i) =>
+        `<li><button type="button" data-stage="${i}" aria-controls="${esc(id)}-stage"${i === 0 ? ' aria-current="step"' : ''}>` +
+        `<span class="fig-step-n">${i + 1}</span> ${esc(s.label)}</button></li>`,
+    )
+    .join('');
+  const stills = fig.stages
+    .map(
+      (s, i) =>
+        `<img class="fig-poster fig-still${i === 0 ? ' is-on' : ''}" data-stage="${i}" src="${esc(s.still)}" ` +
+        `alt="" width="${w}" height="${h}" loading="lazy" decoding="async">`,
+    )
+    .join('');
+  return (
+    `<figure class="fig fig--track" data-fig="${esc(fig.kind)}" data-fig-data='${json}' data-stages='${labels}' ` +
+    `aria-label="Fig. ${n}: ${esc(fig.title)}" style="--fig-ar:${w}/${h}">` +
+    `<div class="fig-head"><span class="fig-led" aria-hidden="true"></span><span class="fig-n">Fig. ${n}</span>` +
+    `<span class="fig-t">${esc(fig.title)}</span><span class="fig-readout" aria-hidden="true"></span></div>` +
+    `<ol class="fig-stages" aria-label="Stages">${steps}</ol>` +
+    `<div class="fig-stage" id="${esc(id)}-stage" role="img" aria-label="${esc(fig.alt || fig.title)}">${stills}</div>` +
+    `<figcaption><strong>${esc(fig.stat)}</strong> <em>${esc(fig.caption)}</em></figcaption></figure>`
+  );
+}
+
+function track(e, next) {
+  const title = e.href ? link(e.href, e.title) : esc(e.title);
+  return (
+    `<article class="track${e.feature ? ' track--feature' : ''}" id="${esc(e.id)}" data-track style="--stages:${e.fig.stages.length}">` +
+    `<div class="track-text"><h3>${title}</h3>` +
+    `<p class="meta"><span>${esc(e.role)}</span><span>${esc(e.dates)}</span></p>` +
+    e.body.map((p) => `<p>${p}</p>`).join('') +
+    `<p class="tags" translate="no">${esc(e.tags.join(', '))}</p>` +
+    `</div><div class="track-rail">${trackFigure(e.fig, next(), e.id)}</div></article>`
+  );
+}
+
 function contests(c, s, next) {
   const rows = c.contests
     .map(
@@ -123,7 +167,7 @@ function section(c, s, next) {
   let inner;
   if (s.id === 'contests') inner = contests(c, s, next);
   else if (s.id === 'contact') inner = touch(c, s, next);
-  else inner = s.entries.map((e) => entry(e, next)).join('');
+  else inner = s.entries.map((e) => (e.fig && e.fig.stages ? track(e, next) : entry(e, next))).join('');
   return `<section class="section" id="${esc(s.id)}" aria-labelledby="${esc(s.id)}-h">` +
     `<h2 id="${esc(s.id)}-h">${esc(s.title)}</h2>${inner}</section>`;
 }

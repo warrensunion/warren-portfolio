@@ -13,7 +13,8 @@
     "check": "node scripts/check-figures.mjs",
     "shoot": "node scripts/shoot.mjs",
     "perf": "node scripts/perf.mjs",
-    "lighthouse": "node scripts/lighthouse.mjs"
+    "lighthouse": "node scripts/lighthouse.mjs",
+    "stills": "node scripts/stills.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

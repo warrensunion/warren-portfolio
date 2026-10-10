@@ -36,11 +36,11 @@ test('hero bio is one paragraph of at most 220 visible characters', () => {
 });
 
 test('every figure has a poster and Fig. numbers run 1..N with no gaps', () => {
-  const figs = html.split('<figure class="fig"').slice(1);
+  const figs = html.split(/<figure class="fig[" ]/).slice(1);
   assert.ok(figs.length >= 6, `expected at least 6 figures, got ${figs.length}`);
   for (const f of figs) {
     const body = f.slice(0, f.indexOf('</figure>'));
-    assert.match(body, /<img class="fig-poster"/);
+    assert.match(body, /<img class="fig-poster[" ]/);
     assert.match(body, /<span class="fig-readout" aria-hidden="true"><\/span>/);
     assert.match(body, /<figcaption><strong>/);
   }
@@ -50,12 +50,12 @@ test('every figure has a poster and Fig. numbers run 1..N with no gaps', () => {
 
 test('figure data is valid JSON in data-fig-data', () => {
   const blobs = [...html.matchAll(/data-fig-data='([^']*)'/g)].map((m) => m[1]);
-  assert.equal(blobs.length, count(html, /<figure class="fig"/g));
+  assert.equal(blobs.length, count(html, /<figure class="fig[" ]/g));
   for (const b of blobs) JSON.parse(b.replace(/&#39;/g, "'").replace(/&amp;/g, '&'));
 });
 
 test('every entry renders a title, tags and a figure', () => {
-  const entries = html.split('<article class="entry"').slice(1);
+  const entries = html.split(/<article class="(?:entry|track)[" ]/).slice(1);
   const expected = content.sections.reduce((n, s) => n + (s.entries || []).length, 0);
   assert.equal(entries.length, expected);
   assert.ok(expected >= 3);
@@ -63,7 +63,7 @@ test('every entry renders a title, tags and a figure', () => {
     const body = e.slice(0, e.indexOf('</article>'));
     assert.match(body, /<h3[\s>]/);
     assert.match(body, /class="tags"/);
-    assert.match(body, /<figure class="fig"/);
+    assert.match(body, /<figure class="fig[" ]/);
   }
 });
 
@@ -105,14 +105,9 @@ test('controller rulings: copy email, live status, morph links, drag hint, under
 
   const contact = html.slice(html.indexOf('id="contact"'));
   const morphs = [...contact.matchAll(/data-morph="(\d)"[^>]*>([^<]+)</g)].map((m) => [m[1], m[2]]);
-  assert.deepEqual(morphs, [['0', 'BC Window Coverings'], ['1', 'BTTRURSLF'], ['2', 'Archer Hero']]);
-
-  const blocks = [...html.matchAll(/<figure class="fig"[^>]*data-fig="iceblock"[^>]*>/g)];
-  assert.equal(blocks.length, 3);
-  // No tab stop in the static markup: without JS (or as a poster) the block cannot be turned; the host adds it.
-  for (const b of blocks) assert.doesNotMatch(b[0], /tabindex/);
+  assert.deepEqual(morphs, [['0', 'BC Window Coverings'], ['1', 'BTTRURSLF'], ['2', 'Terrarium'], ['3', 'HowPolluted'], ['4', 'Archer Hero']]);
+  // No tab stop in the static markup: a still cannot be played; the host adds one once a scene is live.
   assert.equal(count(html, /tabindex=/g), 0);
-  assert.equal(count(html, /Drag or use arrow keys to turn it\./g), 3);
 
   assert.match(html, /data-fig="iceberg"[^>]*data-poster-under="\/posters\/iceberg-under\.webp"/);
   assert.match(html, /<img class="fig-poster" src="\/posters\/iceberg\.webp"[^>]*loading="eager"/);
@@ -121,6 +116,41 @@ test('controller rulings: copy email, live status, morph links, drag hint, under
 test('the ring carries its per-project stills for the reduced-motion cross-fade, in morph-link order', () => {
   const ring = html.match(/<figure class="fig"[^>]*data-fig="ring"[^>]*>/)[0];
   const list = ring.match(/data-poster-morph="([^"]+)"/)[1].split(' ');
-  assert.deepEqual(list, ['/posters/ws-0.webp', '/posters/ws-1.webp', '/posters/ws-2.webp']);
+  assert.deepEqual(list, [0, 1, 2, 3, 4].map((i) => `/posters/ws-${i}.webp`));
   assert.equal(list.length, content.touch.fig.data.objects.length);
+});
+
+const tracks = [...html.matchAll(/<article class="track[^"]*" id="([^"]+)" data-track style="--stages:(\d+)">([\s\S]*?)<\/article>/g)];
+
+test('tracks render in page order', () => {
+  assert.deepEqual(tracks.map((m) => m[1]), ['bcwc', 'bttrurslf', 'terrarium', 'howpolluted', 'archer-hero']);
+});
+
+test('each track has --stages equal to its stage buttons and stills', () => {
+  const want = { bcwc: 5, bttrurslf: 15, terrarium: 5, howpolluted: 5, 'archer-hero': 4 };
+  for (const [, id, n, body] of tracks) {
+    assert.equal(Number(n), want[id], id + ' --stages');
+    assert.equal(count(body, /<button type="button" data-stage="\d+"/g), want[id], id + ' buttons');
+    assert.equal(count(body, /<img class="fig-poster fig-still[^"]*" data-stage="\d+"/g), want[id], id + ' stills');
+    assert.equal(count(body, /class="fig-poster fig-still is-on"/g), 1, id + ' one still on');
+    assert.equal(count(body, /aria-current="step"/g), 1, id + ' one current step');
+  }
+});
+
+test('BTTRURSLF is the only feature track', () => {
+  const feats = [...html.matchAll(/<article class="track track--feature" id="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(feats, ['bttrurslf']);
+});
+
+test('no iceblock figure remains', () => {
+  assert.doesNotMatch(html, /data-fig="iceblock"/);
+});
+
+test('track role and dates render, as visible TODOs until supplied', () => {
+  for (const sec of content.sections) {
+    for (const e of sec.entries || []) {
+      assert.ok(html.includes(e.role.replace(/&/g, '&amp;')), e.title + ' role');
+      assert.ok(html.includes(e.dates.replace(/&/g, '&amp;')), e.title + ' dates');
+    }
+  }
 });
