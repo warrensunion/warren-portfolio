@@ -115,8 +115,10 @@ live in `src/content.js` unless the table says otherwise.
 - **Input safety.**
   - No figure ever cancels the wheel.
   - Games and jars read keys only while focused, and Esc lets go.
-  - The bcwc frame sits under a "Click to use the site" cover until clicked. Leaving the plate, Esc, Done or
-    scrolling away hands the pointer back.
+  - The bcwc frame sits under a "Click to use the site" cover, inert, until clicked. Done, leaving the plate
+    or scrolling away hands the pointer back. Esc does too while this page has focus. Inside the frame, keys
+    belong to bcwc's own page, so Esc can't be heard from outside without a change in bcwc: a
+    `postMessage` to its parent on Esc would add it. That change is optional and not made.
 - **Honesty.**
   - HowPolluted's numbers are fixed demo values, labelled "Demo, not a measurement" wherever a number or
     grade shows. Land or water comes from its real land mask, and it makes no `/api` calls.

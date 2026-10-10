@@ -78,6 +78,8 @@ export async function create(stage, ctx) {
     if (!frame || engaged === on) return;
     engaged = on;
     frame.iframe.style.pointerEvents = on ? 'auto' : 'none';
+    // Inert while not in use: no hit-testing (so no wheel or drag can land in it) and no focus.
+    frame.iframe.inert = !on;
     frame.cover.hidden = on;
     done.hidden = !on;
     if (on) frame.iframe.focus();
@@ -103,6 +105,7 @@ export async function create(stage, ctx) {
     iframe.referrerPolicy = 'no-referrer';
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
     iframe.style.pointerEvents = 'none';
+    iframe.inert = true;
     const cover = el('button', 'bw-cover', '<span>Click to use the site</span>');
     cover.type = 'button';
     cover.addEventListener('click', () => engage(true));

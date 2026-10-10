@@ -1619,6 +1619,13 @@ async function checkBcwc(browser, url) {
     return t;
   };
   const toStage = async (page, i, f = 0.5) => {
+    // A phone has no pinned stretch to scroll through: its stage buttons set the stage.
+    if ((await page.evaluate(() => innerWidth)) < 860) {
+      await page.evaluate((id) => document.getElementById(id).querySelector('figure').scrollIntoView({ block: 'center', behavior: 'instant' }), id);
+      await page.locator(`#${id} .fig-stages button[data-stage="${i}"]`).click();
+      await page.waitForFunction(([id, i]) => document.getElementById(id).dataset.stage === String(i), [id, i], { timeout: 4000 }).catch(() => {});
+      return;
+    }
     await page.evaluate(([id, i, f]) => window.__jump(window.__stageY(id, i) + (f - 0.5) * (window.__track(id).pad / Math.max(1, window.__track(id).n - 1))), [id, i, f]);
     await page.waitForFunction(([id, i]) => document.getElementById(id).dataset.stage === String(i), [id, i], { timeout: 4000 }).catch(() => {});
   };
@@ -1660,34 +1667,78 @@ async function checkBcwc(browser, url) {
 
   const srv = await startBcwc();
   if (!srv) {
-    report('bcwc live frame: SKIP (bcwc/dist not found, or its preview did not start)', true);
+    console.log('SKIP bcwc live frame  (bcwc/dist not found, or its preview did not start)');
     return;
   }
   try {
     for (const [label, opts] of [['1440x900', {}], ['390x844', PHONE_OPTS]]) {
       const t = await pageFor('?bcwc=' + encodeURIComponent(srv.origin), opts);
       const { page } = t;
-      const live = `bcwc ${label}: the live frame attaches at the last stage within the budget`;
+      // The frame really claims its two contexts when it attaches and gives them back when it detaches.
+      const live = `bcwc ${label}: the live frame claims weight 2 at the last stage and gives it back on leaving`;
       await step(live, async () => {
+        await toStage(page, 3);
+        await sleep(800);
+        const w0 = await page.evaluate(() => window.__figWeight());
         await toStage(page, 4);
         await page.waitForSelector(`#${id} iframe.bw-frame.is-loaded`, { timeout: 30000 });
-        const w = await page.evaluate(() => window.__figWeight());
-        report(live, w <= 3, `budget weight ${w}`);
+        const w1 = await page.evaluate(() => window.__figWeight());
+        await toStage(page, 2);
+        await sleep(400);
+        const w2 = await page.evaluate(() => window.__figWeight());
+        const gone = await page.evaluate((id) => document.querySelectorAll(`#${id} iframe`).length === 0, id);
+        await toStage(page, 4);
+        await page.waitForSelector(`#${id} iframe.bw-frame.is-loaded`, { timeout: 30000 });
+        report(live, w1 === w0 + 2 && w1 <= 3 && w2 === w0 && gone, `weight ${w0} -> ${w1} attached -> ${w2} detached, iframe removed ${gone}`);
       });
-      const guard = `bcwc ${label}: the wheel scrolls the page over the frame until clicked in, and again after letting go`;
+      // Back on the live stage with the frame loaded and settled. (On a phone any scroll moves the stage,
+      // which correctly detaches the frame; 300 ms covers the browser's hit-test update for a new frame.)
+      const ensureLive = async () => {
+        await toStage(page, 4);
+        await page.waitForSelector(`#${id} iframe.bw-frame.is-loaded`, { timeout: 30000 });
+        await sleep(300);
+      };
+      const state = (page) =>
+        page.evaluate((id) => ({ engaged: document.querySelector(`#${id} iframe`).style.pointerEvents === 'auto', cover: !document.querySelector(`#${id} .bw-cover`).hidden }), id);
+      const guard = `bcwc ${label}: the wheel scrolls the page over the frame until clicked in, and again once let go`;
       await step(guard, async () => {
+        await ensureLive();
         const before = await wheelScrolls(page, `#${id} .bw-view`);
+        await ensureLive();
         await page.locator(`#${id} .bw-cover`).click();
-        const engaged = await page.evaluate((id) => document.querySelector(`#${id} iframe`).style.pointerEvents === 'auto', id);
-        await page.keyboard.press('Escape').catch(() => {});
-        await page.evaluate(() => document.body.focus());
-        await page.keyboard.press('Escape');
-        await page.mouse.move(2, 2); // leaving the plate lets go too
-        await sleep(200);
-        const released = await page.evaluate((id) => document.querySelector(`#${id} iframe`).style.pointerEvents === 'none' && !document.querySelector(`#${id} .bw-cover`).hidden, id);
+        const engaged = (await state(page)).engaged;
+        await page.locator(`#${id} .bw-done`).click();
+        const s = await state(page);
         const after = await wheelScrolls(page, `#${id} .bw-view`);
-        report(guard, before.moved && engaged && released && after.moved, `before ${before.y0}->${before.y1}, engaged ${engaged}, released ${released}, after ${after.y0}->${after.y1}`);
+        report(guard, before.moved && engaged && !s.engaged && s.cover && after.moved, `before ${before.y0}->${before.y1}, engaged ${engaged}, after Done ${JSON.stringify(s)}, after ${after.y0}->${after.y1}`);
       });
+      // Esc while this page has focus lets go on its own (inside the cross-origin frame, keys belong to
+      // the frame's page; Done and leaving the plate cover that case).
+      const esc = `bcwc ${label}: Esc on this page lets go of the frame by itself`;
+      await step(esc, async () => {
+        await ensureLive();
+        const box = await page.locator(`#${id} .bw-view`).boundingBox();
+        await page.locator(`#${id} .bw-cover`).click();
+        const engaged = (await state(page)).engaged;
+        // Focus back on this page (the email button), pointer still over the plate.
+        await page.evaluate(() => [...document.querySelectorAll('[data-copy-email]')].find((x) => x.getClientRects().length)?.focus({ preventScroll: true }));
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.keyboard.press('Escape');
+        const s = await state(page);
+        report(esc, engaged && !s.engaged && s.cover, `engaged ${engaged}, after Esc ${JSON.stringify(s)}`);
+      });
+      if (label === '1440x900') {
+        const leave = `bcwc ${label}: moving the pointer off the plate lets go of the frame by itself`;
+        await step(leave, async () => {
+          await ensureLive();
+          await page.locator(`#${id} .bw-cover`).click();
+          const engaged = (await state(page)).engaged;
+          await page.mouse.move(2, 2);
+          await sleep(200);
+          const s = await state(page);
+          report(leave, engaged && !s.engaged && s.cover, `engaged ${engaged}, after leaving ${JSON.stringify(s)}`);
+        });
+      }
       report(`bcwc ${label}: no page errors`, t.errors.length === 0, t.errors.join(' | '));
       await t.close();
     }
@@ -1721,6 +1772,27 @@ async function checkBcwc(browser, url) {
       report(down, r.frames === 0 && r.w <= 3, JSON.stringify(r));
     });
     await td.close();
+
+    // A deploy that answers but never finishes loading the page: the 10 s timeout says so, removes the
+    // frame and gives its two contexts back.
+    const ts = await pageFor('?bcwc=' + encodeURIComponent(srv.origin));
+    const stall = 'bcwc: a live page that never finishes loading times out within 12 s and gives its claim back';
+    await step(stall, async () => {
+      await ts.page.route(srv.origin + '/products', async (route) => {
+        if (route.request().resourceType() === 'document') await sleep(20000);
+        await route.continue().catch(() => {});
+      });
+      await toStage(ts.page, 3);
+      await sleep(800);
+      const w0 = await ts.page.evaluate(() => window.__figWeight());
+      await toStage(ts.page, 4);
+      await ts.page.waitForSelector(`#${id} iframe`, { timeout: 15000 });
+      const w1 = await ts.page.evaluate(() => window.__figWeight());
+      await ts.page.waitForFunction((id) => /did not load/.test(document.querySelector(`#${id} .bw-note`)?.textContent || ''), id, { timeout: 13000 });
+      const r = await ts.page.evaluate((id) => ({ frames: document.querySelectorAll(`#${id} iframe`).length, w: window.__figWeight() }), id);
+      report(stall, w1 === w0 + 2 && r.frames === 0 && r.w === w0, `weight ${w0} -> ${w1} attached -> ${r.w} after the timeout, frames ${r.frames}`);
+    });
+    await ts.close();
   } finally {
     srv.stop();
   }
