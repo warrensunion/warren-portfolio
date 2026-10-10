@@ -124,7 +124,9 @@ async function posters() {
   console.log('posters: written');
 }
 
+// A placeholder only while there is no résumé: once Warren drops his own PDF in, re-running art keeps it.
 async function resume() {
+  if (existsSync(pub('resume.pdf'))) return console.log('resume.pdf: kept');
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
