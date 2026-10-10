@@ -7,6 +7,7 @@ import { chromium } from 'playwright';
 import { build, GPU_ARGS, startPreview } from './lib/preview.mjs';
 import { content } from '../src/content.js';
 import { deskProgress, stageFor } from '../src/figures/track-math.js';
+import { gradeFor } from '../src/figures/howpolluted/grades.js';
 
 const argv = new Set(process.argv.slice(2));
 const ARGS = argv.has('--swiftshader') ? [] : GPU_ARGS;
@@ -14,9 +15,9 @@ const ARGS = argv.has('--swiftshader') ? [] : GPU_ARGS;
 const only = ([...argv].find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
 // The live WebGL figures on the page today. Each later plan appends its track figure's id here (and its
 // kind to KIND_COUNT and CANVASES) as its demo lands.
-const WEBGL_IDS = ['iceberg-0', 'ring-0'];
-const KIND_COUNT = { iceberg: 1, ring: 1 }; // WebGL figures per kind: one fallback log each
-const CANVASES = { iceberg: 2, ring: 1 }; // the iceberg's WebGL scene plus its 2D overlay
+const WEBGL_IDS = ['iceberg-0', 'ring-0', 'howpolluted-0'];
+const KIND_COUNT = { iceberg: 1, ring: 1, howpolluted: 1 }; // WebGL figures per kind: one fallback log each
+const CANVASES = { iceberg: 2, ring: 1, howpolluted: 2 }; // the iceberg's WebGL scene plus its 2D overlay; the globe plus the 2D litter scene
 // Kinds that hold a WebGL context once live (env.js WEIGHTS > 0), whether their demo has landed or not.
 const WEBGL_KINDS = ['iceberg', 'ring', 'terrarium', 'howpolluted', 'archer'];
 const DESK = { width: 1440, height: 900 };
@@ -1027,6 +1028,78 @@ async function checkTracks(browser, url) {
   }
 }
 
+/* ── HowPolluted (plan 2, spec 5.4) ── */
+
+// At its last stage the demo is a pile the visitor cleans up: clicking pieces lowers the card's number and
+// its grade follows HowPolluted's own scale; every number says it is a demo; nothing calls /api; and a
+// wheel over the plate still scrolls the page (no wheel zoom).
+async function checkHowPolluted(browser, url) {
+  const t = await open(browser, url + '?debug=1');
+  const { page } = t;
+  const api = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/api')) api.push(r.url());
+  });
+  await page.evaluate(trackHelpers, STICKY_TOP);
+  const card = () =>
+    page.evaluate(() => {
+      const c = document.querySelector('#howpolluted .hp-card');
+      const n = c?.querySelector('.hp-card-n');
+      return { n: n ? Number(n.textContent) : NaN, grade: c?.querySelector('.hp-card-grade-word')?.textContent || '', text: c?.textContent || '', readout: document.querySelector('#howpolluted .fig-readout')?.textContent || '' };
+    });
+  const pick = 'howpolluted: at stage 5, clicking 6 pieces lowers the card number and the grade matches gradeFor(litter, N)';
+  await step(pick, async () => {
+    await page.evaluate(() => window.__jump(window.__stageY('howpolluted', 4)));
+    await waitLive(page, 'howpolluted-0');
+    await page.waitForFunction(() => document.getElementById('howpolluted').dataset.stage === '4' && window.__hp?.interactive() && window.__hp.items().length > 6, null, { timeout: 15000 });
+    await sleep(700); // the card has slid in
+    const c0 = await card();
+    let clicked = 0;
+    for (let k = 0; k < 40 && clicked < 6; k++) {
+      // The front-most piece whose centre is on the scene itself (not under the card or a button).
+      const p = await page.evaluate(() => {
+        const r = document.querySelector('#howpolluted .hp').getBoundingClientRect();
+        const items = window.__hp.items().slice().reverse();
+        for (const it of items) {
+          const x = r.left + it.cx;
+          const y = r.top + it.cy;
+          const el = document.elementFromPoint(x, y);
+          if (el && el.closest('.hp') && !el.closest('.hp-card, .hp-controls, button')) return { x, y };
+        }
+        return null;
+      });
+      if (!p) break;
+      const before = await page.evaluate(() => window.__hp.items().length);
+      await page.mouse.click(p.x, p.y);
+      const after = await page.evaluate(() => window.__hp.items().length);
+      if (after === before - 1) clicked++;
+    }
+    await sleep(400); // the card repaints within a frame
+    const c1 = await card();
+    const want = gradeFor('litter', c1.n).grade;
+    report(pick, clicked === 6 && c1.n < c0.n && c1.grade === want, `picked ${clicked}, card ${c0.n}% ${c0.grade} -> ${c1.n}% ${c1.grade} (gradeFor says ${want})`);
+  });
+  const demo = 'howpolluted: the card and the readout both say demo, and the card says "Demo, not a measurement"';
+  await step(demo, async () => {
+    const c = await card();
+    report(demo, /demo/i.test(c.text) && /Demo, not a measurement/.test(c.text) && /demo/i.test(c.readout), `readout "${c.readout}"`);
+  });
+  report('howpolluted: no request to /api', api.length === 0, api.slice(0, 3).join(' | '));
+  const wheel = 'howpolluted: a wheel over the plate at stage 5 scrolls the page';
+  await step(wheel, async () => {
+    const box = await page.locator('#howpolluted .fig-stage').boundingBox();
+    await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.6);
+    const y0 = await page.evaluate(() => scrollY);
+    await page.mouse.wheel(0, 240);
+    await sleep(600);
+    const y1 = await page.evaluate(() => scrollY);
+    report(wheel, y1 !== y0, `scrollY ${y0} -> ${y1}`);
+  });
+  report('howpolluted: no page errors', t.errors.length === 0, t.errors.join(' | '));
+  reportConsole('howpolluted: no console errors or WebGL/context warnings', t.logs);
+  await t.close();
+}
+
 /* ── run ── */
 
 if (!argv.has('--no-build')) build();
@@ -1060,6 +1133,7 @@ try {
     phonedenied: () => checkPhoneDenied(browser, url),
     resize: () => checkResize(browser, url),
     tracks: () => checkTracks(browser, url),
+    howpolluted: () => checkHowPolluted(browser, url),
   };
   for (const [name, run] of Object.entries(checks)) if (!only.length || only.includes(name)) await run();
 } finally {

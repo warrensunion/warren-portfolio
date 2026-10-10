@@ -2,8 +2,8 @@
 // or pinch zoom (removed, so the page always scrolls); no rAF or ResizeObserver of its own (the figure calls
 // render(dtMs) and resize(w, h)); the time-driven flyTo() became aim(point, t), a pure pose of t in 0..1
 // on the source's ease-out cubic; the pin's back-out drop became setPin(point, s); drag-to-spin with
-// inertia only while interactive(true), with the pointer handlers handed to the figure instead of bound
-// here; no hover callback; DPR min(devicePixelRatio, 2 on the high tier else 1); an opaque paper clear
+// inertia only while interactive(true), which also backs the camera off to the whole globe, with the
+// pointer handlers handed to the figure instead of bound here; no hover callback; DPR min(devicePixelRatio, 2 on the high tier else 1); an opaque paper clear
 // colour instead of a transparent canvas; the camera backs off on a portrait stage so the globe fits its
 // width. three 0.180: every API the source uses on 0.186 exists in 0.180 unchanged, so nothing was swapped.
 //
@@ -215,11 +215,13 @@ export function createGlobe(canvas, { texture, tier = 'high', onPick }) {
     setVisible(v) {
       visible = !!v;
     },
-    // Hands the current pose to the visitor (or takes it back for scroll-driven aiming).
+    // Hands the current pose to the visitor, backed off to the whole globe (or takes it back for
+    // scroll-driven aiming).
     interactive(on) {
       free = !!on;
       down = null;
       vYaw = vPitch = 0;
+      if (free) dist = IDLE.dist;
     },
     destroy() {
       geo.dispose();

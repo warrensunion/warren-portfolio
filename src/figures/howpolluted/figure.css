@@ -1,0 +1,379 @@
+/* The HowPolluted track figure. Everything is scoped under .hp, which the figure lays over its stage. The
+   colours are HowPolluted's own tokens (its src/styles/tokens.css at 80f6d06), copied as custom properties
+   on .hp; the card, tag and button rules are ported from its scene.css and ui.css, smaller to fit a plate.
+   Its fonts are added by figure.js through FontFace, never here, so the page's first paint is untouched. */
+
+.hp {
+  --hp-paper: #f1ede5;
+  --hp-ink: #2b2d3a;
+  --hp-ink-soft: #4a4c5a;
+  --hp-slate: #60657c;
+  --hp-slate-deep: #4c5168;
+  --hp-grade-0: #4f8f6f;
+  --hp-grade-1: #7aa46a;
+  --hp-grade-4: #a8524f;
+  --hp-font-display: 'Archivo Expanded', 'Arial Black', sans-serif;
+  --hp-font-ui: 'Montserrat', system-ui, sans-serif;
+  --hp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --hp-r-frame: 6px;
+  --hp-r-pill: 999px;
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--hp-paper);
+  color: var(--hp-ink);
+  font-family: var(--hp-font-ui);
+  touch-action: pan-y; /* vertical swipes always scroll the page */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Nothing of the figure shows before its first frame: the stage stills stay until then. */
+.fig:not(.is-live) .hp {
+  visibility: hidden;
+}
+
+/* Both canvases fill the stage; their cross-fade is driven by scroll, so it has no transition. */
+.hp canvas,
+.hp .fig-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: none;
+}
+
+.hp.is-interactive .hp-scene {
+  cursor: grab;
+}
+
+.hp.is-interactive.is-globe .hp-globe {
+  cursor: grab;
+}
+
+/* A one-line label on the plate: the demo point, then the ground the mask gave. */
+.hp-chip {
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  z-index: 3;
+  max-width: calc(100% - 28px);
+  margin: 0;
+  padding: 6px 12px 5px;
+  border-radius: var(--hp-r-pill);
+  background: var(--hp-paper);
+  box-shadow: 0 0 0 1.5px var(--hp-ink);
+  font: 700 12px/1.3 var(--hp-font-ui);
+  pointer-events: none;
+}
+
+.hp-chip[hidden] {
+  display: none;
+}
+
+/* The source's tag, with its Estimate colours: here it always says "Demo, not a measurement". */
+.hp-tag {
+  display: inline-block;
+  padding: 3px 9px 2px;
+  border-radius: var(--hp-r-pill);
+  border: 1.5px solid currentColor;
+  color: #8a5a2b;
+  background: #f6e7cf;
+  font: 700 10.5px/1.4 var(--hp-font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The result card (HowPolluted's scene.css .sc-card), at the right of the plate. */
+.hp-card {
+  --hp-slide: 40px;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  z-index: 4;
+  width: min(300px, 40%);
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+  padding: 14px 16px 12px;
+  background: var(--hp-paper);
+  border-radius: var(--hp-r-frame);
+  box-shadow: 0 0 0 1.5px var(--hp-ink), 0 0 0 5px var(--hp-paper), 0 0 0 6.5px var(--hp-ink), 0 16px 40px rgb(30 32 44 / 0.3);
+  transform: translate(var(--hp-slide), -50%);
+  opacity: 0;
+  visibility: hidden;
+  scrollbar-width: none;
+}
+
+.hp-card p {
+  margin: 0;
+}
+
+.hp-card-kind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-bottom: 8px !important;
+  font: 700 11px/1 var(--hp-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hp-card-num {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--hp-ink);
+}
+
+.hp-card-n {
+  font: 900 clamp(32px, 3.4vw, 48px) / 1 var(--hp-font-display);
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.hp-card-unit {
+  font: 800 18px/1 var(--hp-font-ui);
+  color: var(--hp-ink-soft);
+}
+
+.hp-card-what {
+  margin: 4px 0 10px !important;
+  color: var(--hp-ink-soft);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.hp-card-grade {
+  padding: 8px 10px;
+  border-radius: var(--hp-r-frame);
+  background: #fbf9f5;
+  box-shadow: inset 4px 0 0 var(--gc);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.hp-card-grade-word {
+  display: block;
+  font: 800 16px/1.2 var(--hp-font-ui);
+  color: var(--gc);
+}
+
+.hp-card-grade[data-g='0'] { --gc: var(--hp-grade-0); }
+.hp-card-grade[data-g='1'] { --gc: var(--hp-grade-1); }
+.hp-card-grade[data-g='2'] { --gc: #9c7426; }
+.hp-card-grade[data-g='3'] { --gc: #a35a33; }
+.hp-card-grade[data-g='4'] { --gc: var(--hp-grade-4); }
+
+.hp-card-note {
+  margin-top: 8px !important;
+  font: 700 13px/1.35 var(--hp-font-ui);
+}
+
+.hp-card-small {
+  margin-top: 6px !important;
+  color: #5f5d58;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* Stage 5's switches (HowPolluted's .hp-btn: an inked frame with clipped corners), bottom left. */
+.hp-controls {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 4;
+  display: flex;
+  gap: 16px;
+}
+
+.hp-controls[hidden] {
+  display: none;
+}
+
+.hp-btn {
+  --btn-fill: var(--hp-slate);
+  --btn-text: var(--hp-paper);
+  --cut: 7px;
+  position: relative;
+  display: inline-grid;
+  padding: 0;
+  border: 0;
+  background: none;
+  isolation: isolate;
+  cursor: pointer;
+  transition: transform 0.25s var(--hp-ease-out);
+}
+
+.hp-btn::before,
+.hp-btn::after,
+.hp-btn > span {
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+}
+
+.hp-btn::before,
+.hp-btn::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+}
+
+.hp-btn::before {
+  inset: -5px;
+  background: var(--hp-ink);
+}
+
+.hp-btn::after {
+  inset: -3.5px;
+  background: var(--hp-paper);
+}
+
+.hp-btn > span {
+  display: grid;
+  place-items: center;
+  min-height: 34px;
+  padding: 0 16px;
+  background: linear-gradient(var(--hp-ink-soft), var(--hp-ink-soft)) bottom / 100% 0% no-repeat, var(--btn-fill);
+  color: var(--btn-text);
+  font: 700 12px/1 var(--hp-font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background-size 0.6s var(--hp-ease-out), color 0.25s;
+}
+
+.hp-btn:hover > span,
+.hp-btn:focus-visible > span,
+.hp-btn[aria-pressed='true'] > span {
+  background-size: 100% 100%, auto;
+}
+
+.hp-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.hp-btn:focus-visible {
+  outline: 2px solid var(--accent, #1f5f78);
+  outline-offset: 7px;
+}
+
+.hp-btn--ghost {
+  --btn-fill: var(--hp-paper);
+  --btn-text: var(--hp-ink);
+}
+
+.hp-btn--ghost:hover > span,
+.hp-btn--ghost:focus-visible > span,
+.hp-btn--ghost[aria-pressed='true'] > span {
+  color: var(--hp-paper);
+}
+
+/* A phone-size plate: the card covers the plate at stage 4, then folds into one line over the sky. */
+.hp--compact .hp-chip {
+  left: 8px;
+  top: 8px;
+  max-width: calc(100% - 16px);
+  padding: 4px 9px 3px;
+  font-size: 10.5px;
+}
+
+.hp--compact .hp-card {
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  width: auto;
+  max-height: calc(100% - 16px);
+  padding: 10px 12px;
+  box-shadow: 0 0 0 1.5px var(--hp-ink), 0 8px 24px rgb(30 32 44 / 0.25);
+  transform: translateX(var(--hp-slide));
+}
+
+.hp--compact .hp-card-n {
+  font-size: 30px;
+}
+
+.hp--compact .hp-card-what,
+.hp--compact .hp-card-where {
+  display: none;
+}
+
+.hp--compact .hp-card-num {
+  margin-bottom: 6px;
+}
+
+.hp--compact .hp-card-grade {
+  padding: 5px 8px;
+  font-size: 11.5px;
+}
+
+.hp--compact .hp-card-grade-word {
+  font-size: 13px;
+}
+
+.hp--compact .hp-card-small {
+  margin-top: 4px !important;
+  font-size: 10px;
+}
+
+.hp-card.is-mini {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  max-height: none;
+  padding: 6px 10px;
+}
+
+.hp-card.is-mini .hp-card-kind {
+  order: 3;
+  margin: 0 !important;
+}
+
+.hp-card.is-mini .hp-card-n {
+  font-size: 20px;
+}
+
+.hp-card.is-mini .hp-card-unit {
+  font-size: 13px;
+}
+
+.hp-card.is-mini .hp-card-grade {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.hp-card.is-mini .hp-card-grade-word {
+  font-size: 13px;
+}
+
+.hp-card.is-mini .hp-card-what,
+.hp-card.is-mini .hp-card-meaning,
+.hp-card.is-mini .hp-card-note,
+.hp-card.is-mini .hp-card-small {
+  display: none;
+}
+
+.hp--compact .hp-controls {
+  left: 12px;
+  bottom: 12px;
+  gap: 12px;
+}
+
+.hp--compact .hp-btn > span {
+  min-height: 28px;
+  padding: 0 11px;
+  font-size: 10.5px;
+}
+
+/* The readout is a nowrap line in the plate's head. On a narrow plate it wraps instead, so it never
+   widens the page and never cuts off the word "demo". */
+.fig[data-fig='howpolluted'] .fig-readout {
+  min-width: 0;
+  white-space: normal;
+  text-align: right;
+}
