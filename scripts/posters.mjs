@@ -1,8 +1,8 @@
 // Every WebGL figure's poster is a still of the scene itself, so the page reads the same before the
 // scene loads, under reduced motion and on a device that cannot run it. This shoots each one through
 // the host's ?poster= hook (one figure, fixed state, no motion) from the built page at the 1440x900
-// layout and 2x pixels, writes webp into public/posters, then rebuilds so dist/ carries them too.
-// Usage: npm run posters [-- --only=ws-1,iceberg]
+// layout and 2x pixels, writes webp into public/posters (track stage stills into public/stills), then rebuilds so dist/ carries them too.
+// Usage: npm run posters [-- --only=ws-1,iceberg,stills/archer-hero-s2]
 import { chromium } from 'playwright';
 import sharp from 'sharp';
 import { stat } from 'node:fs/promises';
@@ -18,6 +18,8 @@ const SHOTS = [
   { file: 'ws-2', q: 'poster=ring&shape=2' },
   { file: 'ws-3', q: 'poster=ring&shape=3' },
   { file: 'ws-4', q: 'poster=ring&shape=4' },
+  // Track stage stills go to public/stills (a file with a folder is relative to public/).
+  ...[0, 1, 2, 3].map((i) => ({ file: `stills/archer-hero-s${i}`, q: `poster=archer&stage=${i}` })),
 ];
 const KIND_INDEX = (q) => {
   const p = new URLSearchParams(q);
@@ -53,7 +55,7 @@ try {
     // Two more frames after scrolling, so the compositor has the canvas at its final place.
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     const png = await stage.screenshot({ type: 'png', animations: 'disabled' });
-    const out = path.join(root, 'public/posters', shot.file + '.webp');
+    const out = path.join(root, 'public', shot.file.includes('/') ? '' : 'posters', shot.file + '.webp');
     const info = await sharp(png).webp({ quality: 80, effort: 6 }).toFile(out);
     const kb = ((await stat(out)).size / 1024).toFixed(0);
     console.log(`ok   ${shot.file}.webp ${info.width}x${info.height} ${kb} KB`);

@@ -153,7 +153,7 @@ export function createHud(el, { onPlay = () => {}, onSkill = () => {} } = {}) {
     hud,
     stick,
     sync(state, camera, size) {
-      const s = Math.max(0.6, Math.min(1.5, size.w / 760)).toFixed(3);
+      const s = Math.max(0.6, Math.min(1.5, size.w / 640)).toFixed(3);
       set('s', s, (x) => hud.style.setProperty('--ah-s', x));
       const a = state.archer;
       set('left', state.left + ' left', (t) => (leftN.textContent = t));

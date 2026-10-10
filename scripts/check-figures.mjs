@@ -14,9 +14,9 @@ const ARGS = argv.has('--swiftshader') ? [] : GPU_ARGS;
 const only = ([...argv].find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
 // The live WebGL figures on the page today. Each later plan appends its track figure's id here (and its
 // kind to KIND_COUNT and CANVASES) as its demo lands.
-const WEBGL_IDS = ['iceberg-0', 'ring-0'];
-const KIND_COUNT = { iceberg: 1, ring: 1 }; // WebGL figures per kind: one fallback log each
-const CANVASES = { iceberg: 2, ring: 1 }; // the iceberg's WebGL scene plus its 2D overlay
+const WEBGL_IDS = ['iceberg-0', 'ring-0', 'archer-0'];
+const KIND_COUNT = { iceberg: 1, ring: 1, archer: 1 }; // WebGL figures per kind: one fallback log each
+const CANVASES = { iceberg: 2, ring: 1, archer: 1 }; // the iceberg's WebGL scene plus its 2D overlay
 // Kinds that hold a WebGL context once live (env.js WEIGHTS > 0), whether their demo has landed or not.
 const WEBGL_KINDS = ['iceberg', 'ring', 'terrarium', 'howpolluted', 'archer'];
 const DESK = { width: 1440, height: 900 };
@@ -1027,6 +1027,162 @@ async function checkTracks(browser, url) {
   }
 }
 
+/* ── Archer Hero: the game never traps keys or scrolling (spec 3.7 and 9.6) ── */
+
+// Pointer Lock is refused in this context (as headless, an iframe policy or a declining visitor would),
+// so the drag fallback and the unlocked Esc are what get exercised. ?debug=1 exposes __archer.
+async function checkArcher(browser, url) {
+  const refuse = () => {
+    Element.prototype.requestPointerLock = function () {
+      return Promise.reject(new DOMException('refused for the check', 'NotAllowedError'));
+    };
+  };
+  const t = await open(browser, url + '?debug=1', {}, { init: refuse });
+  const { page } = t;
+  const id = 'archer-hero';
+  const roblox = JSON.stringify(content).match(/https:\/\/www\.roblox\.com\/[^"]+/)?.[0];
+  await page.evaluate(trackHelpers, STICKY_TOP);
+  const toStage = async (i) => {
+    await page.evaluate(([id, i]) => window.__jump(window.__stageY(id, i)), [id, i]);
+    await page.waitForFunction(([id, i]) => document.getElementById(id).dataset.stage === String(i), [id, i], { timeout: 3000 });
+    await twoFrames(page);
+  };
+  const z = () => page.evaluate(() => window.__archer?.state?.archer?.z ?? NaN);
+  const scrollY = () => page.evaluate(() => scrollY);
+  const isFocused = () => page.evaluate(() => document.activeElement === document.querySelector('figure.fig[data-fig="archer"]'));
+  const sel = figSel('archer-0');
+
+  await step('archer: at stage 1 the attract mode walks the archer up the path', async () => {
+    await toStage(1);
+    await waitLive(page, 'archer-0');
+    await page.waitForFunction(() => window.__archer?.state, null, { timeout: 10000 });
+    await sleep(300);
+    const z0 = await z();
+    await sleep(2000);
+    const z1 = await z();
+    report('archer: at stage 1 the attract mode walks the archer up the path', z1 > z0 + 0.5, `z ${z0.toFixed(2)} -> ${z1.toFixed(2)} in 2 s`);
+  });
+
+  await step('archer: stage 3 shows "Click to play"', async () => {
+    await toStage(3);
+    await page.waitForFunction((sel) => !document.querySelector(sel + ' .ah-prompt')?.hidden, sel, { timeout: 3000 });
+    const text = await page.textContent(sel + ' .ah-prompt');
+    report('archer: stage 3 shows "Click to play"', text === 'Click to play', `prompt "${text}"`);
+  });
+
+  await step('archer: unfocused, ArrowDown and Space scroll the page', async () => {
+    await page.evaluate(() => document.activeElement?.blur());
+    const y0 = await scrollY();
+    await page.keyboard.press('ArrowDown');
+    await sleep(400);
+    const y1 = await scrollY();
+    await page.keyboard.press('Space');
+    await sleep(600);
+    const y2 = await scrollY();
+    report('archer: unfocused, ArrowDown and Space scroll the page', y1 > y0 && y2 > y1, `scrollY ${y0} -> ${y1} (ArrowDown) -> ${y2} (Space)`);
+  });
+
+  await step('archer: click to play, W moves the archer and ArrowDown leaves the page put', async () => {
+    await toStage(3);
+    await page.click(sel + ' .ah-prompt');
+    await page.waitForFunction((sel) => document.activeElement === document.querySelector(sel), sel, { timeout: 2000 });
+    await sleep(200);
+    const z0 = await z();
+    await page.keyboard.down('KeyW');
+    await sleep(500);
+    await page.keyboard.up('KeyW');
+    const z1 = await z();
+    const y0 = await scrollY();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Space');
+    await sleep(400);
+    const y1 = await scrollY();
+    report('archer: click to play, W moves the archer and ArrowDown leaves the page put', z1 > z0 + 1 && y1 === y0 && (await isFocused()), `z ${z0.toFixed(2)} -> ${z1.toFixed(2)}, scrollY ${y0} -> ${y1}`);
+  });
+
+  await step('archer: with Pointer Lock refused, a drag turns the camera', async () => {
+    const box = await page.locator(sel + ' canvas.fig-canvas').boundingBox();
+    const yaw0 = await page.evaluate(() => window.__archer.state.archer.yaw);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 6 });
+    await page.mouse.up();
+    await sleep(150);
+    const yaw1 = await page.evaluate(() => window.__archer.state.archer.yaw);
+    report('archer: with Pointer Lock refused, a drag turns the camera', Math.abs(yaw1 - yaw0) > 0.1 && (await isFocused()), `yaw ${yaw0.toFixed(3)} -> ${yaw1.toFixed(3)}`);
+  });
+
+  await step('archer: a wheel over the playing game scrolls the page', async () => {
+    const box = await page.locator(sel + ' canvas.fig-canvas').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    const y0 = await scrollY();
+    await page.mouse.wheel(0, 400);
+    await sleep(500);
+    const y1 = await scrollY();
+    report('archer: a wheel over the playing game scrolls the page', y1 > y0, `scrollY ${y0} -> ${y1}`);
+    await toStage(3);
+  });
+
+  await step('archer: Esc lets go of the figure', async () => {
+    const before = await isFocused();
+    await page.keyboard.press('Escape');
+    await sleep(100);
+    const after = await isFocused();
+    report('archer: Esc lets go of the figure', before && !after, `focused before ${before}, after ${after}`);
+  });
+
+  await step('archer: W pressed in the page\'s own email button does not move the archer', async () => {
+    const focused = await page.evaluate(() => {
+      const b = [...document.querySelectorAll('[data-copy-email]')].find((x) => x.getClientRects().length);
+      b?.focus({ preventScroll: true });
+      return document.activeElement === b && !!b;
+    });
+    const z0 = await z();
+    await page.keyboard.down('KeyW');
+    await sleep(500);
+    await page.keyboard.up('KeyW');
+    const z1 = await z();
+    report('archer: W pressed in the page\'s own email button does not move the archer', focused && z1 === z0, `email button focused ${focused}, z ${z0.toFixed(3)} -> ${z1.toFixed(3)}`);
+  });
+
+  await step('archer: losing shows the end panel with Play again and the Roblox link', async () => {
+    await toStage(3);
+    await page.evaluate(() => window.__archer.kill());
+    await page.waitForFunction((sel) => !document.querySelector(sel + ' .ah-end')?.hidden, sel, { timeout: 3000 });
+    const r = await page.evaluate((sel) => {
+      const end = document.querySelector(sel + ' .ah-end');
+      const a = end.querySelector('a');
+      return { again: !!end.querySelector('button.ah-again'), href: a?.getAttribute('href'), text: a?.textContent, target: a?.target, rel: a?.rel };
+    }, sel);
+    report('archer: losing shows the end panel with Play again and the Roblox link', r.again && r.href === roblox && r.text === 'Play the full game on Roblox' && r.target === '_blank' && /noopener/.test(r.rel), JSON.stringify(r));
+  });
+
+  await step('archer: scrolling away mid-game and back leaves no key held', async () => {
+    await page.click(sel + ' .ah-again');
+    await page.waitForFunction((sel) => document.activeElement === document.querySelector(sel), sel, { timeout: 2000 });
+    await page.keyboard.down('KeyW');
+    await sleep(300);
+    // Away: the figure just above the viewport (stopped, not destroyed), then back to its last stage.
+    await page.evaluate((sel) => {
+      const r = document.querySelector(sel).getBoundingClientRect();
+      window.__jump(window.scrollY + r.bottom + 60);
+    }, sel);
+    await sleep(600);
+    await toStage(3);
+    await sleep(200);
+    const z0 = await z();
+    await sleep(500);
+    const z1 = await z();
+    await page.keyboard.up('KeyW');
+    const playing = await page.evaluate((sel) => document.querySelector(sel + ' .ah-hud')?.classList.contains('is-playing'), sel);
+    report('archer: scrolling away mid-game and back leaves no key held', z1 === z0 && playing, `z ${z0.toFixed(3)} -> ${z1.toFixed(3)} over 500 ms after returning, still playing ${playing}`);
+  });
+
+  report('archer: no page errors', t.errors.length === 0, t.errors.join(' | '));
+  reportConsole('archer: no console errors or WebGL/context warnings', t.logs);
+  await t.close();
+}
+
 /* ── run ── */
 
 if (!argv.has('--no-build')) build();
@@ -1060,6 +1216,7 @@ try {
     phonedenied: () => checkPhoneDenied(browser, url),
     resize: () => checkResize(browser, url),
     tracks: () => checkTracks(browser, url),
+    archer: () => checkArcher(browser, url),
   };
   for (const [name, run] of Object.entries(checks)) if (!only.length || only.includes(name)) await run();
 } finally {
