@@ -208,7 +208,8 @@ export async function create(el, ctx) {
 
   // ── Input: the contact section's project links, and the pointer over the stage (the trail) ──
   const section = el.closest('section');
-  const links = poster ? null : bindMorphLinks(section, show, 120);
+  const shown = () => (parts.index === 0 ? null : parts.index - 1); // what is on screen, in link terms
+  const links = poster ? null : bindMorphLinks(section, show, 120, shown);
   if (!poster && links && !links.count) log('no [data-morph] links in this section');
   const listeners = [];
   const on = (target, type, fn) => {
@@ -234,7 +235,8 @@ export async function create(el, ctx) {
   const frame = (now) => {
     if (!running || destroyed) return;
     raf = requestAnimationFrame(frame);
-    const dtMs = last ? Math.min(now - last, 100) : 16.7;
+    const rawMs = last ? now - last : 16.7; // the real frame time, for ctx.frame (fps meter, __figStats)
+    const dtMs = Math.min(rawMs, 100); // the simulation step only
     last = now;
     const dt = dtMs / 1000;
     if (!poster) clock += dt;
@@ -258,7 +260,7 @@ export async function create(el, ctx) {
       dist,
     });
     renderer.render(scene, camera);
-    ctx.frame?.(dtMs);
+    ctx.frame?.(rawMs);
     if (!readyFired) {
       readyFired = true;
       el.dispatchEvent(new Event('fig:ready'));

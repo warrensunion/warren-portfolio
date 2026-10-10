@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { grow, fitInCircle, thicken } from '../src/figures/ring/tubeShapes.js';
-import { createMorphDebounce } from '../src/figures/ring/morphLinks.js';
+import { createMorphDebounce, morphTarget } from '../src/figures/ring/morphLinks.js';
 
 /** A "W"-like RGBA mask: two opaque white rectangles side by side on transparent, about as wide for its
  *  height (16:7) as the real "WS" in a bold serif. */
@@ -82,7 +82,8 @@ test('thicken() grows a 1 px line so thin art keeps its strokes when sampled', (
   assert.equal(data[(20 * w + 21) * 4 + 3], 0, 'input untouched');
 });
 
-test('morph links: rapid enter/leave across links settles once, 120 ms after the last event', () => {
+/** Fake timers, plus a 'screen' that the debouncer reads back as what is shown. */
+function harness() {
   let now = 0;
   const timers = [];
   const clock = {
@@ -93,8 +94,14 @@ test('morph links: rapid enter/leave across links settles once, 120 ms after the
     now += ms;
     for (const t of timers) if (t.live && t.at <= now) (t.live = false), t.fn();
   };
+  const screen = { current: null };
   const shown = [];
-  const d = createMorphDebounce((i) => shown.push(i), 120, clock);
+  const d = createMorphDebounce((i) => (shown.push(i), (screen.current = i)), 120, clock, () => screen.current);
+  return { advance, screen, shown, d };
+}
+
+test('morph links: rapid enter/leave across links settles once, 120 ms after the last event', () => {
+  const { advance, shown, d } = harness();
   d.request(0);
   advance(50);
   d.request(null);
@@ -114,4 +121,29 @@ test('morph links: rapid enter/leave across links settles once, 120 ms after the
   d.cancel();
   advance(500);
   assert.deepEqual(shown, [1, null]);
+});
+
+test('morph links: compares against what is shown, so a direct show() elsewhere cannot leave it stale', () => {
+  const { advance, screen, shown, d } = harness();
+  d.request(1);
+  advance(120);
+  assert.deepEqual(shown, [1]);
+  screen.current = null; // the poster script (or anything) called show(null) directly
+  d.request(1); // hovering link 1 again must morph back to it
+  advance(120);
+  assert.deepEqual(shown, [1, 1]);
+  screen.current = 2; // shown directly
+  d.request(2); // already on screen: nothing to do
+  advance(120);
+  assert.deepEqual(shown, [1, 1]);
+});
+
+test('morph links: hover wins over focus, and leaving a link while another keeps focus shows the focused one', () => {
+  assert.equal(morphTarget({ hovered: null, focused: null }), null);
+  assert.equal(morphTarget({ hovered: 0, focused: null }), 0);
+  assert.equal(morphTarget({ hovered: null, focused: 2 }), 2);
+  assert.equal(morphTarget({ hovered: 1, focused: 2 }), 1);
+  assert.equal(morphTarget({ hovered: 0, focused: 0 }), 0);
+  // Index 0 is a real link, not 'nothing'.
+  assert.equal(morphTarget({ hovered: null, focused: 0 }), 0);
 });

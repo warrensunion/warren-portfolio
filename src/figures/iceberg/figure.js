@@ -148,13 +148,14 @@ export async function create(el, ctx) {
   const frame = (now) => {
     if (!running || destroyed) return;
     raf = requestAnimationFrame(frame);
-    const dtMs = last ? Math.min(now - last, 100) : 16.7;
+    const rawMs = last ? now - last : 16.7; // the real frame time, for ctx.frame (fps meter, __figStats)
+    const dtMs = Math.min(rawMs, 100); // the simulation step only
     last = now;
     if (!poster) scene.setDepth(progress());
     const t = poster ? POSTER_TIME : now / 1000;
     scene.render(t, poster ? 0 : dtMs / 1000);
     if (!poster) diagram.draw(scene.diagram(), (id) => scene.project(id), now);
-    ctx.frame?.(dtMs);
+    ctx.frame?.(rawMs);
     adapt(dtMs);
     if (!readyFired) {
       readyFired = true;

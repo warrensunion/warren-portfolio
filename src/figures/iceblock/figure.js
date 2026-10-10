@@ -246,7 +246,8 @@ export async function create(el, ctx) {
   const frame = (now) => {
     if (!running || destroyed) return;
     raf = requestAnimationFrame(frame);
-    const dtMs = last ? Math.min(now - last, 100) : 16.7;
+    const rawMs = last ? now - last : 16.7; // the real frame time, for ctx.frame (fps meter, __figStats)
+    const dtMs = Math.min(rawMs, 100); // the simulation step only
     last = now;
     const dt = dtMs / 1000;
     if (!poster) orbit.step(dt);
@@ -269,7 +270,7 @@ export async function create(el, ctx) {
       label.place(block.screenAnchors(camera, w, h).topLeft, w, h, motion ? lagFor(dt) : 1);
       label.update(now);
     }
-    ctx.frame?.(dtMs);
+    ctx.frame?.(rawMs);
     if (!readyFired) {
       readyFired = true;
       el.dispatchEvent(new Event('fig:ready'));
