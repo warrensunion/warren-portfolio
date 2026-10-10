@@ -260,3 +260,46 @@ html:not(.js) .fig-stages {
     animation: none;
   }
 }
+
+/* Tabs of a feature track (BTTRURSLF): one row in the plate, scrolling inside it on narrow screens,
+   never the page. The selected tab is ink with an underline; the stage list below shows its stages. */
+.fig-tabs {
+  display: flex;
+  gap: 2px 20px;
+  margin: -2px 0 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--hair);
+}
+
+.fig-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.fig-tabs button {
+  flex: none;
+  padding: 6px 0 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.fig-tabs button:hover {
+  color: var(--ink);
+}
+
+.fig-tabs button[aria-selected='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+html:not(.js) .fig-tabs {
+  display: none;
+}

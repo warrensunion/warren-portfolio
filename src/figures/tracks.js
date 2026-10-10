@@ -14,7 +14,8 @@ export function initTracks(root, { reduced = false } = {}) {
     const rail = el.querySelector('.track-rail');
     const fig = rail && rail.querySelector('figure');
     const buttons = fig ? [...fig.querySelectorAll('.fig-stages button[data-stage]')] : [];
-    return { el, rail, fig, buttons, n: Math.max(1, buttons.length), p: 0, stage: 0, visible: false, override: null, subs: new Set(), lastP: -1 };
+    const tabs = fig ? [...fig.querySelectorAll('.fig-tabs [role="tab"]')] : [];
+    return { el, rail, fig, buttons, tabs, n: Math.max(1, buttons.length), p: 0, stage: 0, visible: false, override: null, subs: new Set(), lastP: -1 };
   });
   const byFig = new Map(tracks.filter((t) => t.fig).map((t) => [t.fig, t]));
 
@@ -24,6 +25,19 @@ export function initTracks(root, { reduced = false } = {}) {
   function apply(t) {
     t.el.dataset.stage = String(t.stage);
     t.buttons.forEach((b, i) => (i === t.stage ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current')));
+    // A feature track's tabs: the one whose stages contain the current stage is selected, and the stage
+    // list shows only that tab's stages.
+    if (t.tabs.length) {
+      let k = 0;
+      t.tabs.forEach((b, j) => {
+        if (Number(b.dataset.stage) <= t.stage) k = j;
+      });
+      t.tabs.forEach((b, j) => b.setAttribute('aria-selected', String(j === k)));
+      t.buttons.forEach((b) => {
+        const li = b.closest('li');
+        if (li) li.hidden = Number(li.dataset.tab) !== k;
+      });
+    }
     for (const fn of t.subs) {
       try {
         fn(t.stage);
@@ -109,7 +123,7 @@ export function initTracks(root, { reduced = false } = {}) {
   for (const t of tracks) {
     if (!t.fig) continue;
     t.el.addEventListener('click', (e) => {
-      const b = e.target.closest('.fig-stages button[data-stage]');
+      const b = e.target.closest('.fig-stages button[data-stage], .fig-tabs button[data-stage]');
       if (b && t.el.contains(b)) go(t, Number(b.dataset.stage));
     });
     // Correct on the first frame, including a load deep inside a track.

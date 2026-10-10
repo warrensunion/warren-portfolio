@@ -6,7 +6,7 @@ const ACCENT = '#1f5f78';
 
 // A track figure walks through stages as the visitor scrolls (spec section 3). Each stage has a still:
 // the poster under reduced motion and ?static=1, and the first paint before the demo loads.
-const trackFig = (slug, kind, { title, caption, alt, size = [1280, 800], data = {}, stages }) => ({
+const trackFig = (slug, kind, { title, caption, alt, size = [1280, 800], data = {}, stages, tabs }) => ({
   kind,
   title,
   stat: '[TODO: stat]',
@@ -15,6 +15,8 @@ const trackFig = (slug, kind, { title, caption, alt, size = [1280, 800], data = 
   size,
   data: { accent: ACCENT, ...data },
   stages: stages.map(([label, stillAlt], i) => ({ label, still: `/stills/${slug}-s${i}.webp`, alt: stillAlt || label })),
+  // A feature track groups its stages under tabs: [label, first stage].
+  tabs: tabs ? tabs.map(([label, first]) => ({ label, first })) : null,
 });
 
 export const content = {
@@ -71,6 +73,8 @@ export const content = {
             title: 'The site, live',
             caption: 'The BC Window Coverings site in a browser frame. Scroll through its loader and sliders, then use it.',
             alt: 'A browser window showing the BC Window Coverings website and its blind configurator.',
+            // The deployed site's origin, framed live at the last stage. Not deployed yet: see the README.
+            data: { liveUrl: null, liveNote: '[TODO: deploy bcwc and add its URL]' },
             stages: [['Loader'], ['Blind transition'], ['Time of day'], ['Blind'], ['Try it']],
           }),
         },
@@ -102,7 +106,7 @@ export const content = {
             caption: 'Screens recorded from the game itself. Scroll through each tab, or pick one.',
             alt: 'Recorded screens from BTTRURSLF: its dashboard, shop, motivator, Ping and map.',
             size: [1600, 1000],
-            data: { tabs: ['Appearance', 'BTTRshop', 'Motivator', 'Knowledge & Sociability', 'BTTRmap', 'Stats'] },
+            tabs: [['Appearance', 0], ['BTTRshop', 3], ['Motivator', 7], ['Knowledge & Sociability', 10], ['BTTRmap', 12], ['Stats', 14]],
             stages: [
               ['Appearance: cards open'], ['Appearance: ask Mereum'], ['Appearance: Mereum answers'],
               ['BTTRshop: ice blocks'], ['BTTRshop: stone ring'], ['BTTRshop: particle B'], ['BTTRshop: market'],

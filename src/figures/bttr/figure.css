@@ -1,0 +1,154 @@
+/* BTTRURSLF feature figure: clips over the stage stills, the flippable puzzle cards and the stats panel.
+   Clips fade in only once they have drawn (player.js marks .is-ready), so a still never gives way to black. */
+/* The recording's own 16:10 box, covering the stage the way the stills do (object-fit: cover), so the
+   puzzle cards' rects, which are fractions of the recording, land on their cards at any plate height. */
+.fig[data-fig='bttr'] .fig-stage {
+  container-type: size;
+}
+
+.bt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100cqw, 160cqh);
+  height: max(100cqh, 62.5cqw);
+  translate: -50% -50%;
+}
+
+.bt.is-stats .fp-video {
+  opacity: 0;
+}
+
+/* Puzzle cards: a 600 ms turn about Y, transform and opacity only. */
+.bp {
+  position: absolute;
+  inset: 0;
+}
+
+.bp[hidden] {
+  display: none;
+}
+
+.bp-card {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: none;
+  perspective: 900px;
+  cursor: pointer;
+}
+
+.bp-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.bp-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.bp-face img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+
+.bp-face--closed {
+  transform: rotateY(180deg);
+}
+
+.bp-card[aria-pressed='true'] .bp-face--open {
+  transform: rotateY(-180deg);
+}
+
+.bp-card[aria-pressed='true'] .bp-face--closed {
+  transform: rotateY(0deg);
+}
+
+/* Stats: big numbers in the plate, after yuzeli.ca's readouts. */
+.bs {
+  position: absolute;
+  inset: max(0px, (100% - 100cqh) / 2) max(0px, (100% - 100cqw) / 2);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6% 7%;
+  background: var(--plate);
+}
+
+.bs[hidden] {
+  display: none;
+}
+
+.bs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px 40px;
+}
+
+.bs-row {
+  min-width: 0;
+}
+
+.bs-n {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: clamp(28px, 3.4vw, 44px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.bs-what {
+  display: block;
+  margin-top: 6px;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.bs-how {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--fs-caption);
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+.bs-foot {
+  margin-top: 28px;
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  color: var(--ink-3);
+}
+
+@media (max-width: 859px) {
+  .bs {
+    padding: 5%;
+    overflow-y: auto;
+  }
+
+  .bs-grid {
+    gap: 16px 18px;
+  }
+
+  .bs-how {
+    display: none;
+  }
+
+  .bs-foot {
+    margin-top: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-face {
+    transition: none;
+  }
+}

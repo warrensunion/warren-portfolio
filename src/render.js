@@ -87,10 +87,23 @@ function trackFigure(fig, n, id) {
   const [w, h] = fig.size || [1280, 800];
   const json = JSON.stringify(fig.data || {}).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
   const labels = JSON.stringify(fig.stages.map((s) => s.label)).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
+  // With tabs, each stage belongs to the last tab that starts at or before it; only tab 0's show at first.
+  const tabOf = (i) => (fig.tabs ? fig.tabs.reduce((k, t, j) => (t.first <= i ? j : k), 0) : -1);
+  const tabs = fig.tabs
+    ? `<div class="fig-tabs" role="tablist" aria-label="Screens">` +
+      fig.tabs
+        .map(
+          (t, j) =>
+            `<button type="button" role="tab" data-stage="${t.first}" data-tab="${j}" aria-selected="${j === 0}" aria-controls="${esc(id)}-stage">${esc(t.label)}</button>`,
+        )
+        .join('') +
+      `</div>`
+    : '';
   const steps = fig.stages
     .map(
       (s, i) =>
-        `<li><button type="button" data-stage="${i}" aria-controls="${esc(id)}-stage"${i === 0 ? ' aria-current="step"' : ''}>` +
+        (fig.tabs ? `<li data-tab="${tabOf(i)}"${tabOf(i) ? ' hidden' : ''}>` : '<li>') +
+        `<button type="button" data-stage="${i}" aria-controls="${esc(id)}-stage"${i === 0 ? ' aria-current="step"' : ''}>` +
         `<span class="fig-step-n">${i + 1}</span> ${esc(s.label)}</button></li>`,
     )
     .join('');
@@ -106,6 +119,7 @@ function trackFigure(fig, n, id) {
     `aria-label="Fig. ${n}: ${esc(fig.title)}" style="--fig-ar:${w}/${h}">` +
     `<div class="fig-head"><span class="fig-led" aria-hidden="true"></span><span class="fig-n">Fig. ${n}</span>` +
     `<span class="fig-t">${esc(fig.title)}</span><span class="fig-readout" aria-hidden="true"></span></div>` +
+    tabs +
     `<ol class="fig-stages" aria-label="Stages">${steps}</ol>` +
     `<div class="fig-stage" id="${esc(id)}-stage" role="img" aria-label="${esc(fig.alt || fig.title)}">${stills}</div>` +
     `<figcaption><strong>${esc(fig.stat)}</strong> <em>${esc(fig.caption)}</em></figcaption></figure>`

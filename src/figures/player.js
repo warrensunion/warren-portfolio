@@ -3,6 +3,7 @@
 // u of its length; the stage's still stays on top until the clip has really seeked once, so a slow
 // download shows the right picture rather than a black box. Only the stage on show and its neighbours
 // hold a video; ones further away are unloaded so a long track never holds a dozen decoders.
+import './player.css';
 
 export function createPlayer(host, { base, stages }) {
   // stages: [{ file: 'tab/s0', duration }] indexed by stage; a missing entry means "no clip" (still only).

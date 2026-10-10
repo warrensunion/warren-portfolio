@@ -1,0 +1,27 @@
+/* Clips scrubbed by player.js: each covers its box, and fades in only once it has drawn (.is-ready),
+   so a still underneath never gives way to black while a clip downloads. */
+.fp {
+  position: absolute;
+  inset: 0;
+}
+
+.fp-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.fp-video.is-on.is-ready {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fp-video {
+    transition: none;
+  }
+}
