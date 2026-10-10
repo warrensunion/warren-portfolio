@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test scripts/test-*.mjs"
+    "test": "node --test scripts/test-*.mjs",
+    "art": "node scripts/prepare-art.mjs"
   },
   "dependencies": {
     "three": "0.180.0"
