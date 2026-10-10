@@ -8,6 +8,7 @@ import { nearestInRange, RAIN, BOSS, ENEMY } from './sim.js';
 const KITE = 2.5; // u: closer than this, back off
 const DODGE_LEAD = 0.15; // s: dodge a blow due this soon
 const CROWD = 3; // enemies within the rain's radius of the target that are worth a rain
+const SIDE_STEP = 2.2; // u: how far to one side of the target the archer likes to stand
 
 export function attractInput(s) {
   const a = s.archer;
@@ -37,6 +38,15 @@ export function attractInput(s) {
     if (px * -a.x + pz * (a.z < 6 ? 1 : 0) < 0) [px, pz] = [-px, -pz];
     wx = ax * 0.6 + px * 0.8;
     wz = az * 0.6 + pz * 0.8;
+  } else {
+    // Stand a step to one side of the target, so the view down the path shows the archer and the
+    // target side by side instead of one hidden behind the other.
+    const dx = a.x - target.x;
+    if (Math.abs(dx) < SIDE_STEP) {
+      let side = dx >= 0 ? 1 : -1;
+      if (Math.abs(a.x + side) > 4.5) side = -side;
+      wx = side * 0.6;
+    }
   }
   // World direction to camera-space input: the inverse of sim.js's turn (the matrix is its own inverse).
   const sy = Math.sin(a.yaw);

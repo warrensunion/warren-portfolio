@@ -1,0 +1,503 @@
+/* Archer Hero's HUD over the canvas. Sizes are in --u, a pixel scaled with the stage's width (hud.js sets
+   --ah-s), so one layout fits a phone plate and a wide desktop plate. Only the Q and E buttons, the
+   prompt and the end panel take the pointer; the stage keeps touch-action: pan-y so a vertical swipe
+   scrolls the page, and only the 120 px stick claims the touch for itself. */
+.fig[data-fig='archer'] .fig-stage {
+  touch-action: pan-y;
+}
+
+.ah-hud,
+.ah-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ah-hud {
+  --u: calc(var(--ah-s, 1) * 1px);
+  overflow: hidden;
+  color: #fff;
+  font-family: var(--serif);
+  transition: opacity 0.3s ease;
+}
+
+/* Hidden with the canvas until the scene's first frame is drawn. */
+.fig:not(.is-live) .ah-hud,
+.fig:not(.is-live) .ah-overlay {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.ah-num {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ah-hud svg {
+  display: block;
+}
+
+/* Text sits on a bright sky and grass, so it carries a dark outline of shadows. */
+.ah-stage-name,
+.ah-left,
+.ah-coins,
+.ah-dmg,
+.ah-tag-lv,
+.ah-skill-name {
+  text-shadow:
+    0 1px 0 rgba(10, 25, 35, 0.55),
+    0 0 calc(3 * var(--u)) rgba(10, 25, 35, 0.45);
+}
+
+.ah-top {
+  position: absolute;
+  top: calc(8 * var(--u));
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: calc(3 * var(--u));
+  white-space: nowrap;
+}
+
+.ah-stage-name {
+  display: flex;
+  align-items: center;
+  gap: calc(10 * var(--u));
+  font-size: calc(14 * var(--u));
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.ah-rule {
+  width: calc(34 * var(--u));
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9));
+  box-shadow: 0 1px 2px rgba(10, 25, 35, 0.35);
+}
+
+.ah-rule:last-child {
+  transform: scaleX(-1);
+}
+
+.ah-left {
+  display: flex;
+  align-items: center;
+  gap: calc(5 * var(--u));
+  font-size: calc(13 * var(--u));
+  font-style: italic;
+  font-weight: 700;
+}
+
+.ah-left svg {
+  width: calc(14 * var(--u));
+  height: calc(14 * var(--u));
+}
+
+.ah-coins {
+  position: absolute;
+  top: calc(10 * var(--u));
+  left: calc(10 * var(--u));
+  display: flex;
+  align-items: center;
+  gap: calc(6 * var(--u));
+  padding: calc(4 * var(--u)) calc(10 * var(--u)) calc(4 * var(--u)) calc(5 * var(--u));
+  border-radius: calc(8 * var(--u));
+  background: rgba(16, 32, 40, 0.42);
+  font-size: calc(15 * var(--u));
+  font-style: italic;
+}
+
+.ah-coins svg {
+  width: calc(20 * var(--u));
+  height: calc(20 * var(--u));
+}
+
+.ah-panel {
+  position: absolute;
+  left: 50%;
+  bottom: calc(8 * var(--u));
+  transform: translateX(-50%);
+  width: calc(214 * var(--u));
+  display: grid;
+  gap: calc(4 * var(--u));
+  padding: calc(7 * var(--u)) calc(10 * var(--u)) calc(8 * var(--u));
+  border-radius: calc(7 * var(--u));
+  background: rgba(22, 30, 36, 0.78);
+  box-shadow: 0 calc(2 * var(--u)) calc(8 * var(--u)) rgba(0, 0, 0, 0.2);
+}
+
+.ah-row {
+  display: flex;
+  align-items: center;
+  gap: calc(7 * var(--u));
+}
+
+.ah-row svg {
+  flex: none;
+  width: calc(16 * var(--u));
+  height: calc(16 * var(--u));
+}
+
+.ah-row .ah-num {
+  flex: none;
+  min-width: 4.4em;
+  text-align: right;
+  font-size: calc(11.5 * var(--u));
+  font-style: italic;
+}
+
+.ah-bar {
+  position: relative;
+  flex: 1;
+  height: calc(8 * var(--u));
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.ah-bar i {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform-origin: 0 50%;
+  transition: transform 0.15s linear;
+}
+
+.ah-bar--hp i {
+  background: linear-gradient(180deg, #8cf29a, #3fc85e);
+}
+
+.ah-bar--xp {
+  height: calc(6 * var(--u));
+}
+
+.ah-bar--xp i {
+  background: linear-gradient(180deg, #7ff0e2, #2fbfae);
+  transform: scaleX(0);
+}
+
+.ah-row--lv {
+  align-items: flex-end;
+}
+
+.ah-diamond {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: calc(17 * var(--u));
+  height: calc(17 * var(--u));
+  margin: 0 calc(1 * var(--u)) calc(-1 * var(--u));
+  border: 1.5px solid #f1d38a;
+  background: #1a2228;
+  transform: rotate(45deg);
+}
+
+.ah-diamond b {
+  transform: rotate(-45deg);
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: calc(9.5 * var(--u));
+  font-style: normal;
+  color: #fff;
+}
+
+.ah-lv {
+  flex: 1;
+  display: grid;
+  gap: calc(3 * var(--u));
+}
+
+.ah-lv-label {
+  font-size: calc(8.5 * var(--u));
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.ah-skills {
+  position: absolute;
+  right: calc(12 * var(--u));
+  bottom: calc(10 * var(--u));
+  display: flex;
+  align-items: flex-end;
+  gap: calc(10 * var(--u));
+}
+
+.ah-skill {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(50 * var(--u));
+  height: calc(50 * var(--u));
+  border-radius: 50%;
+  background: radial-gradient(circle, #2d6f6a 0 55%, #1d4c49 70%);
+  box-shadow: 0 calc(2 * var(--u)) calc(6 * var(--u)) rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.ah-skill--q {
+  margin-bottom: calc(14 * var(--u));
+}
+
+.ah-skill--e {
+  width: calc(66 * var(--u));
+  height: calc(66 * var(--u));
+  background: radial-gradient(circle, #345a55 0 52%, #2a3c2e 66%, #3d4a2c 72%);
+}
+
+.ah-ring {
+  position: absolute;
+  inset: calc(-3 * var(--u));
+  width: calc(100% + 6 * var(--u));
+  height: calc(100% + 6 * var(--u));
+}
+
+.ah-ring circle {
+  fill: none;
+  stroke-width: 3.4;
+}
+
+.ah-ring-track {
+  stroke: rgba(10, 25, 30, 0.45);
+}
+
+.ah-ring-arc {
+  stroke: #3fe0c6;
+  stroke-linecap: round;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+.ah-skill--e .ah-ring-arc {
+  stroke: #b8d36a;
+}
+
+.ah-skill.is-cooling .ah-skill-icon {
+  opacity: 0.45;
+}
+
+.ah-skill-icon {
+  width: 62%;
+  height: 62%;
+}
+
+.ah-skill-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ah-key {
+  position: absolute;
+  top: calc(-6 * var(--u));
+  left: calc(-4 * var(--u));
+  display: grid;
+  place-items: center;
+  width: calc(17 * var(--u));
+  height: calc(17 * var(--u));
+  border-radius: 50%;
+  background: #1a2228;
+  font-family: var(--mono);
+  font-size: calc(9.5 * var(--u));
+  font-weight: 600;
+  color: #fff;
+}
+
+.ah-skill-name {
+  position: absolute;
+  bottom: calc(-15 * var(--u));
+  padding: 0 calc(6 * var(--u));
+  border-radius: calc(5 * var(--u));
+  background: rgba(22, 30, 36, 0.8);
+  font-size: calc(10.5 * var(--u));
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* Projected per frame: each is placed by transform at its anchor point. */
+.ah-tags,
+.ah-dmgs {
+  position: absolute;
+  inset: 0;
+}
+
+.ah-tag,
+.ah-dmg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
+
+.ah-tag {
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--u));
+  margin: calc(-6 * var(--u)) 0 0 calc(-28 * var(--u));
+}
+
+.ah-tag-lv {
+  font-size: calc(8.5 * var(--u));
+  font-style: italic;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ah-tag-bar {
+  position: relative;
+  width: calc(38 * var(--u));
+  height: calc(5 * var(--u));
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(20, 20, 24, 0.6);
+}
+
+.ah-tag-bar i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #ff8a8a, #ef4a4a);
+  transform-origin: 0 50%;
+}
+
+.ah-tag.is-boss .ah-tag-bar {
+  width: calc(70 * var(--u));
+  height: calc(7 * var(--u));
+}
+
+.ah-tag.is-boss {
+  margin-left: calc(-44 * var(--u));
+}
+
+.ah-dmg {
+  margin: calc(-14 * var(--u)) 0 0 calc(-14 * var(--u));
+  font-family: var(--mono);
+  font-size: calc(22 * var(--u));
+  font-style: italic;
+  font-weight: 700;
+  color: #fff;
+  text-shadow:
+    1px 1px 0 rgba(20, 28, 40, 0.8),
+    -1px 1px 0 rgba(20, 28, 40, 0.8),
+    1px -1px 0 rgba(20, 28, 40, 0.8),
+    -1px -1px 0 rgba(20, 28, 40, 0.8),
+    0 2px 4px rgba(20, 28, 40, 0.5);
+}
+
+/* The touch stick: 120 px on a touch screen while playing, the one place that claims the touch. */
+.ah-stick {
+  display: none;
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(16, 32, 40, 0.28);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.ah-stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .ah-hud.is-playing .ah-stick {
+    display: block;
+  }
+
+  /* The stick takes the bottom-left corner on touch, so the panel moves up out of its way. */
+  .ah-hud.is-playing .ah-panel {
+    left: auto;
+    right: calc(12 * var(--u));
+    transform: none;
+    width: calc(170 * var(--u));
+    bottom: calc(90 * var(--u));
+  }
+}
+
+.ah-overlay {
+  display: grid;
+  place-items: center;
+}
+
+.ah-prompt,
+.ah-end {
+  pointer-events: auto;
+}
+
+.ah-prompt {
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(251, 251, 248, 0.94);
+  box-shadow: 0 4px 18px rgba(10, 25, 35, 0.3);
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 600;
+  color: #17191c;
+  cursor: pointer;
+}
+
+.ah-prompt:hover {
+  background: #fff;
+}
+
+.ah-prompt[hidden],
+.ah-end[hidden] {
+  display: none;
+}
+
+.ah-end {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 16px 22px 18px;
+  border-radius: 10px;
+  background: rgba(22, 30, 36, 0.88);
+  color: #fff;
+  font-family: var(--serif);
+  text-align: center;
+}
+
+.ah-end-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.ah-again {
+  padding: 7px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #fbfbf8;
+  font: inherit;
+  font-weight: 600;
+  color: #17191c;
+  cursor: pointer;
+}
+
+.ah-roblox {
+  color: #9fe6dc;
+  font-size: 14px;
+  text-underline-offset: 3px;
+}
+
+.ah-roblox:hover {
+  color: #c8f4ee;
+}
