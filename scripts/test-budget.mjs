@@ -155,3 +155,21 @@ test('mustWait: a full budget held only by in-flight builds makes the acquirer w
   assert.equal(mustWait(['a', 'b'], 'z', 3, isBuilding), false); // a free slot
   assert.equal(mustWait(['a', 'b', 'z'], 'z', 3, isBuilding), false); // already holds a slot
 });
+
+test('waiterRetries: after an install, only figures mustWait turned away get another chance', () => {
+  const { waiterRetries } = hostHelpers;
+  const f = (id, o = {}) => ({ id, kind: 'ring', visible: true, waiting: true, instance: null, build: null, failed: false, blockedUntil: 0, ...o });
+  const cands = [
+    f('w'),
+    f('evicted', { waiting: false }), // evicted figures wait for a free slot, or they would evict back
+    f('gone', { visible: false }),
+    f('built', { instance: {} }),
+    f('busy', { build: {} }),
+    f('bad', { failed: true }),
+    f('cool', { blockedUntil: 5000 }),
+    f('svg', { kind: 'contests' }),
+    f('w2'),
+  ];
+  assert.deepEqual(waiterRetries(cands, 1000), ['w', 'w2']);
+  assert.deepEqual(waiterRetries(cands, 6000), ['w', 'cool', 'w2']);
+});

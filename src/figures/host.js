@@ -38,6 +38,15 @@ export function slotRetries(candidates, free, now) {
     .map((c) => c.id);
 }
 
+// A build that installs keeps its slot, so it never frees one for a figure mustWait() turned away.
+// Those waiters (and only they: an evicted figure retrying here would evict back) try again after
+// each install, when acquire() can evict a farther installed figure instead of an in-flight build.
+export function waiterRetries(candidates, now) {
+  return candidates
+    .filter((c) => isWebGLKind(c.kind) && c.waiting && c.visible && !c.instance && !c.build && !c.failed && !(now < c.blockedUntil))
+    .map((c) => c.id);
+}
+
 // Evicting a figure whose create() is still running would not free its context any sooner, so
 // when every other slot is held by such a build the newcomer waits for the next freed slot instead.
 export function mustWait(liveIds, id, max, isBuilding) {
@@ -145,7 +154,11 @@ export function initFigures(root, { loaders, env } = {}) {
   function ensure(s) {
     if (s.instance || s.build || s.failed || !(s.near || s.visible)) return;
     if (performance.now() < s.blockedUntil) return; // the cooldown timer retries
-    if (isWebGLKind(s.kind) && mustWait(budget.live(), s.id, MAX_LIVE, (id) => !!byId.get(id).build)) return;
+    if (isWebGLKind(s.kind) && mustWait(budget.live(), s.id, MAX_LIVE, (id) => !!byId.get(id).build)) {
+      s.waiting = true;
+      return;
+    }
+    s.waiting = false;
     const build = { cancelled: false, preexisting: new Set() };
     s.build = build;
     if (isWebGLKind(s.kind)) {
@@ -199,6 +212,9 @@ export function initFigures(root, { loaders, env } = {}) {
     if (s.size) safe(s.kind, () => inst.resize(s.size.w, s.size.h));
     if (s.ready) reveal(s);
     if (s.visible) start(s);
+    if (isWebGLKind(s.kind)) {
+      for (const id of waiterRetries(states, performance.now())) ensure(byId.get(id));
+    }
   }
 
   function start(s) {
@@ -404,6 +420,7 @@ export function initFigures(root, { loaders, env } = {}) {
       canvases: new Set(),
       instance: null,
       build: null, // the one create() in flight, if any
+      waiting: false, // turned away by mustWait(); retried after the next install
       live: null, // the build whose instance is installed (gates ctx.frame)
       preexisting: new Set(), // stage canvases that predate the current build
       ready: false,
