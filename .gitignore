@@ -2,3 +2,4 @@ node_modules
 dist
 .lighthouse
 design/art-src/*.log
+.capture-work
