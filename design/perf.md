@@ -20,8 +20,10 @@ requestAnimationFrame at 60 Hz, so 60 fps is the most any row can show.
 | figure | frames | avg fps | p95 frame (ms) | worst frame (ms) |
 |---|---|---|---|---|
 | iceberg-0 | 301 | 60.0 | 16.7 | 16.8 |
-| ring-0 | 301 | 60.0 | 16.7 | 16.8 |
-| howpolluted-0 | 300 | 60.0 | 16.7 | 16.8 |
+| ring-0 | 301 | 60.0 | 16.8 | 16.8 |
+| howpolluted-0 | 301 | 60.0 | 16.7 | 16.8 |
+| archer-0 | 301 | 60.0 | 16.7 | 16.8 |
+| terrarium-0 | 301 | 60.0 | 16.8 | 16.8 |
 
 Quality steps taken by the runtime adapt:
 - none
@@ -30,9 +32,11 @@ Quality steps taken by the runtime adapt:
 
 | figure | frames | avg fps | p95 frame (ms) | worst frame (ms) |
 |---|---|---|---|---|
-| iceberg-0 | 300 | 60.0 | 16.7 | 16.8 |
-| ring-0 | 301 | 60.0 | 16.8 | 16.8 |
+| iceberg-0 | 301 | 60.0 | 16.8 | 16.8 |
+| ring-0 | 301 | 60.0 | 16.7 | 16.8 |
 | howpolluted-0 | 300 | 60.0 | 16.7 | 16.8 |
+| archer-0 | 301 | 60.0 | 16.7 | 16.8 |
+| terrarium-0 | 301 | 60.0 | 16.7 | 16.8 |
 
 Quality steps taken by the runtime adapt:
 - none
@@ -41,7 +45,7 @@ Quality steps taken by the runtime adapt:
 
 | figure | frames | avg fps | p95 frame (ms) | worst frame (ms) |
 |---|---|---|---|---|
-| iceberg-0 | 298 | 59.4 | 16.8 | 33.3 |
+| iceberg-0 | 301 | 60.0 | 16.7 | 16.8 |
 
 Quality steps taken by the runtime adapt:
 - none
@@ -52,4 +56,4 @@ CPU work (water simulation, scroll read, overlay drawing) still fits a 16.7 ms f
 ## Verdict
 
 Every figure averages 58 fps or more at both tiers on this machine.
-The hero still averages 59.4 fps under a 4x CPU throttle.
+The hero still averages 60.0 fps under a 4x CPU throttle.

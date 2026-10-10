@@ -136,10 +136,12 @@ try {
       } else {
         await jump(page, (id) => document.querySelector(`#${id} figure`).scrollIntoView({ block: 'center', behavior: 'instant' }), id);
         // The figure centred is already past the start of its phone range: tap stage 0 for the first shot.
-        await page.locator(`#${id} .fig-stages button[data-stage="0"]`).click();
+        await page.locator(`#${id} :is(.fig-stages, .fig-tabs) button[data-stage="0"]:visible`).first().click();
         await settle(page, 900);
         await shot(`${id}-first`);
-        await page.locator(`#${id} .fig-stages button[data-stage]`).last().click();
+        // A tabbed track hides other tabs' stage buttons; its tab for the last stage is the visible one.
+        const n = await page.locator(`#${id} .fig-stages button[data-stage]`).count();
+        await page.locator(`#${id} :is(.fig-stages, .fig-tabs) button[data-stage="${n - 1}"]:visible`).first().click();
         await settle(page, 900);
         await shot(`${id}-last`);
       }
