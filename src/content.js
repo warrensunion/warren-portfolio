@@ -135,7 +135,6 @@ export const content = {
         title: 'Placement over time',
         stat: '[TODO: stat]',
         caption: 'Placement percentile by year.',
-        alt: 'A dot plot of contest placements by year. No results have been added yet.',
         poster: '/posters/contests.svg',
         size: [1280, 800],
         data: {},

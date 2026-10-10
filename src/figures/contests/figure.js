@@ -12,6 +12,7 @@ const MONO = "'IBM Plex Mono', ui-monospace, monospace";
 const SERIF = "'Source Serif 4', Georgia, serif";
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const NO_RESULTS = 'A dot plot of contest placements by year. No results have been added yet.';
 const num = (n) => String(Math.round(n * 10) / 10);
 
 function frame(width, height, body, label) {
@@ -42,8 +43,18 @@ function emptyState(width, height) {
   );
 }
 
+const isNum = (v) => v !== null && v !== '' && v !== undefined && Number.isFinite(Number(v));
+const markRows = (rows) => (rows || []).filter((r) => r && !r.placeholder && isNum(r.percentile) && isNum(r.year));
+
+// The one text description of the chart (the SVG itself is aria-hidden), built from the same rows as the marks.
+export function contestsLabel(rows) {
+  const pts = markRows(rows);
+  if (!pts.length) return NO_RESULTS;
+  return 'Dot plot of contest placement by year. ' + pts.map((p) => `${p.name}, ${p.year}: top ${num(100 - Number(p.percentile))}%`).join('. ') + '.';
+}
+
 export function buildContestsSvg(rows, { width = 1280, height = 800 } = {}) {
-  const pts = (rows || []).filter((r) => r && !r.placeholder && Number.isFinite(Number(r.percentile)) && r.percentile !== null && r.percentile !== '');
+  const pts = markRows(rows);
   if (!pts.length) return emptyState(width, height);
 
   const m = { l: 52, r: 28, t: 44, b: 44 };
@@ -94,9 +105,11 @@ export async function create(el, ctx = {}) {
   wrap.className = 'fig-canvas'; // the host's reveal CSS targets this class; it only auto-tags canvases
   wrap.setAttribute('aria-hidden', 'true');
   el.appendChild(wrap);
+  el.setAttribute('aria-label', contestsLabel(rows));
   let w = el.clientWidth || 1280;
   let h = el.clientHeight || 800;
   const draw = () => {
+    el.setAttribute('aria-label', contestsLabel(rows));
     wrap.innerHTML = buildContestsSvg(rows, { width: Math.round(w), height: Math.round(h) });
     const svg = wrap.firstChild;
     svg.setAttribute('width', '100%');

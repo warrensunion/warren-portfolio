@@ -5,6 +5,8 @@
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
+import { contestsLabel } from './figures/contests/figure.js';
+
 const DRAG_HINT = 'Drag or use arrow keys to turn it.';
 const DRAGGABLE = new Set(['iceblock']);
 
@@ -93,7 +95,7 @@ function contests(c, s, next) {
     `<div class="entry entry--contests"><div class="entry-text">` +
     (s.lede ? `<p>${esc(s.lede)}</p>` : '') +
     `<ol class="contest-list">${rows}</ol>` +
-    `</div><div class="entry-fig">${figure(s.fig, next())}</div></div>`
+    `</div><div class="entry-fig">${figure({ ...s.fig, alt: contestsLabel(c.contests) }, next())}</div></div>`
   );
 }
 
