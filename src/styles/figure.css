@@ -251,7 +251,7 @@ html:not(.js) .fig-stages {
 
 @media (min-width: 860px) {
   .js .track-rail .fig--track .fig-stage {
-    max-height: calc(100svh - 96px - 24px - 120px);
+    max-height: calc(100svh - 96px - 24px - var(--plate-chrome, 120px));
   }
 }
 

@@ -95,6 +95,10 @@
   min-width: 0;
 }
 
+.bs-row dd {
+  margin: 0;
+}
+
 .bs-n {
   font-family: var(--mono);
   font-weight: 500;

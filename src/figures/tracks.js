@@ -108,6 +108,10 @@ export function initTracks(root, { reduced = false } = {}) {
       if (!text) continue;
       const top = Math.min(TOP, innerHeight - text.offsetHeight - 24);
       t.el.style.setProperty('--text-top', Math.round(top) + 'px');
+      // The plate's own chrome (head, tabs, stage list, caption), so CSS can cap the stage to what is left
+      // of the screen under the sticky top.
+      const st = t.fig && t.fig.querySelector('.fig-stage');
+      if (st) t.fig.style.setProperty('--plate-chrome', Math.round(t.fig.offsetHeight - st.offsetHeight) + 'px');
     }
   };
   fitText();

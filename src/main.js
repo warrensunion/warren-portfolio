@@ -31,6 +31,8 @@ const loaders = {
   iceberg: () => import('./figures/iceberg/figure.js'),
   ring: () => import('./figures/ring/figure.js'),
   contests: () => import('./figures/contests/figure.js'),
+  bttr: () => import('./figures/bttr/figure.js'),
+  bcwc: () => import('./figures/bcwc/figure.js'),
   howpolluted: () => import('./figures/howpolluted/figure.js'),
 };
 // Tracks first: they set each track's stage from where the page is, so stills and figures start right.

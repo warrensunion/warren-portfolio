@@ -925,11 +925,14 @@ async function checkTracks(browser, url) {
       const out = [];
       for (const id of ids) {
         const n = await page.evaluate((id) => window.__track(id).n, id);
-        for (const i of [n - 1, Math.floor(n / 2)]) {
+        // A tabbed track shows only its current tab's stage buttons; its tabs are the buttons to click.
+        const tabStarts = await page.evaluate((id) => [...document.querySelectorAll(`#${id} .fig-tabs button[data-stage]`)].map((b) => Number(b.dataset.stage)), id);
+        const picks = tabStarts.length ? [tabStarts[tabStarts.length - 1], tabStarts[Math.floor(tabStarts.length / 2)]] : [n - 1, Math.floor(n / 2)];
+        for (const i of picks) {
           await page.evaluate((id) => window.__jump(window.__stageY(id, 0)), id);
           await twoFrames(page);
           const y0 = await page.evaluate(() => scrollY);
-          await page.locator(`#${id} .fig-stages button[data-stage="${i}"]`).click();
+          await page.locator(`#${id} :is(.fig-stages, .fig-tabs) button[data-stage="${i}"]:visible`).first().click();
           const y1 = await page.evaluate(() => scrollY);
           await sleep(50);
           const y2 = await page.evaluate(() => scrollY);
