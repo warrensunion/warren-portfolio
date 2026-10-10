@@ -1,8 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800">
-  <rect width="1280" height="800" fill="#eef0f1"/>
-  <g stroke="rgba(23,25,28,0.14)" stroke-width="2" fill="none">
-    <line x1="96" y1="680" x2="1184" y2="680"/>
-    <line x1="96" y1="120" x2="96" y2="680"/>
-  </g>
-  <text x="640" y="410" text-anchor="middle" font-family="'Source Serif 4', Georgia, serif" font-style="italic" font-size="34" fill="rgba(23,25,28,0.62)">Contest results go here. Add them to contests in src/content.js.</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" role="img" aria-label="Contest results go here. Add them to contests in src/content.js."><title>Contest results go here. Add them to contests in src/content.js.</title><rect width="1280" height="800" fill="#fbfbf8"/><g stroke="rgba(23,25,28,0.22)" stroke-width="1" fill="none"><line x1="102.4" y1="656" x2="1177.6" y2="656"/><line x1="102.4" y1="112.00000000000001" x2="102.4" y2="656"/></g><text text-anchor="middle" font-family="'Source Serif 4', Georgia, serif" font-style="italic" font-size="22" fill="#17191c" fill-opacity="0.62"><tspan x="640" y="377.4">Contest results go here.</tspan><tspan x="640" y="408.2">Add them to contests in src/content.js.</tspan></text></svg>
