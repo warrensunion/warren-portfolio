@@ -8,6 +8,7 @@
 // the first frame after `fig:ready` is a reproducible poster.
 import { IcebergScene, END_STATE } from './icebergScene.js';
 import { BergDiagram } from './overlay.js';
+import { warmDraws } from '../warm.js';
 
 const DESKTOP = '(min-width: 860px)';
 // Ascent's adapt step judged frames over 24 ms; a figure on a page shares the frame, so 22 ms.
@@ -51,6 +52,7 @@ export async function create(el, ctx) {
   let scene;
   try {
     scene = new IcebergScene(gl, { dpr, tier });
+    await scene.init();
   } catch (err) {
     // A throw after the renderer was made would otherwise leave its context counted by the browser.
     try {
@@ -79,6 +81,18 @@ export async function create(el, ctx) {
     diagram.resize(w, h, Math.min(devicePx, 2));
   };
   sizeTo(w, h);
+
+  // The poster stays up while the programs link in parallel off the main thread and are then drawn
+  // once each, a task apiece (see warm.js); in one first render() they blocked the page for 1.4 s.
+  try {
+    await scene.precompile();
+    await warmDraws(scene.scene, scene.warmPasses());
+  } catch (err) {
+    scene.dispose();
+    gl.remove();
+    over.remove();
+    throw err;
+  }
 
   // Pointer -> NDC from the canvas rect. A touch tap opens the blocks under it for a moment.
   let touchTimer = 0;

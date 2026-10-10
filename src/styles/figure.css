@@ -103,7 +103,10 @@
 
 /* Live scenes sit over the poster and stay invisible until their first frame is drawn, so a slow
    shader compile shows the poster rather than a blank plate. Opacity-only, so it is a cross-fade
-   that reduced-motion visitors may also see (the under-water poster swap below). */
+   that reduced-motion visitors may also see (the under-water poster swap below). Any canvas in a
+   stage is held out of flow from the moment a figure appends it, before the host tags it: an untagged
+   canvas at its backing size would push the plate open during the build (a layout shift). */
+.fig-stage > canvas,
 .fig-canvas {
   position: absolute;
   inset: 0;
@@ -114,6 +117,7 @@
   transition: opacity 0.4s ease;
 }
 
+.fig.is-live .fig-stage > canvas,
 .fig.is-live .fig-canvas {
   opacity: 1;
 }

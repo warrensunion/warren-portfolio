@@ -14,6 +14,7 @@ import { createBackground } from './background.js';
 import { createLabel, lagFor } from './label.js';
 import { Orbit, keyNudge, formatYaw, clamp, DEG, YAW_MAX, PITCH_MAX } from './orbit.js';
 import { SHAPE_IDS } from './shapes.js';
+import { nextTask, warmDraws } from '../warm.js';
 import './figure.css';
 
 const FOV = 30;
@@ -79,6 +80,7 @@ export async function create(el, ctx) {
     camera.position.set(0, 0, CAM_Z);
     scene.add(camera); // the fog backdrop rides on it
 
+    await nextTask(); // the context, the environment and the frost maps each get a task of their own
     // Environment: RoomEnvironment's soft boxes, tinted to the fog, made once and the generator freed.
     const pmrem = new THREE.PMREMGenerator(renderer);
     const room = new RoomEnvironment();
@@ -90,6 +92,24 @@ export async function create(el, ctx) {
       // bright facet edges.
       if (o.material?.emissiveIntensity > 3) o.material.emissiveIntensity = 3;
     });
+    // The room's lit materials link in parallel first (into a float target, as fromScene draws them),
+    // and its six faces are then drawn one per task, so fromScene() finds every program ready.
+    // Done in one go, this step was a 750 ms main-thread task on a desktop GPU.
+    {
+      const probe = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType });
+      const probeCam = new THREE.PerspectiveCamera(90, 1, 0.1, 100);
+      renderer.setRenderTarget(probe);
+      const ready = renderer.compileAsync(room, probeCam);
+      renderer.setRenderTarget(null);
+      await ready;
+      await warmDraws(room, () => {
+        renderer.setRenderTarget(probe);
+        renderer.render(room, probeCam);
+        renderer.setRenderTarget(null);
+      });
+      probe.dispose();
+      await nextTask();
+    }
     env = pmrem.fromScene(room, 0.04).texture;
     room.traverse((o) => {
       o.geometry?.dispose();
@@ -108,7 +128,8 @@ export async function create(el, ctx) {
     const fill = new THREE.HemisphereLight('#dfe3ec', '#6f7686', 0.55);
     scene.add(key, rim, rim2, fill);
 
-    const maps = frostMaps(11);
+    await nextTask();
+    const maps = await frostMaps(11);
     owned.textures.push(maps.roughness, maps.normal, maps.thickness);
     shared = sharedMaterials({ maps, env });
 
@@ -160,8 +181,10 @@ export async function create(el, ctx) {
 
   // Link the programs off the main thread where the driver can (KHR_parallel_shader_compile), so the
   // first frame does not stall a scrolling page.
+  // Then each program is drawn once, a task apiece (see warm.js), so the first frame is cheap too.
   try {
     await renderer.compileAsync(scene, camera);
+    await warmDraws(scene, () => renderer.render(scene, camera));
   } catch {}
 
   // ── Input: drag orbit (pointer capture), arrow keys on the focused figure, cursor lean, hot ──

@@ -41,4 +41,15 @@ function contentPlugin() {
 
 export default defineConfig({
   plugins: [contentPlugin()],
+  build: {
+    // three.js is one lazy chunk shared by the WebGL figures. It is ~500 kB minified by nature and only
+    // loads once a scene is near, so the default 500 kB warning is noise here; naming the chunk keeps it
+    // from taking the name of whichever small shared module Rollup merges it with.
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => (id.includes('/node_modules/three/') ? 'three' : undefined),
+      },
+    },
+  },
 });

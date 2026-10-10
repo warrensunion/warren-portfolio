@@ -49,6 +49,7 @@ import * as THREE from 'three';
 import { height, glacierTop, glacierFace, FRONT_Z, GLACIER_Z, FAR_Z, HALF_W } from './terrain.js';
 import { buildBlocks, BergMotion, rayThrough, innerR, Y_BOTTOM, BLOCK_W, IDLE, IDLE_DELAY } from './berg.js';
 import { WaterSim, SIM_WORLD, SIM_HEIGHT } from './water.js';
+import { nextTask } from '../warm.js';
 
 // ── Look ───────────────────────────────────────────────────────────────────
 /** Re-keyed for a paper page (spec 5, Fig. 1): the sky runs from the page's
@@ -1076,8 +1077,18 @@ export class IcebergScene {
     this.refrCam = new THREE.PerspectiveCamera();
     this.refrCam.layers.set(1);
 
+  }
+
+  /** Added for the page: everything after the context is built here, in slices with a task between
+      them (figures/warm.js), because in the constructor it was one ~300 ms task while the hero
+      loaded. Call once, and await it, before anything else. */
+  async init() {
+    const { tier, dpr } = this;
+    await nextTask(); // the context was the constructor's task
+
     // ── The berg ──
     this.blocks = buildBlocks();
+    await nextTask();
     this.motion = new BergMotion(this.blocks);
     const n = this.blocks.length;
     if (n > TEX * TEX) throw new Error('too many blocks for the data texture');
@@ -1094,6 +1105,7 @@ export class IcebergScene {
     this.texBlock = dataTexture(this.blockData);
     this.texGlow = dataTexture(this.glowData);
     this.texNoise = noiseTexture();
+    await nextTask();
     // The hollow's inner wall where it meets the waterline, one radius per
     // angle round C (atan(z, x) from -pi .. pi), for the hole in the water.
     {
@@ -1110,6 +1122,7 @@ export class IcebergScene {
       this.texHole.needsUpdate = true;
     }
 
+    await nextTask();
     // ── The water's height field ──
     this.sim = new WaterSim(this.renderer, 128);
     this.simAcc = 0;
@@ -1158,9 +1171,11 @@ export class IcebergScene {
     });
     this.berg = add(new THREE.Mesh(buildBlockGeometry(this.blocks), mat(this.uBlocks, BLOCK_VERT, BLOCK_FRAG, { side: THREE.DoubleSide })), [0, 1, 2]);
 
+    await nextTask();
     this.uTerrain = U({ uRock: { value: ROCK }, uRockLight: { value: ROCK_LIGHT }, uSnow: { value: SNOW }, uHaze: { value: 1 } });
     this.terrain = add(new THREE.Mesh(buildTerrain(tier === 'low'), mat(this.uTerrain, TERRAIN_VERT, TERRAIN_FRAG)), [0, 2]);
 
+    await nextTask();
     this.glacier = add(
       new THREE.Mesh(buildGlacier(), mat(U({ uIce: { value: GLACIER }, uIceDark: { value: GLACIER_DARK }, uSnow: { value: SNOW } }), GLACIER_VERT, GLACIER_FRAG)),
       [0, 2],
@@ -1185,6 +1200,7 @@ export class IcebergScene {
     this.edge = add(new THREE.Mesh(buildEdge(), mat(this.uEdge, EDGE_VERT, EDGE_FRAG, { transparent: true, depthWrite: false })));
     this.edge.renderOrder = 2;
 
+    await nextTask();
     // Decoration (off on the low tier and after the second adapt step).
     this.uShaft = U({ uOn: { value: 0 }, uCol: { value: SHAFT_COL } });
     this.shafts = add(new THREE.Mesh(plane(-90, 90, -32, 0, FRONT_Z - 0.4), mat(this.uShaft, SHAFT_VERT, SHAFT_FRAG, { transparent: true, depthWrite: false })));
@@ -1452,6 +1468,46 @@ export class IcebergScene {
       this.sim.step(steps);
     }
     this.u.uSim.value = this.sim.texture;
+  }
+
+  /** Added for the page: links every program the first frames need through KHR_parallel_shader_compile
+      (renderer.compileAsync), so the driver compiles them off the main thread instead of the first
+      render() blocking on them for over a second. Render targets and the screen get different programs
+      (output colour space), hence one pass with a target bound and one without. */
+  async precompile() {
+    const R = this.renderer;
+    const sim = this.sim;
+    const jobs = [];
+    R.setRenderTarget(this.reflRT);
+    jobs.push(R.compileAsync(this.scene, this.camera));
+    R.setRenderTarget(sim.a);
+    const simMat = sim.quad.material;
+    for (const m of [sim.mDrop, sim.mUpdate]) {
+      sim.quad.material = m;
+      jobs.push(R.compileAsync(sim.scene, sim.camera));
+    }
+    sim.quad.material = simMat;
+    R.setRenderTarget(null);
+    jobs.push(R.compileAsync(this.scene, this.camera));
+    await Promise.all(jobs);
+  }
+
+  /** The passes precompile()'s programs are drawn in, as render() draws them (the reflection's layer
+      into its target, the refraction's into its own, layer 0 onto the screen, then the water
+      simulation), each as its own draw so the warm-up (figures/warm.js) can give each a task. Each
+      pass keeps its layer, or the water would sample the very target it is drawn into. */
+  warmPasses() {
+    const R = this.renderer;
+    const pass = (layer, target) => {
+      const cam = this.camera.clone();
+      cam.layers.set(layer);
+      return () => {
+        R.setRenderTarget(target);
+        R.render(this.scene, cam);
+        R.setRenderTarget(null);
+      };
+    };
+    return [pass(2, this.reflRT), pass(1, this.refrRT), pass(0, null), () => this.sim.step(1)];
   }
 
   render(time, dt) {

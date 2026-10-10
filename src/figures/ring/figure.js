@@ -16,6 +16,7 @@ import { loadShapes, fitInCircle } from './tubeShapes.js';
 import { prepareStone } from './textures.js';
 import { createWork } from './work.js';
 import { bindMorphLinks } from './morphLinks.js';
+import { warmDraws } from '../warm.js';
 
 const FOV = 35;
 const TAN = Math.tan(((FOV / 2) * Math.PI) / 180);
@@ -205,6 +206,7 @@ export async function create(el, ctx) {
     pose(settled ? 1 : 0);
     ring.update({ asm: 1, ign: 1, time: 0, motion: 0, scale }); // every piece visible for the compile
     await renderer.compileAsync(scene, camera);
+    await warmDraws(scene, () => renderer.render(scene, camera)); // then one draw per program, a task each
   } catch {}
 
   // ── Input: the contact section's project links, and the pointer over the stage (the trail) ──

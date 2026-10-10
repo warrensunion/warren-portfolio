@@ -2,7 +2,8 @@
 // and takes the scene away again before it can cost the visitor a crashed tab or a hot phone. It owns
 // lifetime (create/start/stop/destroy), the WebGL context budget and every fallback, so figure modules
 // only have to draw. Figures own their own rAF and report each frame via ctx.frame(); the host rAF only
-// writes readouts and repaints the ?fps=1 meter.
+// writes readouts and repaints the ?fps=1 meter. A figure on screen builds at once; one that is only
+// near waits for load, idle, the visitor's first input and a quiet build queue (see pump()).
 //
 // ?poster=<kind>&i=<n> (plus depth= / shape= / yaw= pitch=, see readPoster in env.js) is the stills
 // hook for scripts/posters.mjs, and does nothing without the param: the host then makes only that one
@@ -166,9 +167,49 @@ export function initFigures(root, { loaders, env } = {}) {
     for (const id of slotRetries(states, freeSlots(), performance.now())) ensure(byId.get(id));
   }
 
+  // A scene that is only near (not on screen) is a head start for a reader who is about to scroll, not
+  // a need: it waits until the page has loaded and gone idle, until the visitor has shown a sign of life
+  // (pointer, wheel, touch or key; never a scroll listener), and then until no other scene is building.
+  // So it never competes with the hero while the page loads, and a visitor who only reads the top never
+  // pays for scenes below it. A figure on screen always builds at once.
+  let settled = false;
+  let loaded = false;
+  let stirred = false;
+  const STIR = ['pointermove', 'pointerdown', 'wheel', 'touchstart', 'keydown'];
+  const onStir = () => {
+    for (const t of STIR) removeEventListener(t, onStir, true);
+    stirred = true;
+    settle();
+  };
+  for (const t of STIR) addEventListener(t, onStir, { capture: true, passive: true });
+  function settle() {
+    if (settled || !loaded || !stirred) return;
+    settled = true;
+    pump();
+  }
+  const building = () => states.some((x) => x.build && !x.build.cancelled);
+  function pump() {
+    for (const s of states) if (s.deferred && !building()) ensure(s);
+  }
+  const whenIdle = () => {
+    const go = () => {
+      loaded = true;
+      settle();
+    };
+    if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2000 });
+    else setTimeout(go, 1500);
+  };
+  if (document.readyState === 'complete') whenIdle();
+  else addEventListener('load', whenIdle, { once: true });
+
   function ensure(s) {
+    s.deferred = false;
     if (s.instance || s.build || s.failed || !(s.near || s.visible)) return;
     if (performance.now() < s.blockedUntil) return; // the cooldown timer retries
+    if (isWebGLKind(s.kind) && !s.visible && (!settled || building())) {
+      s.deferred = true;
+      return;
+    }
     if (isWebGLKind(s.kind) && mustWait(budget.live(), s.id, MAX_LIVE, (id) => !!byId.get(id).build)) {
       s.waiting = true;
       return;
@@ -198,6 +239,7 @@ export function initFigures(root, { loaders, env } = {}) {
       err = e;
     }
     s.build = null;
+    setTimeout(pump, 0); // a deferred near scene may build now
     const ownCanvases = () =>
       [...s.stage.querySelectorAll('canvas')].filter((c) => !build.preexisting.has(c));
 
@@ -460,6 +502,7 @@ export function initFigures(root, { loaders, env } = {}) {
       instance: null,
       build: null, // the one create() in flight, if any
       waiting: false, // turned away by mustWait(); retried after the next install
+      deferred: false, // near but not on screen, waiting for load, idle and no other build (pump)
       live: null, // the build whose instance is installed (gates ctx.frame)
       preexisting: new Set(), // stage canvases that predate the current build
       ready: false,
