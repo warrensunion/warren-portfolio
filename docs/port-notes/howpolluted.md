@@ -12,6 +12,15 @@ source path and carry the changes over by hand.
 |---|---|---|
 | `litter-sim.js` | `src/screens/scene/litter-sim.js` | nothing but the header |
 | `grades.js` | `src/core/grades.js` | nothing but the header |
+| `globe.js` | `src/screens/globe/globe.js` | no wheel or pinch zoom; no own rAF or ResizeObserver; `flyTo` became the pure `aim(point, t)` (same ease-out cubic); the pin drop became `setPin(point, s)` (same back-out); drag-to-spin only while `interactive(true)`, which backs off to the whole globe; pointer handlers handed to the figure; DPR 2 on the high tier else 1; opaque paper clear colour; portrait fit. No three API needed swapping for 0.180. |
+| `scene.js` | `src/screens/scene/litter.js` | scroll-driven `draw({ fall, spill, t })`; plate and foreground drawn into the one 2D canvas; pile from `model.js`; slick area follows the remaining coverage; no router, hint, tally, parallax or window listeners |
+| `card.js` | `src/screens/scene/card.js` | litter only; tag "Demo, not a measurement"; no Explain button, /api call, inputs, sources or actions; `update()` in place; "All picked up." at zero; a line saying where the ground came from |
+| `figure.css` | `src/styles/tokens.css`, `src/screens/scene/scene.css`, `src/ui/ui.css` | tokens copied as custom properties on `.hp`; card, tag and button rules scaled to the plate; a compact layout under 480 px |
+
+New, not ported: `mask.js` (land-mask lookup), `model.js` (the demo pile: pick, drag, flick, regrade), `figure.js`
+(the scroll mapping, controls and host contract). Not ported although spec 5.4 lists them: `src/core/terrain.js`
+and `src/core/types.js` (the mask replaces live terrain; the card's kind is one word) and `src/ui/parallax.js`
+(it would move pieces under the visitor's click).
 
 ## Copied assets (`public/howpolluted/`, same sub-path as the source's `public/`)
 
