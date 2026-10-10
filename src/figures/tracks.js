@@ -87,6 +87,25 @@ export function initTracks(root, { reduced = false } = {}) {
     kick();
   }
 
+  // Pinned text keeps its bottom on screen: 96 px down, or higher when the text is taller than the room.
+  const fitText = () => {
+    for (const t of tracks) {
+      const text = t.el.querySelector('.track-text');
+      if (!text) continue;
+      const top = Math.min(TOP, innerHeight - text.offsetHeight - 24);
+      t.el.style.setProperty('--text-top', Math.round(top) + 'px');
+    }
+  };
+  fitText();
+  addEventListener('resize', fitText, { passive: true });
+  if ('ResizeObserver' in window) {
+    const ro = new ResizeObserver(fitText);
+    for (const t of tracks) {
+      const text = t.el.querySelector('.track-text');
+      if (text) ro.observe(text);
+    }
+  }
+
   for (const t of tracks) {
     if (!t.fig) continue;
     t.el.addEventListener('click', (e) => {

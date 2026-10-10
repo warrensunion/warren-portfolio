@@ -156,12 +156,21 @@ test('slotRetries: refills free slots with visible, unbuilt, unblocked WebGL fig
 
 test('mustWait: a full budget held only by in-flight builds makes the acquirer wait', () => {
   const { mustWait } = hostHelpers;
-  const building = new Set(['a', 'b', 'c']);
-  const isBuilding = (id) => building.has(id);
-  assert.equal(mustWait(['a', 'b', 'c'], 'z', 3, isBuilding), true);
-  assert.equal(mustWait(['a', 'b', 'x'], 'z', 3, isBuilding), false); // x is installed: evict it
-  assert.equal(mustWait(['a', 'b'], 'z', 3, isBuilding), false); // a free slot
-  assert.equal(mustWait(['a', 'b', 'z'], 'z', 3, isBuilding), false); // already holds a slot
+  const e = (id, building, weight = 1) => ({ id, building, weight });
+  assert.equal(mustWait([e('a', true), e('b', true), e('c', true)], 'z', 3, 1), true);
+  assert.equal(mustWait([e('a', true), e('b', true), e('x', false)], 'z', 3, 1), false); // x is installed: evict it
+  assert.equal(mustWait([e('a', true), e('b', true)], 'z', 3, 1), false); // a free slot
+  assert.equal(mustWait([e('a', true), e('b', true), e('z', false)], 'z', 3, 1), false); // already holds a slot
+});
+
+test('mustWait counts weight: a weight-2 claim waits while two weight-1 builds are in flight', () => {
+  const { mustWait } = hostHelpers;
+  const e = (id, building, weight = 1) => ({ id, building, weight });
+  assert.equal(mustWait([e('a', true), e('b', true), e('w', false, 0)], 'w', 3, 2), true);
+  assert.equal(mustWait([e('a', true), e('b', false), e('w', false, 0)], 'w', 3, 2), false); // b can go
+  assert.equal(mustWait([e('a', false), e('b', false)], 'w', 3, 2), false);
+  // A weight-0 entry (bcwc showing clips) never holds a slot against anyone.
+  assert.equal(mustWait([e('a', true), e('b', true), e('w', true, 0)], 'z', 3, 1), false);
 });
 
 test('waiterRetries: after an install, only figures mustWait turned away get another chance', () => {

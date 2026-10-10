@@ -33,6 +33,9 @@ export function createBudget(max) {
     live() {
       return [...live.keys()];
     },
+    entries() {
+      return [...live].map(([id, e]) => ({ id, weight: e.weight }));
+    },
     used,
   };
 }

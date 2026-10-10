@@ -57,12 +57,13 @@ export function waiterRetries(candidates, now) {
     .map((c) => c.id);
 }
 
-// Evicting a figure whose create() is still running would not free its context any sooner, so
-// when every other slot is held by such a build the newcomer waits for the next freed slot instead.
-export function mustWait(liveIds, id, max, isBuilding) {
-  if (liveIds.includes(id)) return false;
-  const others = liveIds.filter((x) => x !== id);
-  return others.length >= max && others.every(isBuilding);
+// Evicting a figure whose create() is still running would not free its context any sooner, so a
+// newcomer (or a figure re-weighing itself with ctx.claim) that could only fit by evicting such builds
+// waits for the next freed slot instead. Entries are the budget's { id, weight, building }; only the
+// weight of installed figures can be evicted to make room.
+export function mustWait(entries, id, max, weight) {
+  const inFlight = entries.filter((e) => e.id !== id && e.building).reduce((n, e) => n + e.weight, 0);
+  return inFlight + weight > max;
 }
 
 // Gap in px between the figure and the viewport; 0 while any part of it is on screen.
@@ -150,16 +151,29 @@ export function initFigures(root, { loaders, env, tracks = null } = {}) {
       log: (msg) => console.info('[fig:' + s.kind + '] ' + msg),
       data,
       ...trackCtx(tracks, s.fig),
-      // A figure whose context count changes at runtime (bcwc attaching its iframe) re-weighs itself;
-      // whatever that pushes over the cap is destroyed farthest-first, never this figure.
+      // A figure whose context count changes at runtime (bcwc attaching its iframe) re-weighs itself.
+      // The promise resolves true once the weight is held: whatever that pushes over the cap is destroyed
+      // farthest-first (never this figure), and if only in-flight builds could make room it waits for an
+      // install or a release, like a newcomer. It resolves false if this build is gone first. Allowed from
+      // inside create() as well as after install.
       claim(weight) {
-        if (s.live !== build) return;
-        for (const id of budget.acquire(s.id, () => distance(s.fig), weight)) destroy(byId.get(id));
+        if (!(s.live === build || (s.build === build && !build.cancelled))) {
+          console.info('[fig:' + s.kind + '] claim ignored: not the current build');
+          return Promise.resolve(false);
+        }
+        s.pendingClaim?.resolve(false);
+        return new Promise((resolve) => {
+          s.pendingClaim = { weight, resolve, build };
+          tryClaim(s);
+        });
       },
       unclaim() {
-        if (s.live !== build) return;
+        if (!(s.live === build || s.build === build)) return;
+        s.pendingClaim?.resolve(false);
+        s.pendingClaim = null;
         budget.acquire(s.id, () => distance(s.fig), weightOf(s.kind));
         refill();
+        retryClaims();
       },
       // Figures call this once per rendered frame. Only the installed instance counts, so a
       // cancelled build or a destroyed instance's last frame never pollutes the stats.
@@ -174,11 +188,29 @@ export function initFigures(root, { loaders, env, tracks = null } = {}) {
   }
 
   const freeSlots = () => MAX_LIVE - budget.used();
+  const budgetEntries = () => budget.entries().map((e) => ({ ...e, building: !!byId.get(e.id)?.build }));
+
+  function tryClaim(s) {
+    const p = s.pendingClaim;
+    if (!p) return;
+    if (p.build.cancelled || !(s.live === p.build || s.build === p.build)) {
+      s.pendingClaim = null;
+      return p.resolve(false);
+    }
+    if (mustWait(budgetEntries(), s.id, MAX_LIVE, p.weight)) return; // retried after an install or release
+    s.pendingClaim = null;
+    for (const id of budget.acquire(s.id, () => distance(s.fig), p.weight)) destroy(byId.get(id));
+    p.resolve(true);
+  }
+  const retryClaims = () => {
+    for (const x of states) if (x.pendingClaim) tryClaim(x);
+  };
 
   function release(s) {
     if (!isWebGLKind(s.kind)) return;
     budget.release(s.id);
     refill();
+    retryClaims();
   }
 
   // An evicted figure that is still on screen gets its scene back as soon as a slot frees up,
@@ -234,7 +266,7 @@ export function initFigures(root, { loaders, env, tracks = null } = {}) {
       s.deferred = true;
       return;
     }
-    if (weightOf(s.kind) > 0 && mustWait(budget.live(), s.id, MAX_LIVE, (id) => !!byId.get(id).build)) {
+    if (weightOf(s.kind) > 0 && mustWait(budgetEntries(), s.id, MAX_LIVE, weightOf(s.kind))) {
       s.waiting = true;
       return;
     }
@@ -296,6 +328,7 @@ export function initFigures(root, { loaders, env, tracks = null } = {}) {
     if (isWebGLKind(s.kind)) {
       for (const id of waiterRetries(states, performance.now())) ensure(byId.get(id));
     }
+    retryClaims();
   }
 
   function start(s) {
@@ -317,6 +350,10 @@ export function initFigures(root, { loaders, env, tracks = null } = {}) {
 
   function destroy(s) {
     if (!s) return;
+    if (s.pendingClaim) {
+      s.pendingClaim.resolve(false);
+      s.pendingClaim = null;
+    }
     if (s.build) s.build.cancelled = true; // run() frees the slot once create() settles
     if (s.instance) {
       const inst = s.instance;
@@ -551,6 +588,7 @@ export function initFigures(root, { loaders, env, tracks = null } = {}) {
       near: false,
       visible: false,
       mid: false, // inside the middle half of the viewport (runIO)
+      pendingClaim: null, // a ctx.claim(weight) waiting for room: { weight, resolve, build }
       failed: false,
       blockedUntil: 0,
       size: null,
@@ -624,7 +662,7 @@ function shootPoster(root, loaders, shot) {
     log: (msg) => console.info('[fig:' + shot.kind + '] ' + msg),
     data: { ...data, posterState: shot.state },
     frame() {},
-    claim() {},
+    claim: () => Promise.resolve(true),
     unclaim() {},
   };
   // A stage still is shot at its stage, held there.

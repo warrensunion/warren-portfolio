@@ -755,9 +755,12 @@ const twoFrames = (page) => page.evaluate(() => new Promise((r) => requestAnimat
 // never overlaps the next track's text.
 function walkTrack(page, id) {
   return page.evaluate(
-    ([id, top]) => {
+    ([id, top96]) => {
       const { el, rail, fig } = window.__track(id);
       const text = el.querySelector('.track-text');
+      // Text taller than the room under 96 px sticks higher, so its bottom stays on screen (layout.css).
+      const top = parseFloat(getComputedStyle(text).top);
+      if (!(top <= top96 + 0.5)) return { n: { samples: 0 }, bad: ['sticky top ' + top + ' above ' + top96] };
       const all = [...document.querySelectorAll('article.track[data-track]')];
       const next = all[all.indexOf(el) + 1]?.querySelector('.track-text') || null;
       const cs = getComputedStyle(el);
@@ -786,7 +789,8 @@ function walkTrack(page, id) {
         } else if (tx.bottom < cBottom - 1) {
           if (figOn) {
             n.pinned++;
-            if (Math.abs(tx.top - top) > 1) bad.push(`y ${y}: pinned, text top ${tx.top.toFixed(1)}`);
+            if (Math.abs(tx.top - top) > 1) bad.push(`y ${y}: pinned, text top ${tx.top.toFixed(1)} vs sticky top ${top.toFixed(1)}`);
+            if (tx.bottom > innerHeight + 0.5) bad.push(`y ${y}: pinned text runs off screen, bottom ${tx.bottom.toFixed(1)} > ${innerHeight}`);
           }
         } else {
           n.after++;
@@ -833,6 +837,8 @@ async function checkTracks(browser, url) {
   for (const [label, opts] of [
     ['1440x900', { viewport: DESK }],
     ['1920x1080', { viewport: WIDE }],
+    ['1366x768', { viewport: { width: 1366, height: 768 } }],
+    ['1280x640', { viewport: { width: 1280, height: 640 } }],
     ['390x844', PHONE_OPTS],
   ]) {
     const desk = opts.viewport.width >= 860;

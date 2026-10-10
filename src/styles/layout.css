@@ -266,9 +266,11 @@ main > *,
 }
 
 @media (min-width: 860px) {
+  /* 96 px, as measured on yuzeli.ca; text taller than the room below that sticks higher instead, so its
+     last line stays on screen on short laptops (tracks.js sets --text-top from the text's height). */
   .track-text {
     position: sticky;
-    top: 96px;
+    top: var(--text-top, 96px);
   }
 
   /* A spacer, not padding: sticky stops at its container's content box, so the pinned stretch must be
