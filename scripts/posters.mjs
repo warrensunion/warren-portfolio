@@ -1,8 +1,10 @@
 // Every WebGL figure's poster is a still of the scene itself, so the page reads the same before the
 // scene loads, under reduced motion and on a device that cannot run it. This shoots each one through
 // the host's ?poster= hook (one figure, fixed state, no motion) from the built page at the 1440x900
-// layout and 2x pixels, writes webp into public/posters, then rebuilds so dist/ carries them too.
-// Usage: npm run posters [-- --only=ws-1,iceberg]
+// layout and 2x pixels, writes webp into public/posters, then rebuilds so dist/ carries them too. Track
+// figures also get one still per stage (TRACK_STILLS, ?poster=<kind>&stage=<i>), shot at the 1440 layout and
+// 1x into public/stills/<slug>-s<i>.webp; the figure draws stage i at the end of its own stretch.
+// Usage: npm run posters [-- --only=ws-1,iceberg,stills/howpolluted-s0]
 import { chromium } from 'playwright';
 import sharp from 'sharp';
 import { stat } from 'node:fs/promises';
@@ -19,13 +21,15 @@ const SHOTS = [
   { file: 'ws-3', q: 'poster=ring&shape=3' },
   { file: 'ws-4', q: 'poster=ring&shape=4' },
 ];
+const TRACK_STILLS = [0, 1, 2, 3, 4].map((i) => ({ file: `stills/howpolluted-s${i}`, q: `poster=howpolluted&stage=${i}`, still: true }));
 const KIND_INDEX = (q) => {
   const p = new URLSearchParams(q);
   return [p.get('poster'), Number(p.get('i') || 0)];
 };
 
 const only = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
-const shots = only.length ? SHOTS.filter((s) => only.includes(s.file)) : SHOTS;
+const ALL = [...SHOTS, ...TRACK_STILLS];
+const shots = only.length ? ALL.filter((s) => only.includes(s.file)) : ALL;
 
 build();
 const server = await startPreview(4318);
@@ -33,8 +37,9 @@ const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
 let failed = 0;
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  const stillContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
   for (const shot of shots) {
-    const page = await context.newPage();
+    const page = await (shot.still ? stillContext : context).newPage();
     page.on('console', (m) => {
       if (m.type() === 'warning' || m.type() === 'error') console.log(`  [${shot.file}] ${m.text()}`);
     });
@@ -53,8 +58,8 @@ try {
     // Two more frames after scrolling, so the compositor has the canvas at its final place.
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     const png = await stage.screenshot({ type: 'png', animations: 'disabled' });
-    const out = path.join(root, 'public/posters', shot.file + '.webp');
-    const info = await sharp(png).webp({ quality: 80, effort: 6 }).toFile(out);
+    const out = shot.still ? path.join(root, 'public', shot.file + '.webp') : path.join(root, 'public/posters', shot.file + '.webp');
+    const info = await sharp(png).webp({ quality: shot.still ? 78 : 80, effort: 6 }).toFile(out);
     const kb = ((await stat(out)).size / 1024).toFixed(0);
     console.log(`ok   ${shot.file}.webp ${info.width}x${info.height} ${kb} KB`);
     await page.close();
