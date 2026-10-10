@@ -1211,18 +1211,26 @@ async function checkArcher(browser, url) {
     report('archer: Esc lets go of the figure', before && !after, `focused before ${before}, after ${after}`);
   });
 
-  await step('archer: W pressed in the page\'s own email button does not move the archer', async () => {
-    const focused = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('[data-copy-email]')].find((x) => x.getClientRects().length);
-      b?.focus({ preventScroll: true });
-      return document.activeElement === b && !!b;
-    });
+  // With the game resumed and playing (focus leaving pauses it, so focusing another control first would
+  // prove nothing), a W that starts at the page's own email button must not reach the game: the game
+  // listens on the figure, not the window.
+  await step('archer: W pressed at the page\'s own email button does not move a playing archer', async () => {
+    await page.click(sel + ' .ah-prompt');
+    await page.waitForFunction((sel) => document.querySelector(sel + ' .ah-hud')?.classList.contains('is-playing') && document.querySelector(sel + ' .ah-prompt')?.hidden, sel, { timeout: 3000 });
     const z0 = await z();
-    await page.keyboard.down('KeyW');
-    await sleep(500);
-    await page.keyboard.up('KeyW');
+    const sent = await page.evaluate(async () => {
+      const b = [...document.querySelectorAll('[data-copy-email]')].find((x) => x.getClientRects().length);
+      if (!b) return false;
+      b.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', key: 'w', bubbles: true }));
+      await new Promise((r) => setTimeout(r, 500));
+      b.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW', key: 'w', bubbles: true }));
+      return true;
+    });
     const z1 = await z();
-    report('archer: W pressed in the page\'s own email button does not move the archer', focused && z1 === z0, `email button focused ${focused}, z ${z0.toFixed(3)} -> ${z1.toFixed(3)}`);
+    const playing = (await isFocused()) && (await page.evaluate((sel) => document.querySelector(sel + ' .ah-hud')?.classList.contains('is-playing'), sel));
+    report('archer: W pressed at the page\'s own email button does not move a playing archer', sent && playing && z1 === z0, `sent ${sent}, still playing and focused ${playing}, z ${z0.toFixed(3)} -> ${z1.toFixed(3)}`);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
   });
 
   await step('archer: losing shows the end panel with Play again and the Roblox link', async () => {
@@ -1718,6 +1726,24 @@ async function checkBcwc(browser, url) {
   }
 }
 
+
+// On a phone the attract mode must not leave dead zones: until a game is playing, the Q and E circles
+// neither take touches nor block a scroll that starts on them.
+async function checkArcherTouch(browser, url) {
+  const t = await open(browser, url, PHONE_OPTS);
+  const { page } = t;
+  await page.evaluate(trackHelpers, STICKY_TOP);
+  const name = 'archer 390x844: outside play the skill buttons take no touches (no scroll dead zones)';
+  await step(name, async () => {
+    await page.evaluate(() => document.querySelector('#archer-hero figure').scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await waitLive(page, 'archer-0');
+    await page.waitForSelector('#archer-hero .ah-skill', { timeout: 15000 });
+    const r = await page.$$eval('#archer-hero .ah-skill', (els) => els.map((e) => ({ pe: getComputedStyle(e).pointerEvents, ta: getComputedStyle(e).touchAction })));
+    report(name, r.length === 2 && r.every((x) => x.pe === 'none' && x.ta !== 'none'), JSON.stringify(r));
+  });
+  await t.close();
+}
+
 /* ── run ── */
 
 if (!argv.has('--no-build')) build();
@@ -1752,7 +1778,10 @@ try {
     resize: () => checkResize(browser, url),
     tracks: () => checkTracks(browser, url),
     howpolluted: () => checkHowPolluted(browser, url),
-    archer: () => checkArcher(browser, url),
+    archer: async () => {
+      await checkArcher(browser, url);
+      await checkArcherTouch(browser, url);
+    },
     terrarium: () => checkTerrarium(browser, url),
     bttr: () => checkBttr(browser, url),
     bcwc: () => checkBcwc(browser, url),
