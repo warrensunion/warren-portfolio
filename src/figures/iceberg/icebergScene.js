@@ -335,6 +335,11 @@ const BLOCK_FRAG = /* glsl */ `
     // that is the side facing the hollow.
     vec3 n0 = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
     if (dot(n0, V) < 0.0) n0 = -n0;
+    // Added for the descent: the tip's blocks end in flat bottoms on y = 0,
+    // the same plane as the water. From under the surface the swell's troughs
+    // uncover them as grey slivers along the berg's waterline; the water's
+    // underside belongs there, so they are dropped and the surface shows.
+    if (above && uClip < 0.5 && cameraPosition.y < 0.0 && vRest.y < 0.12 && n0.y < -0.3) discard;
     vec3 Ls = normalize(uSun);
 
     float inner = 1.0 - smoothstep(0.08, 0.12, vU);         // the hollow's faces
@@ -412,7 +417,15 @@ const BLOCK_FRAG = /* glsl */ `
     // Under water the hollow's light is in the water too: it is not dimmed
     // by depth like the daylight, only scattered on its way to the eye.
     coreLit *= uCoreOn;
-    col = vWorld.y < 0.0
+    // Added for the descent: from a camera under the waterline, a face above
+    // y = 0 seen through the cut below it (through the hollow's opening in the
+    // surface) is seen through water too, not through the daylit fog.
+    bool wet = vWorld.y < 0.0;
+    if (!wet && cameraPosition.y < 0.0 && cameraPosition.z > FRONT_Z) {
+      vec3 rd = vWorld - cameraPosition;
+      wet = cameraPosition.y + rd.y * (cameraPosition.z - FRONT_Z) / max(-rd.z, 1e-4) < 0.0;
+    }
+    col = wet
       ? underwater(col, vWorld) + coreLit * exp(-waterPath(vWorld) * 0.03)
       : aboveFog(col + coreLit, vWorld);
     gl_FragColor = vec4(col, 1.0);
@@ -487,20 +500,25 @@ const GLACIER_FRAG = /* glsl */ `
   varying float vFace;
   varying float vTop;
   void main() {
+    // Derivatives first, before any branch or discard: a quad straddling the
+    // deep-water branch below otherwise gets undefined dFdx/dFdy, a NaN normal
+    // and black pixels (seen on ANGLE/D3D11 at the far waterline).
+    vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
     if (uClip > 0.5 && vWorld.y < -0.05) discard;
     // The deep rows buildGlacier adds only have to hide what lies behind them:
     // they show the deep water the sky would. Seen from under the surface the
     // whole submerged face does the same; from above, the source's foot
     // (-0.6..0, glimpsed between the water's edge and the face) stays ice.
     // The mirrored reflection camera is also below 0, hence the uClip test.
-    if (vWorld.y < -0.7 || (vWorld.y < 0.0 && cameraPosition.y < 0.0 && uClip < 0.5)) {
+    // (0.3, not 0: the swell's crests stand above y = 0, and the face just over
+    // them must not show as a sliver under the surface's far edge.)
+    if (vWorld.y < -0.7 || (vWorld.y < 0.3 && cameraPosition.y < 0.0 && uClip < 0.5)) {
       gl_FragColor = vec4(deepWater(normalize(vWorld - cameraPosition)), 1.0);
       #include <colorspace_fragment>
       return;
     }
     float rim;
     if (spread(vWorld.xz, rim) < 0.5) discard;
-    vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
     vec3 V = normalize(cameraPosition - vWorld);
     if (dot(n, V) < 0.0) n = -n;
     vec3 Ls = normalize(uSun);
@@ -892,7 +910,10 @@ function buildGlacier() {
     cut (where the waves show at the edge) and in the middle of the frame. */
 function buildWater() {
   const xs = symmetric(HALF_W, (x) => (x < 45 ? 0.35 : x < 130 ? 2 : 8));
-  const zs = stops(FRONT_Z, GLACIER_Z + 0.5, (z) => 0.3 + (FRONT_Z - z) * 0.05);
+  // Runs on 3 units behind the glacier's plane (the source stopped 0.5 in
+  // front): the face is pushed in by up to ~2 units, and from under the water
+  // the gap between the surface's edge and the face showed as a line.
+  const zs = stops(FRONT_Z, GLACIER_Z - 3, (z) => 0.3 + (FRONT_Z - z) * 0.05);
   const g = grid(xs, zs, (x, z) => [x, 0, z]);
   g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, -20), HALF_W + 50);
   return g;
