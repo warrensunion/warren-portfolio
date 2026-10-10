@@ -21,7 +21,9 @@ function contentPlugin() {
         ({ content } = await import('./src/content.js'));
         ({ renderPage } = await import('./src/render.js'));
       }
-      return html.replace('<!--content-->', renderPage(content, { updated: new Date() }));
+      const rendered = renderPage(content, { updated: new Date() });
+      // Function replacer: a string replacement would expand $-patterns that appear in the copy.
+      return html.replace('<!--content-->', () => rendered);
     },
     handleHotUpdate({ file, server: s }) {
       const path = file.replace(/\\/g, '/');

@@ -24,11 +24,11 @@ export const content = {
     linkedin: 'https://www.linkedin.com/in/warren-sun-b2b113323',
   },
 
+  // One paragraph, at most 220 visible characters: it must stay within 3 lines at 1440px.
   bio: [
-    'I study Software Engineering at the University of Waterloo, where I started in fall 2026. ' +
-      'I&rsquo;m building <a href="#building">BTTRURSLF</a>, a self-improvement game, and I&rsquo;ve made ' +
-      '<a href="#work">a website for a Richmond business</a> and <a href="#projects">a Roblox combat game</a>.',
-    'Before Waterloo I went to MacNeill Secondary in Richmond, BC.',
+    'I study Software Engineering at Waterloo, after MacNeill Secondary in Richmond, BC. ' +
+      'I&rsquo;m building <a href="#building">BTTRURSLF</a> and made ' +
+      '<a href="#work">a website</a> and <a href="#projects">a Roblox game</a>.',
   ],
 
   hero: {

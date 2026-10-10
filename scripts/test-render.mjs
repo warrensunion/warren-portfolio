@@ -25,6 +25,15 @@ test('hero bio links into work, building and projects', () => {
   for (const id of ['work', 'building', 'projects']) assert.match(hero, new RegExp(`href="#${id}"`));
 });
 
+test('hero bio is one paragraph of at most 220 visible characters', () => {
+  const hero = html.slice(html.indexOf('class="hero-text'), html.indexOf('class="hero-fig'));
+  const paras = [...hero.matchAll(/<p[\s>][\s\S]*?<\/p>/g)].map((m) => m[0]);
+  assert.equal(content.bio.length, 1);
+  assert.equal(paras.length, 1);
+  const visible = paras[0].replace(/<[^>]+>/g, '').replace(/&[a-z]+;|&#\d+;/g, 'x');
+  assert.ok(visible.length <= 220, `bio is ${visible.length} visible characters`);
+});
+
 test('every figure has a poster and Fig. numbers run 1..N with no gaps', () => {
   const figs = html.split('<figure class="fig"').slice(1);
   assert.ok(figs.length >= 6, `expected at least 6 figures, got ${figs.length}`);

@@ -123,11 +123,6 @@ main > *,
   max-width: 30em;
 }
 
-.bio {
-  margin-top: 16px;
-  color: var(--ink-3);
-  font-size: var(--fs-body);
-}
 
 @media (min-width: 860px) {
   .hero {

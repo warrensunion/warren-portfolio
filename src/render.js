@@ -64,7 +64,7 @@ function hero(c, next) {
   return (
     `<div class="hero" id="top"><div class="hero-text">` +
     `<h1>${esc(c.name)}</h1>` +
-    c.bio.map((p, i) => `<p class="${i === 0 ? 'lede' : 'bio'}">${p}</p>`).join('') +
+    c.bio.map((p) => `<p class="lede">${p}</p>`).join('') +
     `</div><div class="hero-fig">${figure(c.hero.fig, next(), { hero: true })}</div></div>`
   );
 }
