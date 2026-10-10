@@ -84,6 +84,7 @@ async function session(browser, name, opts, fn) {
   page.on('pageerror', (e) => errs.push(e.message));
   const t = clock();
   const marks = await fn(page, t);
+  await page.waitForTimeout(1500); // the clip's tail stays on the last screen, not the context closing
   const raw = await finishVideo(context, page, path.join(WORK, name + '.webm'));
   manifest.blocked.push(...blocked);
   if (errs.length) console.log(`  [${name}] page errors: ${errs.slice(0, 3).join(' | ')}`);
@@ -99,7 +100,7 @@ try {
     mkdirSync(cardsDir, { recursive: true });
     const { raw, marks } = await session(browser, 'appearance', { seed: COMMS_DONE }, async (page, t) => {
       await page.goto(srv.url + Q + '/appearance');
-      await page.waitForSelector('.pz__piece');
+      await page.waitForSelector('.pz__piece', { timeout: 90000 });
       await page.mouse.move(VIEW.width - 20, 30);
       await page.waitForTimeout(1500);
       // Closed faces, cropped before anything opens.
@@ -135,6 +136,9 @@ try {
       await page.waitForFunction(() => document.querySelector('.mer__figure')?.dataset.pose === 'idle', null, { timeout: 15000 }).catch(() => {});
       await page.waitForTimeout(600);
       m.end = t();
+      // The recording runs a little behind the clock: idle past the last mark so the clip's tail is the
+      // finished screen, not the crops below.
+      await page.waitForTimeout(1500);
       // Open faces and where each card sits, normalised to the frame.
       const open = await page.$$eval('.pz', (els) =>
         els.map((e) => {

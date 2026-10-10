@@ -81,6 +81,7 @@ try {
   await sweep(page, blind, [...range(0, 100, 2.5), ...range(97.5, 45, -2.5)]);
   await page.waitForTimeout(500);
   m.end = t();
+  await page.waitForTimeout(1500); // the recording lags the clock; keep the tail on the finished slider
   await page.mouse.move(VIEW.width - 10, VIEW.height - 10);
   await page.waitForTimeout(400);
   const rest = await page.screenshot();

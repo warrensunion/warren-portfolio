@@ -15,12 +15,12 @@
     "0": {
       "tab": "appearance",
       "file": "appearance/s0",
-      "duration": 4
+      "duration": 3.958333
     },
     "1": {
       "tab": "appearance",
       "file": "appearance/s1",
-      "duration": 2.458333
+      "duration": 3.958333
     },
     "2": {
       "tab": "appearance",
@@ -30,7 +30,7 @@
     "3": {
       "tab": "shop",
       "file": "shop/s0",
-      "duration": 4
+      "duration": 3.958333
     },
     "4": {
       "tab": "shop",
@@ -45,12 +45,12 @@
     "6": {
       "tab": "shop",
       "file": "shop/s3",
-      "duration": 3.958333
+      "duration": 4
     },
     "7": {
       "tab": "motivator",
       "file": "motivator/s0",
-      "duration": 4
+      "duration": 3.958333
     },
     "8": {
       "tab": "motivator",
@@ -65,12 +65,12 @@
     "10": {
       "tab": "ping",
       "file": "ping/s0",
-      "duration": 3.958333
+      "duration": 4
     },
     "11": {
       "tab": "ping",
       "file": "ping/s1",
-      "duration": 3.958333
+      "duration": 4
     },
     "12": {
       "tab": "map",
