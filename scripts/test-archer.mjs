@@ -153,3 +153,12 @@ test('sim: same seed, same run', () => {
   };
   assert.deepEqual(run(), run());
 });
+
+test('attract: clears the stage alone within 90 simulated seconds', async () => {
+  const { attractInput } = await import('../src/figures/archer/attract.js');
+  const g = createGame({ seed: 7 });
+  let i = 0;
+  for (; i < 5400 && g.status === 'playing'; i++) step(g, attractInput(g), DT);
+  assert.equal(g.status, 'won', `status ${g.status} after ${i} steps, hp ${g.archer.hp}, left ${g.left}`);
+  assert.ok(g.archer.hp > 0);
+});
