@@ -100,3 +100,29 @@
     aspect-ratio: 390 / 360;
   }
 }
+
+/* Live scenes sit over the poster and stay invisible until their first frame is drawn, so a slow
+   shader compile shows the poster rather than a blank plate. Opacity-only, so it is a cross-fade
+   that reduced-motion visitors may also see (the under-water poster swap below). */
+.fig-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.fig.is-live .fig-canvas {
+  opacity: 1;
+}
+
+.fig-poster--under {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.fig.is-under .fig-poster--under {
+  opacity: 1;
+}

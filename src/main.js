@@ -1,8 +1,9 @@
 // Entry point for the page's behaviour. The page is complete as static HTML; this module only
-// adds enhancements on top (email copy and the bar hairline here, the figure host in Task 3),
+// adds enhancements on top (email copy, the bar hairline and the figure host),
 // so a failure here can never blank the page.
 import { content } from './content.js';
 import { initCopyEmail } from './chrome/copyEmail.js';
+import { initFigures } from './figures/host.js';
 
 document.documentElement.classList.add('js');
 
@@ -19,4 +20,18 @@ if (bar && 'IntersectionObserver' in window) {
   new IntersectionObserver(([entry]) => {
     bar.classList.toggle('is-scrolled', !entry.isIntersecting);
   }).observe(sentinel);
+}
+
+// Each figure is its own lazy chunk (three.js only loads once a WebGL figure is near the viewport).
+// A host failure is caught so the posters, which are already on the page, simply stay.
+const loaders = {
+  iceberg: () => import('./figures/iceberg/figure.js'),
+  iceblock: () => import('./figures/iceblock/figure.js'),
+  ring: () => import('./figures/ring/figure.js'),
+  contests: () => import('./figures/contests/figure.js'),
+};
+try {
+  initFigures(document, { loaders });
+} catch (err) {
+  console.warn('[fig] host failed to start', err);
 }

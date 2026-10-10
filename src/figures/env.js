@@ -1,0 +1,74 @@
+// Decides, once per page, what the visitor's device can afford: a live scene or a poster, and how
+// expensive a scene may be. The rules are pure functions over plain values (Node-tested); the small
+// probes at the bottom are the only parts that touch the browser.
+
+const WEBGL_KINDS = new Set(['iceberg', 'iceblock', 'ring']);
+
+export const isWebGLKind = (kind) => WEBGL_KINDS.has(kind);
+
+// Order matters: an explicit ?static=1 wins, then hard capability, then the visitor's data and motion
+// preferences. The contests chart is plain SVG, so none of these apply to it.
+export function fallbackReason({ webgl2, reduced, saveData, forced, kind }) {
+  if (!WEBGL_KINDS.has(kind)) return null;
+  if (forced) return 'forced';
+  if (!webgl2) return 'no-webgl2';
+  if (saveData) return 'save-data';
+  if (reduced) return 'reduced-motion';
+  return null;
+}
+
+export function tierFor({ width, coarse, cores, override }) {
+  if (override === 'low' || override === 'high') return override;
+  if (width < 860 || coarse || (typeof cores === 'number' && cores <= 4)) return 'low';
+  return 'high';
+}
+
+export function readFlags(search) {
+  const q = new URLSearchParams(search || '');
+  const tier = q.get('tier');
+  return {
+    forced: q.get('static') === '1',
+    fps: q.get('fps') === '1',
+    tier: tier === 'low' || tier === 'high' ? tier : null,
+  };
+}
+
+// Reduced-motion poster swap: IntersectionObserver only reports edge crossings, so the swap state is
+// read from where the sentinel sits relative to the line at the moment of the crossing.
+export const pastLine = (entry, lineY) => entry.boundingClientRect.top < lineY;
+
+/* Browser probes (not imported by Node tests' code paths). */
+
+export function detectTier() {
+  return tierFor({
+    width: innerWidth,
+    coarse: matchMedia('(pointer: coarse)').matches,
+    cores: navigator.hardwareConcurrency,
+    override: readFlags(location.search).tier,
+  });
+}
+
+// One throwaway context answers "can this browser do WebGL2"; it is released at once so it never
+// counts against the page's context budget.
+export function hasWebGL2() {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) return false;
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function readEnv() {
+  const flags = readFlags(location.search);
+  return {
+    ...flags,
+    reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    saveData: Boolean(navigator.connection && navigator.connection.saveData),
+    tier: detectTier(),
+    // Probing creates a context, so skip it when the page is forced static anyway.
+    webgl2: flags.forced ? false : hasWebGL2(),
+  };
+}
