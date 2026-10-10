@@ -150,3 +150,113 @@ html:not(.js) .fig-hint,
 .fig-poster--morph.is-on {
   opacity: 1;
 }
+
+/* Track plates (spec section 4): a running LED in the head, the stage list, and the stage stills stacked
+   in one stage box. The stage keeps the figure's own aspect (--fig-ar from its size) and, while pinned,
+   is capped so the whole plate fits under the sticky top of 96 px at 1440x900 and 1920x1080. */
+.fig-led {
+  align-self: center;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  transition: background-color 0.4s;
+}
+
+.fig[data-running] .fig-led {
+  background: var(--accent);
+  animation: fig-led 2.4s ease-in-out infinite;
+}
+
+@keyframes fig-led {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(31, 95, 120, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(31, 95, 120, 0);
+  }
+}
+
+.fig-stages {
+  display: flex;
+  gap: 4px 16px;
+  margin: -4px 0 12px;
+  padding: 0 0 2px;
+  list-style: none;
+  overflow-x: auto; /* a long stage list scrolls inside the plate, never the page */
+  scrollbar-width: none;
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  line-height: 1.6;
+}
+
+.fig-stages::-webkit-scrollbar {
+  display: none;
+}
+
+.fig-stages button {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-3);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.fig-stages button:hover,
+.fig-stages button[aria-current] {
+  color: var(--ink);
+}
+
+.fig-step-n {
+  display: inline-block;
+  min-width: 1.2em;
+  color: var(--ink-3);
+}
+
+.fig--track .fig-stage {
+  aspect-ratio: var(--fig-ar, 16 / 10);
+}
+
+.fig-still {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.fig-still.is-on {
+  opacity: 1;
+}
+
+/* Without JavaScript nothing walks the stages, so the stills read top to bottom like a document. */
+html:not(.js) .fig--track .fig-stage {
+  aspect-ratio: auto;
+  display: grid;
+  gap: 12px;
+  background: none;
+}
+
+html:not(.js) .fig-still {
+  position: static;
+  height: auto;
+  opacity: 1;
+}
+
+html:not(.js) .fig-stages {
+  display: none;
+}
+
+@media (min-width: 860px) {
+  .js .track-rail .fig--track .fig-stage {
+    max-height: calc(100svh - 96px - 24px - 120px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fig[data-running] .fig-led {
+    animation: none;
+  }
+}

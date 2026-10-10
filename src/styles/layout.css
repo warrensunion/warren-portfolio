@@ -208,6 +208,83 @@ main > *,
   color: var(--ink-3);
 }
 
+/* Tracks (spec section 3): the text column sticks at 96 px, as measured on yuzeli.ca, and the rail
+   beside it is one 85svh stretch of scroll per stage after the first, with its figure pinned at the same
+   top. Both are sticky inside the same grid row, so when the rail ends the text meets the figure's
+   bottom edge and the two leave together. */
+.track {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  column-gap: var(--col-gap);
+  align-items: start;
+  padding: 56px 0 79px;
+}
+
+.track--feature {
+  grid-template-columns: 4fr 8fr;
+}
+
+.track-text > * + * {
+  margin-top: 16px;
+}
+
+.track-text p {
+  color: var(--ink-2);
+}
+
+.track h3 {
+  font-size: var(--fs-h3);
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.track h3 a {
+  color: var(--ink);
+}
+
+.track-text .meta {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  color: var(--ink-3);
+}
+
+.track-text .tags {
+  margin-top: 24px;
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+.track-rail {
+  min-width: 0;
+}
+
+@media (min-width: 860px) {
+  .track-text {
+    position: sticky;
+    top: 96px;
+  }
+
+  /* A spacer, not padding: sticky stops at its container's content box, so the pinned stretch must be
+     content for the figure to stay pinned through it. Its height is what tracks.js reads as the stretch. */
+  .js .track-rail::after {
+    content: '';
+    display: block;
+    height: calc((var(--stages) - 1) * 85svh);
+  }
+
+  .js .track-rail > .fig {
+    position: sticky;
+    top: 96px;
+  }
+}
+
 /* Contests list */
 .contest-list {
   border-top: 1px solid var(--hair);
@@ -320,6 +397,8 @@ main > *,
 @media (max-width: 859px) {
   .hero,
   .entry,
+  .track,
+  .track--feature,
   .touch {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -338,7 +417,8 @@ main > *,
   }
 
   .hero-fig,
-  .entry-fig {
+  .entry-fig,
+  .track-rail {
     margin-top: 40px;
   }
 
@@ -347,6 +427,7 @@ main > *,
   }
 
   .entry,
+  .track,
   .touch {
     padding: 32px 0 56px;
   }
