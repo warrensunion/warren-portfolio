@@ -128,6 +128,14 @@ test('recordFrame: accumulates real frame times, ignores junk', () => {
   assert.deepEqual(st, { frames: 2, dtSum: 36, dtMax: 20 });
 });
 
+test('recordFrame: logs each frame only when an opt-in dts array is present', () => {
+  const st = { frames: 0, dtSum: 0, dtMax: 0, dts: [] };
+  recordFrame(st, 16);
+  recordFrame(st, NaN);
+  recordFrame(st, 33);
+  assert.deepEqual(st.dts, [16, 33]);
+});
+
 test('slotRetries: refills free slots with visible, unbuilt, unblocked WebGL figures only', () => {
   const f = (id, o = {}) => ({ id, kind: 'iceblock', visible: true, instance: null, build: null, failed: false, blockedUntil: 0, ...o });
   const cands = [

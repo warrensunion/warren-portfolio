@@ -34,6 +34,8 @@ export function recordFrame(st, dtMs) {
   st.frames += 1;
   st.dtSum += dtMs;
   if (dtMs > st.dtMax) st.dtMax = dtMs;
+  // Opt-in per-frame log for scripts/perf.mjs (its p95): only when the caller put an array there.
+  if (st.dts) st.dts.push(dtMs);
 }
 
 // Which on-screen figures, sitting on their poster after an eviction, should take the free slots.
