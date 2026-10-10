@@ -45,7 +45,7 @@ const jump = (page, fn, arg) => page.evaluate(fn, arg);
 
 if (!argv.includes('--no-build')) build();
 await mkdir(outDir, { recursive: true });
-const server = await startPreview(4320);
+const server = await startPreview(Number(process.env.PREVIEW_PORT) || 4320);
 const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
 const written = [];
 try {

@@ -28,7 +28,7 @@ const only = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7).
 const shots = only.length ? SHOTS.filter((s) => only.includes(s.file)) : SHOTS;
 
 build();
-const server = await startPreview(4318);
+const server = await startPreview(Number(process.env.PREVIEW_PORT) || 4318);
 const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
 let failed = 0;
 try {

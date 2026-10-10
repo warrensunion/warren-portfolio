@@ -1030,7 +1030,7 @@ async function checkTracks(browser, url) {
 /* ── run ── */
 
 if (!argv.has('--no-build')) build();
-const server = await startPreview(4319);
+const server = await startPreview(Number(process.env.PREVIEW_PORT) || 4319);
 const browser = await chromium.launch({ headless: true, args: ARGS });
 const started = Date.now();
 try {
