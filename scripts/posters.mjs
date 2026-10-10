@@ -26,6 +26,8 @@ const SHOTS = [
 const TRACK_STILLS = [
   ...[0, 1, 2, 3, 4].map((i) => ({ file: `stills/howpolluted-s${i}`, q: `poster=howpolluted&stage=${i}`, still: true })),
   ...[0, 1, 2, 3].map((i) => ({ file: `stills/archer-hero-s${i}`, q: `poster=archer&stage=${i}`, still: true })),
+  // BTTRURSLF's other stills come from its captures; its Stats stage is DOM, so it is shot here.
+  { file: 'stills/bttrurslf-s14', q: 'poster=bttr&stage=14', still: true, size: [1600, 1000] },
 ];
 const KIND_INDEX = (q) => {
   const p = new URLSearchParams(q);
