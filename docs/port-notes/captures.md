@@ -46,3 +46,18 @@ while recording, so it is burned into the clip in sync with what it clicks.
 | 12 | `#/map` | The route-drawing intro (`.bm.is-intro`, about 24 s), time-compressed to 4 s. |
 | 13 | `#/map` | The finished map. |
 | 14 | n/a | Stats are DOM on the portfolio, from `src/data/bttr-stats.json`. |
+
+## BC Window Coverings (`npm run capture:bcwc`)
+
+- Source: `C:\Users\Warren\Downloads\Projects\bcwc`, not modified, at commit `291fb52683bf68b7dc1223247e7ceb5e5bd93f4a`.
+- Served by its own `vite preview` of `dist/` on port 4380, at a 1440x900 viewport.
+- bcwc skips its cinematic loader when `navigator.webdriver` is true, so the capture masks that flag to
+  show the loader.
+
+| stage | what drives it |
+|---|---|
+| 0 | `/?intro`. The loader runs to the blinds lifting, time-compressed to 4 s. |
+| 1 | A pointer move loads the WebGL overlay, then a click on the Products nav link plays the shading blind transition into `/products`. |
+| 2 | `#ctl-time` sweeps from 6 to 21.5 in 0.25 steps every 40 ms. |
+| 3 | The blind range (`[aria-labelledby="ctl-blind-label"]`) sweeps 0 to 100 to 45. |
+| 4 | A still of `/products` at rest. The live stage is the iframe once bcwc is deployed. |
