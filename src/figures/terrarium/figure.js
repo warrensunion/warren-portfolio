@@ -55,7 +55,7 @@ export function speedFor(stage, x, gen, G, user) {
 
 export const readoutFor = (s) => (s ? `gen ${s.generation}, ${s.population} alive, ${s.species.length} species` : '');
 
-export async function create(stageEl, ctx) {
+async function build(stageEl, ctx, held) {
   const tier = ctx.tier === 'low' ? 'low' : 'high';
   const poster = ctx.data && ctx.data.posterState && typeof ctx.data.posterState === 'object' ? ctx.data.posterState : null;
   const posterStage = poster ? clamp(poster.stage | 0, 0, 4) : 0;
@@ -70,6 +70,7 @@ export async function create(stageEl, ctx) {
 
   /* The worker first: if it cannot start there is no context to give back. */
   const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+  held.worker = worker;
   let destroyed = false;
   let failed = false;
   let stepErrors = 0;
@@ -116,6 +117,7 @@ export async function create(stageEl, ctx) {
   /* The jar. */
   try {
     stage3 = createStage(stageEl, { bodyFromGenes: (b) => b, reducedMotion: !!ctx.reduced, tier });
+    held.stage3 = stage3;
   } catch (err) {
     worker.terminate();
     throw err;
@@ -149,6 +151,8 @@ export async function create(stageEl, ctx) {
     `<button type="button" class="tr-brain-close" aria-label="Close the brain view" title="Close (Esc)">` +
     `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button></div>`;
   fig.append(layer);
+  held.layer = layer;
+  if (debug && new URLSearchParams(location.search).get('terrafail') === '1') throw new Error('terrafail: a forced failure after the jar was built (debug)');
   const riverEl = layer.querySelector('.tr-river');
   const brainEl = layer.querySelector('.tr-brain');
   const [riverCanvas, thenCanvas, nowCanvas] = layer.querySelectorAll('canvas');
@@ -364,6 +368,7 @@ export async function create(stageEl, ctx) {
     }
   };
   fig.addEventListener('keydown', onKey);
+  held.off = () => fig.removeEventListener('keydown', onKey);
   const addedTab = !fig.hasAttribute('tabindex');
   if (addedTab && !poster) fig.setAttribute('tabindex', '0');
 
@@ -426,7 +431,7 @@ export async function create(stageEl, ctx) {
     inspect(pickFeatured(), 'featured');
     const got = nextFrame();
     worker.postMessage({ type: 'step', n: 0 });
-    await got;
+    await Promise.race([got, new Promise((_, no) => setTimeout(() => no(new Error('no inspect frame for the poster within 60 s')), 60000))]);
   }
 
   try {
@@ -544,4 +549,26 @@ export async function create(stageEl, ctx) {
       if (debug) delete window.__terra;
     },
   };
+}
+
+// create() builds the figure; if anything throws after the jar exists (a bad history file, a 2D context
+// the browser refuses), what was taken is given back before the host falls back to the stills: the
+// WebGL context, the worker, the overlay layer and the figure's key listener. Otherwise the budget would
+// count a slot the page never gets back.
+export async function create(stageEl, ctx) {
+  const held = {};
+  try {
+    return await build(stageEl, ctx, held);
+  } catch (err) {
+    const quiet = (fn) => {
+      try {
+        fn();
+      } catch {}
+    };
+    quiet(() => held.worker && held.worker.terminate());
+    quiet(() => held.stage3 && held.stage3.dispose());
+    quiet(() => held.layer && held.layer.remove());
+    quiet(() => held.off && held.off());
+    throw err;
+  }
 }

@@ -1744,6 +1744,24 @@ async function checkArcherTouch(browser, url) {
   await t.close();
 }
 
+
+// A failure after the jar is built (a bad history file, a 2D context refused) must give back what it
+// took: the WebGL context, the worker and the overlay layer. ?debug=1&terrafail=1 throws at that point.
+async function checkTerrariumFail(browser, url) {
+  const t = await open(browser, url + '?debug=1&terrafail=1');
+  const { page } = t;
+  await page.evaluate(trackHelpers, STICKY_TOP);
+  const name = 'terrarium: a failure after the jar is built falls back and leaks no context, worker or layer';
+  await step(name, async () => {
+    await page.evaluate(() => window.__jump(window.__stageY('terrarium', 0)));
+    await page.waitForFunction(() => document.querySelector('#terrarium figure')?.dataset.fallback === 'error', null, { timeout: 30000 });
+    await sleep(800);
+    const r = await page.evaluate(() => ({ alive: window.__glAlive(), weight: window.__figWeight(), layers: document.querySelectorAll('.tr-layer').length, canvases: document.querySelectorAll('#terrarium canvas').length }));
+    report(name, r.alive <= r.weight && r.layers === 0 && r.canvases === 0, JSON.stringify(r));
+  });
+  await t.close();
+}
+
 /* ── run ── */
 
 if (!argv.has('--no-build')) build();
@@ -1782,7 +1800,10 @@ try {
       await checkArcher(browser, url);
       await checkArcherTouch(browser, url);
     },
-    terrarium: () => checkTerrarium(browser, url),
+    terrarium: async () => {
+      await checkTerrarium(browser, url);
+      await checkTerrariumFail(browser, url);
+    },
     bttr: () => checkBttr(browser, url),
     bcwc: () => checkBcwc(browser, url),
     nosource: () => checkNoSource(),
