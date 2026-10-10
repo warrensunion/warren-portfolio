@@ -162,3 +162,68 @@ test('attract: clears the stage alone within 90 simulated seconds', async () => 
   assert.equal(g.status, 'won', `status ${g.status} after ${i} steps, hp ${g.archer.hp}, left ${g.left}`);
   assert.ok(g.archer.hp > 0);
 });
+
+// A stand-in for the figure element: enough of EventTarget for input.js, with events whose target is
+// the element unless a test says otherwise.
+class FakeEl {
+  constructor() {
+    this.l = {};
+  }
+  addEventListener(t, f) {
+    (this.l[t] ||= []).push(f);
+  }
+  removeEventListener(t, f) {
+    this.l[t] = (this.l[t] || []).filter((g) => g !== f);
+  }
+  dispatch(type, props = {}) {
+    const e = {
+      type,
+      target: this,
+      defaultPrevented: false,
+      preventDefault() {
+        this.defaultPrevented = true;
+      },
+      ...props,
+    };
+    for (const f of this.l[type] || []) f(e);
+    return e;
+  }
+}
+
+test('input: keyMap covers WASD, arrows, Q, E and nothing else', async () => {
+  const { keyMap } = await import('../src/figures/archer/input.js');
+  const want = { KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', KeyQ: 'dodge', KeyE: 'rain' };
+  for (const [code, action] of Object.entries(want)) assert.equal(keyMap(code), action, code);
+  for (const code of ['KeyF', 'Space', 'Escape', 'Tab', 'KeyR', 'Enter', '']) assert.equal(keyMap(code), null, code);
+});
+
+test('input: blur clears held keys', async () => {
+  const { createInput } = await import('../src/figures/archer/input.js');
+  const el = new FakeEl();
+  const input = createInput(el, {});
+  input.playing(true);
+  const down = el.dispatch('keydown', { code: 'KeyW' });
+  assert.ok(down.defaultPrevented, 'W is kept from the page while playing');
+  assert.equal(input.read().mz, 1);
+  el.dispatch('blur');
+  assert.equal(input.read().mz, 0);
+  input.destroy();
+});
+
+test('input: keys only count from the figure itself, and only while playing', async () => {
+  const { createInput } = await import('../src/figures/archer/input.js');
+  const el = new FakeEl();
+  const input = createInput(el, {});
+  const idle = el.dispatch('keydown', { code: 'ArrowDown' });
+  assert.ok(!idle.defaultPrevented, 'not playing: the arrow scrolls the page');
+  assert.equal(input.read().mz, 0);
+  input.playing(true);
+  const other = el.dispatch('keydown', { code: 'KeyW', target: {} }); // bubbled up from a control inside
+  assert.ok(!other.defaultPrevented);
+  assert.equal(input.read().mz, 0);
+  assert.ok(el.dispatch('keydown', { code: 'Space' }).defaultPrevented, 'Space is kept from the page while playing');
+  el.dispatch('keydown', { code: 'KeyQ' });
+  assert.equal(input.read().dodge, true);
+  assert.equal(input.read().dodge, false, 'a press is read once');
+  input.destroy();
+});
