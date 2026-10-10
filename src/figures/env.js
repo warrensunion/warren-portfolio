@@ -33,6 +33,22 @@ export function readFlags(search) {
   };
 }
 
+// ?poster=<kind> (scripts/posters.mjs only): the one figure to shoot and the still state its create()
+// gets as ctx.data.posterState. i = index within the kind (default 0); iceberg takes depth=0|1; ring
+// takes shape=0|1|2 (absent: the initials); iceblock takes optional yaw and pitch in degrees.
+export function readPoster(search) {
+  const q = new URLSearchParams(search || '');
+  const kind = q.get('poster');
+  if (!kind) return null;
+  const i = Number(q.get('i') || 0);
+  const num = (k) => (q.get(k) != null && q.get(k) !== '' && Number.isFinite(Number(q.get(k))) ? Number(q.get(k)) : null);
+  let state = true;
+  if (kind === 'iceberg') state = { depth: q.get('depth') === '1' ? 1 : 0 };
+  else if (kind === 'ring') state = { shape: num('shape') };
+  else if (kind === 'iceblock') state = { yaw: num('yaw') || 0, pitch: num('pitch') || 0 };
+  return { kind, index: Number.isInteger(i) && i >= 0 ? i : 0, state };
+}
+
 // Reduced-motion poster swap: IntersectionObserver only reports edge crossings, so the swap state is
 // read from where the sentinel sits relative to the line at the moment of the crossing.
 export const pastLine = (entry, lineY) => entry.boundingClientRect.top < lineY;

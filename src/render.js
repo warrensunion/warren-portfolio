@@ -35,6 +35,7 @@ function figure(fig, n, { hero = false } = {}) {
     `data-fig="${esc(fig.kind)}"`,
     `data-fig-data='${json}'`,
     fig.posterUnder ? `data-poster-under="${esc(fig.posterUnder)}"` : '',
+    fig.posterMorph ? `data-poster-morph="${esc(fig.posterMorph.join(' '))}"` : '',
     draggable ? `tabindex="0"` : '',
     `aria-label="Fig. ${n}: ${esc(fig.title)}"`,
   ].filter(Boolean);

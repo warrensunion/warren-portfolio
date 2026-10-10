@@ -41,7 +41,8 @@ export async function create(el, ctx) {
   const poster = data.posterState ? (typeof data.posterState === 'object' ? data.posterState : {}) : null;
   const motion = !(ctx.reduced || poster);
   const tier = ctx.tier === 'low' ? 'low' : 'high';
-  const dpr = tier === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+  // A poster still is drawn at the shot's full 2x, not the live scene's 1.5x frame-budget cap.
+  const dpr = poster ? Math.min(window.devicePixelRatio || 1, 2) : tier === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
 
   // The art first: a missing picture fails the figure (the poster stays) before a context is spent.
   const tex = await new THREE.TextureLoader().loadAsync(data.object);

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBudget } from '../src/figures/budget.js';
-import { fallbackReason, tierFor, readFlags, pastLine } from '../src/figures/env.js';
+import { fallbackReason, tierFor, readFlags, pastLine, readPoster } from '../src/figures/env.js';
 
 const dist = (map) => (id) => () => map[id];
 
@@ -172,4 +172,17 @@ test('waiterRetries: after an install, only figures mustWait turned away get ano
   ];
   assert.deepEqual(waiterRetries(cands, 1000), ['w', 'w2']);
   assert.deepEqual(waiterRetries(cands, 6000), ['w', 'cool', 'w2']);
+});
+
+test('readPoster: no param, no poster mode; otherwise one figure and its still state', () => {
+  assert.equal(readPoster(''), null);
+  assert.equal(readPoster('?static=1&tier=low'), null);
+  assert.deepEqual(readPoster('?poster=iceberg'), { kind: 'iceberg', index: 0, state: { depth: 0 } });
+  assert.deepEqual(readPoster('?poster=iceberg&depth=1'), { kind: 'iceberg', index: 0, state: { depth: 1 } });
+  assert.deepEqual(readPoster('?poster=iceblock&i=2'), { kind: 'iceblock', index: 2, state: { yaw: 0, pitch: 0 } });
+  assert.deepEqual(readPoster('?poster=iceblock&i=1&yaw=-20&pitch=5'), { kind: 'iceblock', index: 1, state: { yaw: -20, pitch: 5 } });
+  assert.deepEqual(readPoster('?poster=ring'), { kind: 'ring', index: 0, state: { shape: null } });
+  assert.deepEqual(readPoster('?poster=ring&shape=2'), { kind: 'ring', index: 0, state: { shape: 2 } });
+  assert.equal(readPoster('?poster=iceblock&i=-1').index, 0);
+  assert.equal(readPoster('?poster=iceblock&i=x').index, 0);
 });

@@ -73,7 +73,8 @@ export async function create(el, ctx) {
   const motion = !(reduced || poster) ? 1 : 0;
   const tier = ctx.tier === 'low' ? 'low' : 'high';
   const n = POINTS[tier];
-  const dpr = tier === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+  // A poster still is drawn at the shot's full 2x, not the live scene's 1.5x frame-budget cap.
+  const dpr = poster ? Math.min(window.devicePixelRatio || 1, 2) : tier === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
   const log = typeof ctx.log === 'function' ? ctx.log : () => {};
 
   // The serif first, so the initials are drawn in the page's face (a fallback serif if it will not load).

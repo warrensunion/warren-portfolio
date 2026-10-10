@@ -3,8 +3,15 @@
 // lifetime (create/start/stop/destroy), the WebGL context budget and every fallback, so figure modules
 // only have to draw. Figures own their own rAF and report each frame via ctx.frame(); the host rAF only
 // writes readouts and repaints the ?fps=1 meter.
+//
+// ?poster=<kind>&i=<n> (plus depth= / shape= / yaw= pitch=, see readPoster in env.js) is the stills
+// hook for scripts/posters.mjs, and does nothing without the param: the host then makes only that one
+// figure, at once, with ctx.data.posterState injected and every fallback rule (reduced motion, ?static,
+// save-data) ignored, transitions off, and sets window.__posterReady = true one frame after fig:ready
+// (window.__posterError = message if it cannot). No observers, budget or other figures in that mode.
 import { createBudget } from './budget.js';
-import { fallbackReason, isWebGLKind, pastLine, readEnv } from './env.js';
+import { fallbackReason, isWebGLKind, pastLine, readEnv, readPoster } from './env.js';
+import { bindMorphLinks } from './ring/morphLinks.js';
 
 const MAX_LIVE = 3;
 const LOST_COOLDOWN_MS = 5000;
@@ -64,7 +71,10 @@ function distance(el) {
 }
 
 export function initFigures(root, { loaders, env } = {}) {
-  if (!('IntersectionObserver' in window) || !loaders) return null;
+  if (!loaders) return null;
+  const shot = readPoster(location.search);
+  if (shot) return shootPoster(root, loaders, shot);
+  if (!('IntersectionObserver' in window)) return null;
   env = env || readEnv();
 
   const budget = createBudget(MAX_LIVE);
@@ -82,7 +92,10 @@ export function initFigures(root, { loaders, env } = {}) {
       console.info('[fig:' + s.kind + '] fallback: ' + reason);
     }
     // A permanent fallback on the hero still owes the reader the "below the waterline" half of the story.
-    if (reason !== 'context-lost') setupUnderPoster(s);
+    if (reason !== 'context-lost') {
+      setupUnderPoster(s);
+      setupMorphPosters(s);
+    }
   }
 
   // Only canvases added since this build's create() began are the figure's. Anything already in the
@@ -356,6 +369,30 @@ export function initFigures(root, { loaders, env } = {}) {
     mq.addEventListener?.('change', build);
   }
 
+  /* The ring's still version: a lasting fallback shows the initials poster, and hovering or focusing a
+     contact link [data-morph=i] cross-fades (400 ms, opacity only) to that project's still and back.
+     The links' own debounce and hover-over-focus precedence are reused, so it behaves like the scene. */
+
+  function setupMorphPosters(s) {
+    const list = (s.fig.dataset.posterMorph || '').split(/\s+/).filter(Boolean);
+    if (s.morphs || !list.length || !s.poster) return;
+    s.morphs = list.map((src) => {
+      const img = s.poster.cloneNode(false);
+      img.className = 'fig-poster fig-poster--morph';
+      img.removeAttribute('fetchpriority');
+      img.loading = 'lazy';
+      img.src = src;
+      return img;
+    });
+    s.poster.after(...s.morphs);
+    let shown = null;
+    const show = (i) => {
+      shown = i;
+      s.morphs.forEach((img, k) => img.classList.toggle('is-on', k === i));
+    };
+    bindMorphLinks(s.fig.closest('section') || root, show, 120, () => shown);
+  }
+
   /* Wiring */
 
   const nearIO = new IntersectionObserver(
@@ -432,6 +469,7 @@ export function initFigures(root, { loaders, env } = {}) {
       size: null,
       lastReadout: '',
       under: null,
+      morphs: null, // the ring's per-project stills, in a lasting fallback
     };
     fig.dataset.figId = s.id;
     byEl.set(fig, s);
@@ -460,6 +498,65 @@ export function initFigures(root, { loaders, env } = {}) {
   }
 
   return { live: () => budget.live() };
+}
+
+// The stills hook (see the header): one figure, made at once in a fixed state, for a screenshot.
+function shootPoster(root, loaders, shot) {
+  const fail = (msg) => {
+    window.__posterError = String(msg);
+    console.warn('[fig:' + shot.kind + '] poster: ' + msg);
+    return null;
+  };
+  const fig = root.querySelectorAll('figure.fig[data-fig="' + shot.kind + '"]')[shot.index];
+  const stage = fig && fig.querySelector('.fig-stage');
+  if (!stage || !loaders[shot.kind]) return fail('no figure ' + shot.kind + ' #' + shot.index);
+  fig.dataset.posterShot = '';
+  const style = document.createElement('style');
+  style.textContent = '[data-poster-shot],[data-poster-shot] *{transition:none!important;animation:none!important}';
+  document.head.append(style);
+  let data = {};
+  try {
+    data = JSON.parse(fig.dataset.figData || '{}');
+  } catch {}
+  const ctx = {
+    tier: 'high',
+    reduced: false,
+    log: (msg) => console.info('[fig:' + shot.kind + '] ' + msg),
+    data: { ...data, posterState: shot.state },
+    frame() {},
+  };
+  // Untagged, a canvas sits in flow at its backing size and widens the stage, so tag before measuring.
+  const tag = () => {
+    for (const c of stage.querySelectorAll('canvas')) {
+      c.classList.add('fig-canvas');
+      c.setAttribute('aria-hidden', 'true');
+    }
+  };
+  stage.addEventListener(
+    'fig:ready',
+    () => {
+      tag();
+      fig.classList.add('is-live');
+      // The frame that drew is-live has to be painted before the screenshot.
+      requestAnimationFrame(() => requestAnimationFrame(() => (window.__posterReady = true)));
+    },
+    { once: true },
+  );
+  (async () => {
+    try {
+      await document.fonts?.ready;
+      const mod = await loaders[shot.kind]();
+      const inst = await mod.create(stage, ctx);
+      if (!inst) throw new Error('create() returned nothing');
+      tag();
+      const r = stage.getBoundingClientRect();
+      inst.resize(r.width, r.height);
+      inst.start();
+    } catch (err) {
+      fail(err && err.message ? err.message : err);
+    }
+  })();
+  return { live: () => [] };
 }
 
 function makeMeter() {

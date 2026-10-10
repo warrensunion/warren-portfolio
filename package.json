@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test scripts/test-*.mjs",
-    "art": "node scripts/prepare-art.mjs"
+    "art": "node scripts/prepare-art.mjs",
+    "posters": "node scripts/posters.mjs",
+    "check": "node scripts/check-figures.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

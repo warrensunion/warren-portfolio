@@ -40,7 +40,8 @@ export async function create(el, ctx) {
   const tier = ctx.tier === 'low' ? 'low' : 'high';
   const poster = ctx.data && ctx.data.posterState ? ctx.data.posterState : null;
   const devicePx = window.devicePixelRatio || 1;
-  const dpr = tier === 'low' ? 1 : Math.min(devicePx, 1.5);
+  // A poster still is drawn at the shot's full 2x, not the live scene's 1.5x frame-budget cap.
+  const dpr = poster ? Math.min(devicePx, 2) : tier === 'low' ? 1 : Math.min(devicePx, 1.5);
 
   const gl = document.createElement('canvas');
   const over = document.createElement('canvas');

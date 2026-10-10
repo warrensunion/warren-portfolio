@@ -126,3 +126,13 @@
 .fig.is-under .fig-poster--under {
   opacity: 1;
 }
+
+/* The ring's per-project stills in a lasting fallback: the same 400 ms opacity cross-fade. */
+.fig-poster--morph {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.fig-poster--morph.is-on {
+  opacity: 1;
+}

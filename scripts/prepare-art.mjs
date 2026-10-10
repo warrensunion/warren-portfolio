@@ -104,14 +104,16 @@ async function cutout(slug) {
   console.log(`${slug}: ${cw}x${ch} webp, sample ${mid.info.width}x${mid.info.height}, coverage ${cov.toFixed(1)}%`);
 }
 
-// Plate-coloured placeholders at each stage's aspect ratio (see src/styles/figure.css).
+// Plate-coloured placeholders at each stage's aspect ratio (see src/styles/figure.css), only where a
+// poster is missing: scripts/posters.mjs writes the real stills, and re-running art must not wipe them.
 async function posters() {
   await mkdir(pub('posters'), { recursive: true });
   const sizes = {
-    iceberg: [1200, 1200], 'iceberg-under': [1200, 1200], ws: [1280, 960],
+    iceberg: [1200, 1200], 'iceberg-under': [1200, 1200], ws: [2000, 1040], 'ws-0': [2000, 1040], 'ws-1': [2000, 1040], 'ws-2': [2000, 1040],
     'window-blind': [1280, 960], 'summit-flag': [1280, 960], 'archer-bow': [1280, 960],
   };
   for (const [name, [width, height]] of Object.entries(sizes)) {
+    if (existsSync(pub(`posters/${name}.webp`))) continue;
     await sharp({ create: { width, height, channels: 3, background: PLATE } })
       .webp({ quality: 80 }).toFile(pub(`posters/${name}.webp`));
   }

@@ -159,6 +159,8 @@ export const content = {
       caption: 'A stone ring, and particles that spell my initials. Hover or focus a project to reshape them.',
       alt: 'A stone ring with a cloud of particles inside it forming the letters WS.',
       poster: '/posters/ws.webp',
+      // Reduced motion: hovering or focusing project link i cross-fades to still i (same order as objects).
+      posterMorph: ['/posters/ws-0.webp', '/posters/ws-1.webp', '/posters/ws-2.webp'],
       size: [2000, 1040],
       data: {
         initials: 'WS',

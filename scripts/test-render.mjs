@@ -105,3 +105,10 @@ test('controller rulings: copy email, live status, morph links, drag hint, under
   assert.match(html, /data-fig="iceberg"[^>]*data-poster-under="\/posters\/iceberg-under\.webp"/);
   assert.match(html, /<img class="fig-poster" src="\/posters\/iceberg\.webp"[^>]*loading="eager"/);
 });
+
+test('the ring carries its per-project stills for the reduced-motion cross-fade, in morph-link order', () => {
+  const ring = html.match(/<figure class="fig"[^>]*data-fig="ring"[^>]*>/)[0];
+  const list = ring.match(/data-poster-morph="([^"]+)"/)[1].split(' ');
+  assert.deepEqual(list, ['/posters/ws-0.webp', '/posters/ws-1.webp', '/posters/ws-2.webp']);
+  assert.equal(list.length, content.touch.fig.data.objects.length);
+});
