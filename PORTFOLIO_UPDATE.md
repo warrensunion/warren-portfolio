@@ -170,9 +170,9 @@ Live site, after deploying (run e2ff716):
 - No console or page errors, no 4xx or 5xx responses, and no sideways scroll (scrollWidth 1440 and 390).
 - The Drift, Stress Test and Raingarden demos drew from their data on the live page.
 - The first deploy turned up one bug the local checks could not see: the ring's object samples are fetched
-  in a worker, so their relative paths 404ed under . Fixed in e2ff716 and redeployed.
-- To build for the subpath on this Windows machine, set  in Git Bash. Otherwise
-  Git Bash rewrites  into a Windows path. CI on Linux is unaffected.
+  in a worker, so their relative paths 404ed under `/warren-portfolio/`. Fixed in e2ff716 and redeployed.
+- To build for the subpath on this Windows machine, set `MSYS2_ENV_CONV_EXCL=PAGES_BASE` in Git Bash.
+  Otherwise Git Bash rewrites `/warren-portfolio/` into a Windows path. CI on Linux is unaffected.
 
 ## TODOs for you
 
