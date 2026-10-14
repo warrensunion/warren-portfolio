@@ -32,7 +32,7 @@ import './figure.css';
 const SEED = 20261010;
 const PARAMS = { foodRate: 1.3, mutationRate: 0.3, temperature: 0.5 };
 const COUNT = { high: 300, low: 160 };
-const HISTORY_URL = '/terrarium/history.json';
+const HISTORY_URL = import.meta.env.BASE_URL + 'terrarium/history.json';
 const FIRST_FRAME_MS = 10000; // a worker that sends nothing in this long has failed to start
 const POSTER_TICKS = [0, 1800, 3600, 3600, 3600];
 const POSTER_SETTLE_FRAMES = 90; // brain fade-ins and the river's scale ease out within 1.5 s

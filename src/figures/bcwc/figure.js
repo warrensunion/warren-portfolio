@@ -11,7 +11,7 @@ import { createPlayer } from '../player.js';
 import { clipT } from '../track-math.js';
 import './figure.css';
 
-const BASE = '/captures/bcwc';
+const BASE = import.meta.env.BASE_URL + 'captures/bcwc';
 const LIVE = 4;
 const LOAD_MS = 10000;
 

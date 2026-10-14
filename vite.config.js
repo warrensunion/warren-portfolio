@@ -39,7 +39,11 @@ function contentPlugin() {
   };
 }
 
+// GitHub Pages serves the site under /warren-portfolio/ (PAGES_BASE, set by .github/workflows/pages.yml);
+// locally and in the checks it is served at /. Content paths are relative and figures prefix
+// import.meta.env.BASE_URL, so the same build works under either.
 export default defineConfig({
+  base: process.env.PAGES_BASE || '/',
   plugins: [contentPlugin()],
   build: {
     // three.js is one lazy chunk shared by the WebGL figures. It is ~500 kB minified by nature and only

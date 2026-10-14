@@ -17,7 +17,7 @@ import { lightUniforms } from './look.js';
 
 // no soil texture ships (the terrain's procedural peat is the soil), so none is
 // requested: a missing file is a 404 and a console error on every static host
-const ART = { moss: '/terrarium/moss-floor.webp', backdrop: '/terrarium/room-backdrop.webp' };
+const ART = { moss: import.meta.env.BASE_URL + 'terrarium/moss-floor.webp', backdrop: import.meta.env.BASE_URL + 'terrarium/room-backdrop.webp' };
 
 /** resolves to a texture, or null if the file is missing or not an image */
 function loadOptional(url) {

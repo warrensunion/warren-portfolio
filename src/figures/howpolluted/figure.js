@@ -22,7 +22,7 @@ import { gradeFor } from './grades.js';
 import { pileCoverage } from './litter-sim.js';
 import './figure.css';
 
-const BASE = '/howpolluted/';
+const BASE = import.meta.env.BASE_URL + 'howpolluted/';
 const DEMO = { lat: 49.17, lon: -123.14, label: 'Richmond, BC' };
 const VALUES = { land: 9, water: 6 }; // demo coverage, % (spec 5.4)
 const DROP_MS = 1400; // a new pile falls over this long after a switch
