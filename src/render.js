@@ -128,6 +128,46 @@ function trackFigure(fig, n, id) {
   );
 }
 
+// A project's own links (its live demo, its code), under its tags.
+function projectLinks(e) {
+  if (!e.links || !e.links.length) return '';
+  return `<ul class="project-links">${e.links.map((l) => `<li>${link(l.href, l.label)}</li>`).join('')}</ul>`;
+}
+
+// A compact card (README, "How the page is laid out"): the entry layout, text beside one plate, for the
+// smaller projects. The plate shows the track's last still and its live figure pinned at that last stage,
+// the one the visitor plays with, so there is no rail to scroll through.
+function cardFigure(fig, n, id) {
+  const [w, h] = fig.size || [1280, 800];
+  const json = JSON.stringify(fig.data || {}).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
+  const labels = JSON.stringify(fig.stages.map((s) => s.label)).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
+  const last = fig.stages.length - 1;
+  return (
+    `<figure class="fig fig--card" data-fig="${esc(fig.kind)}" data-fig-data='${json}' data-stages='${labels}' data-pin="${last}" ` +
+    `aria-label="Fig. ${n}: ${esc(fig.title)}" style="--fig-ar:${w}/${h}">` +
+    `<div class="fig-head"><span class="fig-led" aria-hidden="true"></span><span class="fig-n">Fig. ${n}</span>` +
+    `<span class="fig-t">${esc(fig.title)}</span><span class="fig-readout" aria-hidden="true"></span></div>` +
+    `<div class="fig-stage" id="${esc(id)}-stage" role="img" aria-label="${esc(fig.alt || fig.title)}">` +
+    `<img class="fig-poster" src="${esc(fig.stages[last].still)}" alt="" width="${w}" height="${h}" loading="lazy" decoding="async"></div>` +
+    `<figcaption><strong>${esc(fig.stat)}</strong> <em>${esc(fig.caption)}</em>` +
+    (fig.hint ? ` <span class="fig-hint">${esc(fig.hint)}</span>` : '') +
+    `</figcaption></figure>`
+  );
+}
+
+function card(e, next) {
+  const title = e.href ? link(e.href, e.title) : esc(e.title);
+  return (
+    `<article class="entry entry--card" id="${esc(e.id)}"><div class="entry-text">` +
+    `<h3>${title}</h3>` +
+    `<p class="meta"><span>${esc(e.role)}</span><span>${esc(e.dates)}</span></p>` +
+    e.body.map((p) => `<p>${p}</p>`).join('') +
+    `<p class="tags" translate="no">${esc(e.tags.join(', '))}</p>` +
+    projectLinks(e) +
+    `</div><div class="entry-fig">${cardFigure(e.fig, next(), e.id)}</div></article>`
+  );
+}
+
 function track(e, next) {
   const title = e.href ? link(e.href, e.title) : esc(e.title);
   return (
@@ -136,6 +176,7 @@ function track(e, next) {
     `<p class="meta"><span>${esc(e.role)}</span><span>${esc(e.dates)}</span></p>` +
     e.body.map((p) => `<p>${p}</p>`).join('') +
     `<p class="tags" translate="no">${esc(e.tags.join(', '))}</p>` +
+    projectLinks(e) +
     `</div><div class="track-rail">${trackFigure(e.fig, next(), e.id)}</div></article>`
   );
 }
@@ -158,7 +199,7 @@ function contests(c, s, next) {
 
 function touch(c, s, next) {
   const projects = c.sections
-    .flatMap((sec) => (sec.entries || []).map((e) => ({ id: sec.id, title: e.title })))
+    .flatMap((sec) => (sec.entries || []).map((e) => ({ id: e.id || sec.id, title: e.title })))
     .map((p, i) => `<li><a href="#${esc(p.id)}" data-morph="${i}">${esc(p.title)}</a></li>`)
     .join('');
   return (
@@ -178,7 +219,7 @@ function section(c, s, next) {
   let inner;
   if (s.id === 'contests') inner = contests(c, s, next);
   else if (s.id === 'contact') inner = touch(c, s, next);
-  else inner = s.entries.map((e) => (e.fig && e.fig.stages ? track(e, next) : entry(e, next))).join('');
+  else inner = s.entries.map((e) => (e.compact ? card(e, next) : e.fig && e.fig.stages ? track(e, next) : entry(e, next))).join('');
   return `<section class="section" id="${esc(s.id)}" aria-labelledby="${esc(s.id)}-h">` +
     `<h2 id="${esc(s.id)}-h">${esc(s.title)}</h2>${inner}</section>`;
 }

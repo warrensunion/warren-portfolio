@@ -265,6 +265,25 @@ main > *,
   min-width: 0;
 }
 
+/* A project's own links (live demo, code), in the tags' mono voice. */
+.project-links {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+}
+
+.project-links a {
+  color: var(--ink);
+}
+
+/* Compact cards for the smaller projects: the entry layout, a hairline between consecutive cards. */
+.entry--card + .entry--card {
+  border-top: 1px solid var(--hair);
+}
+
 @media (min-width: 860px) {
   /* 96 px, as measured on yuzeli.ca; text taller than the room below that sticks higher instead, so its
      last line stays on screen on short laptops (tracks.js sets --text-top from the text's height). */

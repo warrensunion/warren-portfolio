@@ -630,6 +630,15 @@ export function initFigures(root, { loaders, env, tracks = null } = {}) {
 // figure outside a track (the hero, the ring) gets a fixed stage 0 of 1.
 function trackCtx(tracks, fig) {
   const inTrack = tracks && fig.classList.contains('fig--track');
+  // A compact card's figure is a track figure without its rail: it sits at its last (playable) stage.
+  if (fig.dataset.pin != null) {
+    let n = 1;
+    try {
+      n = JSON.parse(fig.dataset.stages || '[]').length || 1;
+    } catch {}
+    const at = Math.min(n - 1, Number(fig.dataset.pin) || 0);
+    return { progress: () => (n > 1 ? at / (n - 1) : 0), stage: () => at, stages: n, onStage: () => () => {} };
+  }
   return {
     progress: () => (inTrack ? tracks.progressOf(fig) : 0),
     stage: () => (inTrack ? tracks.stageOf(fig) : 0),
@@ -666,7 +675,13 @@ function shootPoster(root, loaders, shot) {
     unclaim() {},
   };
   // A stage still is shot at its stage, held there.
-  const n = fig.querySelectorAll('.fig-stages button[data-stage]').length || 1;
+  let n = fig.querySelectorAll('.fig-stages button[data-stage]').length;
+  if (!n) {
+    try {
+      n = JSON.parse(fig.dataset.stages || '[]').length;
+    } catch {}
+  }
+  n = n || 1;
   const at = Math.min(n - 1, (shot.state && shot.state.stage) || 0);
   Object.assign(ctx, { progress: () => (n > 1 ? at / (n - 1) : 0), stage: () => at, stages: n, onStage: () => () => {} });
   // Untagged, a canvas sits in flow at its backing size and widens the stage, so tag before measuring.
