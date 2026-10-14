@@ -165,6 +165,15 @@ Final run on 2026-10-14, before committing:
 - `npm run check`: 167 passed, 0 failed.
 - Every external link on the page answered HTTP 200, except LinkedIn, which answers its usual 999 to scripts.
 
+Live site, after deploying (run e2ff716):
+- Checked in Chromium at 1440x900 and at 390x844 as a phone, then under reduced motion and with JS off.
+- No console or page errors, no 4xx or 5xx responses, and no sideways scroll (scrollWidth 1440 and 390).
+- The Drift, Stress Test and Raingarden demos drew from their data on the live page.
+- The first deploy turned up one bug the local checks could not see: the ring's object samples are fetched
+  in a worker, so their relative paths 404ed under . Fixed in e2ff716 and redeployed.
+- To build for the subpath on this Windows machine, set  in Git Bash. Otherwise
+  Git Bash rewrites  into a Windows path. CI on Linux is unaffected.
+
 ## TODOs for you
 
 1. **Role and dates** for every project, one real **stat** per figure caption, the **co-op term**, contests
