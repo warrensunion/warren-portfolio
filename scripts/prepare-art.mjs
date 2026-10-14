@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = (f) => path.join(root, 'design/art-src', f);
 const pub = (f) => path.join(root, 'public', f);
-const SLUGS = ['window-blind', 'summit-flag', 'terrarium-jar', 'howpolluted-globe', 'archer-bow'];
+const SLUGS = ['summit-flag', 'drift-bottle', 'stress-gauge', 'raingarden-plant', 'ghostline-ghost', 'terrarium-jar', 'window-blind', 'howpolluted-globe', 'archer-bow'];
 // Plain silhouettes for objects whose marble render Warren has not supplied yet (README, Fill in the
 // TODOs). Drawn in code, not generated art; a real design/art-src/<slug>.png replaces them on the next run.
 const PLACEHOLDER = {
@@ -126,7 +126,7 @@ async function posters() {
   await mkdir(pub('posters'), { recursive: true });
   const sizes = {
     iceberg: [1200, 1200], 'iceberg-under': [1200, 1200], ws: [2000, 1040],
-    ...Object.fromEntries([0, 1, 2, 3, 4].map((i) => [`ws-${i}`, [2000, 1040]])),
+    ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => [`ws-${i}`, [2000, 1040]])),
   };
   for (const [name, [width, height]] of Object.entries(sizes)) {
     if (existsSync(pub(`posters/${name}.webp`))) continue;
@@ -154,6 +154,8 @@ async function resume() {
 }
 
 await mkdir(pub('objects'), { recursive: true });
-for (const s of SLUGS) await (existsSync(src(`${s}.png`)) || !PLACEHOLDER[s] ? cutout(s) : placeholder(s));
+// --only=slug,slug cuts just those objects.
+const only = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
+for (const s of SLUGS.filter((x) => !only.length || only.includes(x))) await (existsSync(src(`${s}.png`)) || !PLACEHOLDER[s] ? cutout(s) : placeholder(s));
 await posters();
 await resume();

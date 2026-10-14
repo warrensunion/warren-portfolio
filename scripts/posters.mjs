@@ -15,11 +15,8 @@ const SHOTS = [
   { file: 'iceberg', q: 'poster=iceberg&depth=0' },
   { file: 'iceberg-under', q: 'poster=iceberg&depth=1' },
   { file: 'ws', q: 'poster=ring' },
-  { file: 'ws-0', q: 'poster=ring&shape=0' },
-  { file: 'ws-1', q: 'poster=ring&shape=1' },
-  { file: 'ws-2', q: 'poster=ring&shape=2' },
-  { file: 'ws-3', q: 'poster=ring&shape=3' },
-  { file: 'ws-4', q: 'poster=ring&shape=4' },
+  // One still per project link in the contact section, in page order (content.touch.fig.data.objects).
+  ...[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => ({ file: 'ws-' + i, q: 'poster=ring&shape=' + i })),
   // A track figure's stage stills (spec 3.6): one per stage, into public/stills at the plate's 1280x800.
   ...[0, 1, 2, 3, 4].map((i) => ({ file: 'terrarium-s' + i, q: 'poster=terrarium&stage=' + i, dir: 'stills', size: [1280, 800] })),
 ];
