@@ -1,7 +1,7 @@
 {
   "source": "bcwc",
-  "commit": "291fb52683bf68b7dc1223247e7ceb5e5bd93f4a",
-  "captured": "2026-10-10",
+  "commit": "065f36e7c08c4c168e29672af5b87d212566b43a",
+  "captured": "2026-10-14",
   "view": {
     "width": 1440,
     "height": 900
@@ -14,7 +14,7 @@
   "stages": {
     "0": {
       "file": "s0",
-      "duration": 4
+      "duration": 3.958333
     },
     "1": {
       "file": "s1",

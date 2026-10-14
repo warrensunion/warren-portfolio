@@ -9,9 +9,9 @@ import { renderStats } from './stats.js';
 import stats from '../../data/bttr-stats.json';
 import './figure.css';
 
-const BASE = '/captures/bttr';
+const BASE = import.meta.env.BASE_URL + 'captures/bttr';
 const STATS_STAGE = 14;
-const PUZZLE_STAGE = 2;
+const PUZZLE_STAGE = 3; // Mereum: Appearance, whose pieces open into the cards
 
 export async function create(stage, ctx) {
   const res = await fetch(`${BASE}/manifest.json`);

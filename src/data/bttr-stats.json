@@ -1,12 +1,12 @@
 {
   "accounts": 2,
-  "accountsAsOf": "2026-10-10",
-  "routes": 32,
-  "apiRoutes": 31,
-  "testFiles": 15,
-  "tests": 539,
+  "accountsAsOf": "2026-10-14",
+  "routes": 34,
+  "apiRoutes": 38,
+  "testFiles": 22,
+  "tests": 640,
   "screens": 13,
-  "measuredAt": "2026-10-10",
+  "measuredAt": "2026-10-14",
   "methods": {
     "accounts": "Rows in the profiles table of its Supabase project, one per account.",
     "routes": "Entries in the client router table in src/main.js, counting each generated shop route.",

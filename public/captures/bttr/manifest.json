@@ -1,7 +1,7 @@
 {
   "source": "BTTRURSLF-v2",
-  "commit": "7bdc26f050892a9f40fea3152ebd7e8951528c54",
-  "captured": "2026-10-10",
+  "commit": "4c01485f691741e6853240e922f9bf7c43ecedc4",
+  "captured": "2026-10-14",
   "view": {
     "width": 1440,
     "height": 900
@@ -13,73 +13,73 @@
   },
   "stages": {
     "0": {
-      "tab": "appearance",
-      "file": "appearance/s0",
-      "duration": 3.958333
-    },
-    "1": {
-      "tab": "appearance",
-      "file": "appearance/s1",
-      "duration": 3.958333
-    },
-    "2": {
-      "tab": "appearance",
-      "file": "appearance/s2",
+      "tab": "climb",
+      "file": "climb/s0",
       "duration": 4
     },
-    "3": {
-      "tab": "shop",
-      "file": "shop/s0",
+    "1": {
+      "tab": "climb",
+      "file": "climb/s1",
+      "duration": 4
+    },
+    "2": {
+      "tab": "climb",
+      "file": "climb/s2",
       "duration": 3.958333
     },
+    "3": {
+      "tab": "mereum",
+      "file": "mereum/s0",
+      "duration": 4
+    },
     "4": {
-      "tab": "shop",
-      "file": "shop/s1",
+      "tab": "mereum",
+      "file": "mereum/s1",
       "duration": 4
     },
     "5": {
-      "tab": "shop",
-      "file": "shop/s2",
+      "tab": "mereum",
+      "file": "mereum/s2",
       "duration": 4
     },
     "6": {
-      "tab": "shop",
-      "file": "shop/s3",
+      "tab": "scan",
+      "file": "scan/s0",
       "duration": 4
     },
     "7": {
-      "tab": "motivator",
-      "file": "motivator/s0",
-      "duration": 3.958333
+      "tab": "scan",
+      "file": "scan/s1",
+      "duration": 4
     },
     "8": {
-      "tab": "motivator",
-      "file": "motivator/s1",
+      "tab": "scan",
+      "file": "scan/s2",
       "duration": 4
     },
     "9": {
-      "tab": "motivator",
-      "file": "motivator/s2",
-      "duration": 3
-    },
-    "10": {
-      "tab": "ping",
-      "file": "ping/s0",
-      "duration": 4
-    },
-    "11": {
-      "tab": "ping",
-      "file": "ping/s1",
-      "duration": 4
-    },
-    "12": {
       "tab": "map",
       "file": "map/s0",
       "duration": 4
     },
-    "13": {
+    "10": {
       "tab": "map",
       "file": "map/s1",
+      "duration": 4
+    },
+    "11": {
+      "tab": "shop",
+      "file": "shop/s0",
+      "duration": 4
+    },
+    "12": {
+      "tab": "shop",
+      "file": "shop/s1",
+      "duration": 4
+    },
+    "13": {
+      "tab": "pro",
+      "file": "pro/s0",
       "duration": 4
     }
   },
@@ -88,79 +88,83 @@
       "kind": "ex",
       "rect": [
         0.05555555555555555,
-        0.10222222222222223,
+        0.1111111111111111,
         0.3263888888888889,
-        0.35888888888888887
+        0.35555555555555557
       ],
-      "closed": "appearance/cards/ex-closed.webp",
-      "open": "appearance/cards/ex-open.webp"
+      "closed": "mereum/cards/ex-closed.webp",
+      "open": "mereum/cards/ex-open.webp"
     },
     {
       "kind": "slot1",
       "rect": [
         0.39166666666666666,
-        0.10222222222222223,
+        0.1111111111111111,
         0.2916666666666667,
-        0.35888888888888887
+        0.35555555555555557
       ],
-      "closed": "appearance/cards/slot1-closed.webp",
-      "open": "appearance/cards/slot1-open.webp"
+      "closed": "mereum/cards/slot1-closed.webp",
+      "open": "mereum/cards/slot1-open.webp"
     },
     {
       "kind": "slot2",
       "rect": [
         0.6930555555555555,
-        0.10222222222222223,
+        0.1111111111111111,
         0.2916666666666667,
-        0.35888888888888887
+        0.35555555555555557
       ],
-      "closed": "appearance/cards/slot2-closed.webp",
-      "open": "appearance/cards/slot2-open.webp"
+      "closed": "mereum/cards/slot2-closed.webp",
+      "open": "mereum/cards/slot2-open.webp"
     },
     {
       "kind": "analysis",
       "rect": [
         0.05555555555555555,
-        0.4766666666666667,
+        0.4822222222222222,
         0.3263888888888889,
-        0.4988888888888889
+        0.49333333333333335
       ],
-      "closed": "appearance/cards/analysis-closed.webp",
-      "open": "appearance/cards/analysis-open.webp"
+      "closed": "mereum/cards/analysis-closed.webp",
+      "open": "mereum/cards/analysis-open.webp"
     },
     {
       "kind": "streak",
       "rect": [
         0.39166666666666666,
-        0.4766666666666667,
+        0.4822222222222222,
         0.2916666666666667,
         0.14888888888888888
       ],
-      "closed": "appearance/cards/streak-closed.webp",
-      "open": "appearance/cards/streak-open.webp"
+      "closed": "mereum/cards/streak-closed.webp",
+      "open": "mereum/cards/streak-open.webp"
     },
     {
       "kind": "mountain",
       "rect": [
         0.39166666666666666,
-        0.6411111111111111,
+        0.6455555555555555,
         0.2916666666666667,
-        0.33444444444444443
+        0.33
       ],
-      "closed": "appearance/cards/mountain-closed.webp",
-      "open": "appearance/cards/mountain-open.webp"
+      "closed": "mereum/cards/mountain-closed.webp",
+      "open": "mereum/cards/mountain-open.webp"
     },
     {
       "kind": "mereum",
       "rect": [
         0.6930555555555555,
-        0.4766666666666667,
+        0.4822222222222222,
         0.2916666666666667,
-        0.4988888888888889
+        0.49333333333333335
       ],
-      "closed": "appearance/cards/mereum-closed.webp",
-      "open": "appearance/cards/mereum-open.webp"
+      "closed": "mereum/cards/mereum-closed.webp",
+      "open": "mereum/cards/mereum-open.webp"
     }
   ],
-  "blocked": []
+  "blocked": [
+    "scan: http://localhost:4395/api/_challenge?for=scan",
+    "scan: http://localhost:4395/api/face/scan",
+    "scan: http://localhost:4395/api/_challenge?for=scan"
+  ]
 }
