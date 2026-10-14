@@ -90,7 +90,9 @@ export async function create(el, ctx) {
   let stone;
   const list = [
     { id: initials, src: initialsDataUrl(initials), kind: 'logo', key: `text:${initials}` },
-    ...objects.map((o) => ({ id: o.slug, src: o.sample, kind: 'object' })),
+    // Absolute: the samples may be fetched inside a worker, where a relative path resolves against the
+    // worker's own URL (assets/), not the page.
+    ...objects.map((o) => ({ id: o.slug, src: new URL(o.sample, document.baseURI).href, kind: 'object' })),
   ];
   try {
     [stone, shapes] = await Promise.all([
