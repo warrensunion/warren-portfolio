@@ -1,0 +1,32 @@
+{
+  "source": "drift",
+  "url": "https://warrensunion.github.io/drift/",
+  "commit": "111ebc5e8649228235af7d8814d878f31f597689",
+  "captured": "2026-10-14",
+  "view": {
+    "width": 1440,
+    "height": 900
+  },
+  "clip": {
+    "w": 960,
+    "h": 600,
+    "fps": 24
+  },
+  "stages": {
+    "0": {
+      "file": "s0",
+      "duration": 4
+    },
+    "1": {
+      "file": "s1",
+      "duration": 4
+    },
+    "2": {
+      "file": "s2",
+      "duration": 4
+    },
+    "3": {
+      "still": "drift-s3.webp"
+    }
+  }
+}

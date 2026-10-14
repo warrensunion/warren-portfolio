@@ -1,0 +1,71 @@
+{
+  "generated": "2026-10-14",
+  "url": "https://warrensunion.github.io/raingarden/",
+  "commit": "7e1ae70e6bd08374d01a2367ca9845483c1bc296",
+  "webpQuality": 76,
+  "view": "Designer step 9 \"Before and after\", demo yard, divider pushed fully right (before) or left (after), playback paused at the same storm time",
+  "clock": {
+    "value": "6:25 am, 1.7 mm/h",
+    "fraction": 0.1,
+    "from": "the clock line under the storm scrubber (step 9); both images are at this time"
+  },
+  "place": {
+    "value": "Richmond, BC",
+    "fallback": true,
+    "from": "step 5 \"storm\": location is off in the capture, so the app uses its Richmond, BC default"
+  },
+  "storm": {
+    "id": "recent",
+    "label": "Heaviest day last month (29 Sep 2026)",
+    "rainMm": 24.3,
+    "source": "Open-Meteo (open-meteo.com) hourly precipitation, 2026-09-14 to 2026-10-13; heaviest day 2026-09-29, real hourly profile.",
+    "from": "step 5 storm card (Open-Meteo)"
+  },
+  "roofM2": {
+    "value": 120,
+    "from": "demo yard roof area (src/data/demo-yard.json), shown in step 6 \"Today, in this storm\""
+  },
+  "before": {
+    "rainOnRoofAndGroundL": 19485,
+    "roofL": 2916,
+    "leavesYardL": 2722,
+    "soakedInL": 16763,
+    "from": "step 6 \"Today, in this storm\": the three counters at the end of playback (sim ledger; the ground is the whole photographed area, not only the marked yard)"
+  },
+  "after": {
+    "capturedL": 2524,
+    "leavesYardL": 198,
+    "leavesYardBeforeL": 2722,
+    "waterStandsH": 39,
+    "from": "step 9 \"Before and after\" big numbers"
+  },
+  "garden": {
+    "areaM2": 7.7,
+    "lengthM": 2.8,
+    "widthM": 3.5,
+    "depthCm": 17,
+    "costCad": 865,
+    "triesAnnealing": 161,
+    "from": "step 7 \"design\" result (optimizer.js, simulated annealing)"
+  },
+  "plants": {
+    "count": 24,
+    "species": 9,
+    "from": "step 8 \"plant\" result"
+  },
+  "slope": {
+    "value": "Gentle (2%) set by hand",
+    "reading": {
+      "slopePct": 16.97573937271162,
+      "lowPct": 5.318316899854786,
+      "highPct": 28.633161845568452,
+      "source": "gravity",
+      "manualSuggested": true,
+      "notes": [
+        "slope band wider than 8 pp"
+      ]
+    },
+    "backend": "wasm",
+    "from": "step 3: the depth reading was unsure (wide band), so the demo uses the manual Gentle slope"
+  }
+}

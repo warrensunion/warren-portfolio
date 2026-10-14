@@ -1,0 +1,32 @@
+{
+  "source": "ghostline",
+  "commit": "23ee0296281388c0efeb6312dbbdf5ae7c01499a",
+  "captured": "2026-10-14",
+  "view": {
+    "width": 1440,
+    "height": 900
+  },
+  "clip": {
+    "w": 960,
+    "h": 600,
+    "fps": 24
+  },
+  "stages": {
+    "0": {
+      "file": "s0",
+      "duration": 4
+    },
+    "1": {
+      "file": "s1",
+      "duration": 4
+    },
+    "2": {
+      "file": "s2",
+      "duration": 4
+    },
+    "3": {
+      "file": "s3",
+      "duration": 4
+    }
+  }
+}

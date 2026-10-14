@@ -1,0 +1,29 @@
+{
+  "source": "stress-test",
+  "url": "https://warrensunion.github.io/stress-test/",
+  "commit": "6799412a0cdbaf049545727b291aa073ab328905",
+  "captured": "2026-10-14",
+  "view": {
+    "width": 1440,
+    "height": 900
+  },
+  "clip": {
+    "w": 960,
+    "h": 600,
+    "fps": 24
+  },
+  "stages": {
+    "0": {
+      "file": "s0",
+      "duration": 4
+    },
+    "1": {
+      "file": "s1",
+      "duration": 4
+    },
+    "2": {
+      "file": "s2",
+      "duration": 4
+    }
+  }
+}

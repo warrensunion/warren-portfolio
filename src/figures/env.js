@@ -4,9 +4,10 @@
 
 // WebGL contexts each figure kind holds once live. bcwc holds none while it shows captured frames and
 // claims 2 at runtime when its iframe (whose /products page opens two contexts) attaches; bttr is a frame
-// player. The contests chart is plain SVG.
-export const WEIGHTS = { iceberg: 1, ring: 1, terrarium: 1, howpolluted: 1, archer: 1, bcwc: 0, bttr: 0, contests: 0 };
-export const TRACK_KINDS = new Set(['bcwc', 'bttr', 'terrarium', 'howpolluted', 'archer']);
+// player, and so are the newer clip tracks (drift, raingarden, stresstest, ghostline), whose last-stage
+// demos draw in 2D. The contests chart is plain SVG.
+export const WEIGHTS = { iceberg: 1, ring: 1, terrarium: 1, howpolluted: 1, archer: 1, bcwc: 0, bttr: 0, contests: 0, drift: 0, raingarden: 0, stresstest: 0, ghostline: 0 };
+export const TRACK_KINDS = new Set(['bcwc', 'bttr', 'terrarium', 'howpolluted', 'archer', 'drift', 'raingarden', 'stresstest', 'ghostline']);
 
 export const weightOf = (kind) => WEIGHTS[kind] || 0;
 // Kinds the budget tracks: anything that holds a context now, or may claim one later.
