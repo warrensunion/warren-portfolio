@@ -16,10 +16,13 @@ const only = ([...argv].find((a) => a.startsWith('--only=')) || '').slice(7).spl
 // The live WebGL figures on the page today. Each later plan appends its track figure's id here (and its
 // kind to KIND_COUNT and CANVASES) as its demo lands.
 const WEBGL_IDS = ['iceberg-0', 'ring-0', 'howpolluted-0', 'archer-0', 'terrarium-0'];
+// The tracks on the page, and the compact cards (render.js card()): a card's figure is pinned at its last stage.
+const TRACKS = 7;
+const CARDS = ['howpolluted', 'archer-hero'];
 const KIND_COUNT = { iceberg: 1, ring: 1, howpolluted: 1, archer: 1, terrarium: 1 }; // WebGL figures per kind: one fallback log each
 // The capture figures (clips, no WebGL of their own) fall back too: both under ?static=1 and reduced
 // motion, and bcwc also without WebGL2, since its live stage frames a WebGL site (env.js).
-const STILLED = { ...KIND_COUNT, bcwc: 1, bttr: 1 };
+const STILLED = { ...KIND_COUNT, bcwc: 1, bttr: 1, drift: 1, stresstest: 1, raingarden: 1, ghostline: 1 };
 const NO_GL2 = { ...KIND_COUNT, bcwc: 1 };
 const CANVASES = { iceberg: 2, ring: 1, howpolluted: 2, archer: 1, terrarium: 4 }; // the iceberg's scene plus its 2D overlay; the globe plus the 2D litter scene; the jar plus its river and two brains
 // Kinds that hold a WebGL context once live (env.js WEIGHTS > 0), whether their demo has landed or not.
@@ -352,7 +355,7 @@ async function checkNoJS(browser, url) {
       }
       const posters = await page.locator('img.fig-poster:not(.fig-still)').count();
       const bad = out.filter((o) => !o.ok);
-      report(name, tracks.length === 5 && bad.length === 0 && posters >= 3, `${tracks.length} tracks${bad.length ? ', bad: ' + bad.map((o) => `${o.id} ${o.why}`).join('; ') : ', every still in flow'}; ${posters} other posters`);
+      report(name, tracks.length === TRACKS && bad.length === 0 && posters >= 3 + CARDS.length, `${tracks.length} tracks${bad.length ? ', bad: ' + bad.map((o) => `${o.id} ${o.why}`).join('; ') : ', every still in flow'}; ${posters} other posters`);
     });
   } finally {
     await context.close();
@@ -379,7 +382,7 @@ async function checkStatic(browser, url) {
     );
     const per = fallbackLogs(t.logs, 'forced');
     const bad = posters.filter((p) => !p.ok).map((p) => p.src);
-    report(name, canv === 0 && bad.length === 0 && posters.length === 8 && sameCounts(per, STILLED), `canvases ${canv}, posters ${posters.length} (bad: ${bad.join(', ') || 'none'}), logs ${JSON.stringify(per)}`);
+    report(name, canv === 0 && bad.length === 0 && posters.length === 3 + TRACKS + CARDS.length && sameCounts(per, STILLED), `canvases ${canv}, posters ${posters.length} (bad: ${bad.join(', ') || 'none'}), logs ${JSON.stringify(per)}`);
   });
   report('fallback ?static=1: no page errors', t.errors.length === 0, t.errors.join(' | '));
   await t.close();
@@ -392,8 +395,9 @@ async function checkNoWebGL2(url) {
     const { page } = t;
     await step('fallback --disable-webgl2: no canvases and one "fallback: no-webgl2" per WebGL figure', async () => {
       let canv = 0;
+      // The clip tracks' last-stage demos are 2D canvases that need no WebGL, so they are not counted.
       await scrollThrough(page, 600, 100, async () => {
-        canv = Math.max(canv, await page.evaluate(() => document.querySelectorAll('figure.fig canvas').length));
+        canv = Math.max(canv, await page.evaluate((kinds) => [...document.querySelectorAll('figure.fig canvas')].filter((c) => kinds.includes(c.closest('figure').dataset.fig)).length, [...WEBGL_KINDS, 'bcwc']));
       });
       const per = fallbackLogs(t.logs, 'no-webgl2');
       report('fallback --disable-webgl2: no canvases and one "fallback: no-webgl2" per WebGL figure', canv === 0 && sameCounts(per, NO_GL2), `canvases ${canv}, logs ${JSON.stringify(per)}`);
@@ -887,7 +891,7 @@ async function checkTracks(browser, url) {
           }),
         ids);
         const bad = r.filter((o) => o.pos !== 'static' || !o.below);
-        report(name, r.length === 5 && bad.length === 0, bad.length ? bad.map((o) => `${o.id}: ${o.pos}, figure ${o.below ? 'below' : 'not below'}`).join('; ') : `${r.length} tracks`);
+        report(name, r.length === TRACKS && bad.length === 0, bad.length ? bad.map((o) => `${o.id}: ${o.pos}, figure ${o.below ? 'below' : 'not below'}`).join('; ') : `${r.length} tracks`);
       });
     }
     const side = `tracks ${label}: no horizontal scroll at top, middle and bottom`;
@@ -960,7 +964,7 @@ async function checkTracks(browser, url) {
     const at = (page, prev) =>
       page.evaluate(
         ([top, prev]) => {
-          const el = document.getElementById('howpolluted');
+          const el = document.getElementById('drift');
           const rail = el.querySelector('.track-rail');
           const fig = rail.querySelector('figure');
           const rr = rail.getBoundingClientRect();
@@ -983,19 +987,19 @@ async function checkTracks(browser, url) {
       }
       await twoFrames(page);
     };
-    const t = await open(browser, url + '#howpolluted');
+    const t = await open(browser, url + '#drift');
     const { page } = t;
-    const name = 'tracks deep load (#howpolluted at 1440): data-stage matches the page position right after load and once the fragment scroll lands';
+    const name = 'tracks deep load (#drift at 1440): data-stage matches the page position right after load and once the fragment scroll lands';
     await step(name, async () => {
       const a = judge(await at(page, 0));
       await landed(page);
       const b = judge(await at(page, a.s));
       report(name, a.ok && b.ok, `at load ${a.txt}; landed ${b.txt}`);
     });
-    const reload = 'tracks deep load (reload at stage 3 of howpolluted at 1440): data-stage matches the page position right after load and once the restored scroll lands';
+    const reload = 'tracks deep load (reload at stage 3 of drift at 1440): data-stage matches the page position right after load and once the restored scroll lands';
     await step(reload, async () => {
       await page.evaluate(trackHelpers, STICKY_TOP);
-      await page.evaluate(() => window.__jump(window.__stageY('howpolluted', 3)));
+      await page.evaluate(() => window.__jump(window.__stageY('drift', 3)));
       await sleep(300);
       await page.reload({ waitUntil: 'load' });
       const a = judge(await at(page, 0));
@@ -1054,11 +1058,11 @@ async function checkHowPolluted(browser, url) {
       const n = c?.querySelector('.hp-card-n');
       return { n: n ? Number(n.textContent) : NaN, grade: c?.querySelector('.hp-card-grade-word')?.textContent || '', text: c?.textContent || '', readout: document.querySelector('#howpolluted .fig-readout')?.textContent || '' };
     });
-  const pick = 'howpolluted: at stage 5, clicking 6 pieces lowers the card number and the grade matches gradeFor(litter, N)';
+  const pick = 'howpolluted: on its card (stage 5), clicking 6 pieces lowers the card number and the grade matches gradeFor(litter, N)';
   await step(pick, async () => {
-    await page.evaluate(() => window.__jump(window.__stageY('howpolluted', 4)));
+    await scrollToFig(page, 'howpolluted-0');
     await waitLive(page, 'howpolluted-0');
-    await page.waitForFunction(() => document.getElementById('howpolluted').dataset.stage === '4' && window.__hp?.interactive() && window.__hp.items().length > 6, null, { timeout: 15000 });
+    await page.waitForFunction(() => window.__hp?.interactive() && window.__hp.items().length > 6, null, { timeout: 15000 });
     await sleep(700); // the card has slid in
     const c0 = await card();
     let clicked = 0;
@@ -1092,7 +1096,7 @@ async function checkHowPolluted(browser, url) {
     report(demo, /demo/i.test(c.text) && /Demo, not a measurement/.test(c.text) && /demo/i.test(c.readout), `readout "${c.readout}"`);
   });
   report('howpolluted: no request to /api', api.length === 0, api.slice(0, 3).join(' | '));
-  const wheel = 'howpolluted: a wheel over the plate at stage 5 scrolls the page';
+  const wheel = 'howpolluted: a wheel over the card\'s plate scrolls the page';
   await step(wheel, async () => {
     const box = await page.locator('#howpolluted .fig-stage').boundingBox();
     await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.6);
@@ -1119,12 +1123,10 @@ async function checkArcher(browser, url) {
   };
   const t = await open(browser, url + '?debug=1', {}, { init: refuse });
   const { page } = t;
-  const id = 'archer-hero';
   const roblox = JSON.stringify(content).match(/https:\/\/www\.roblox\.com\/[^"]+/)?.[0];
   await page.evaluate(trackHelpers, STICKY_TOP);
-  const toStage = async (i) => {
-    await page.evaluate(([id, i]) => window.__jump(window.__stageY(id, i)), [id, i]);
-    await page.waitForFunction(([id, i]) => document.getElementById(id).dataset.stage === String(i), [id, i], { timeout: 3000 });
+  const toStage = async () => {
+    await scrollToFig(page, 'archer-0');
     await twoFrames(page);
   };
   const z = () => page.evaluate(() => window.__archer?.state?.archer?.z ?? NaN);
@@ -1132,22 +1134,13 @@ async function checkArcher(browser, url) {
   const isFocused = () => page.evaluate(() => document.activeElement === document.querySelector('figure.fig[data-fig="archer"]'));
   const sel = figSel('archer-0');
 
-  await step('archer: at stage 1 the attract mode walks the archer up the path', async () => {
-    await toStage(1);
+  await step('archer: its card shows "Click to play"', async () => {
+    await toStage(3);
     await waitLive(page, 'archer-0');
     await page.waitForFunction(() => window.__archer?.state, null, { timeout: 10000 });
-    await sleep(300);
-    const z0 = await z();
-    await sleep(2000);
-    const z1 = await z();
-    report('archer: at stage 1 the attract mode walks the archer up the path', z1 > z0 + 0.5, `z ${z0.toFixed(2)} -> ${z1.toFixed(2)} in 2 s`);
-  });
-
-  await step('archer: stage 3 shows "Click to play"', async () => {
-    await toStage(3);
     await page.waitForFunction((sel) => !document.querySelector(sel + ' .ah-prompt')?.hidden, sel, { timeout: 3000 });
     const text = await page.textContent(sel + ' .ah-prompt');
-    report('archer: stage 3 shows "Click to play"', text === 'Click to play', `prompt "${text}"`);
+    report('archer: its card shows "Click to play"', text === 'Click to play', `prompt "${text}"`);
   });
 
   await step('archer: unfocused, ArrowDown and Space scroll the page', async () => {
@@ -1268,6 +1261,71 @@ async function checkArcher(browser, url) {
 
   report('archer: no page errors', t.errors.length === 0, t.errors.join(' | '));
   reportConsole('archer: no console errors or WebGL/context warnings', t.logs);
+  await t.close();
+}
+
+/* ── the clip tracks (Drift, Stress Test, Raingarden, Ghostline) ── */
+
+// Each scrubs a recorded clip in its middle stages; the three with a last-stage demo draw it in 2D from
+// their exported data, answer the visitor, and never take the wheel.
+async function checkClips(browser, url) {
+  const t = await open(browser, url);
+  const { page } = t;
+  await page.evaluate(trackHelpers, STICKY_TOP);
+  const at = async (id, i) => {
+    await page.evaluate(([id, i]) => window.__jump(window.__stageY(id, i)), [id, i]);
+    await page.waitForFunction(([id, i]) => document.getElementById(id).dataset.stage === String(i), [id, i], { timeout: 4000 });
+  };
+  const readout = (id) => page.evaluate((id) => document.querySelector('#' + id + ' .fig-readout')?.textContent || '', id);
+  for (const id of ['drift', 'stress-test', 'raingarden', 'ghostline']) {
+    const name = `clips: ${id} plays a recorded clip at stage 2`;
+    await step(name, async () => {
+      await at(id, 1);
+      await page.waitForFunction((id) => document.querySelector('#' + id + ' video.is-on.is-ready'), id, { timeout: 20000 });
+      report(name, true);
+    });
+  }
+  const demos = { drift: /^Year \d+(\.\d)? of 10, /, 'stress-test': /req\/s, p99 [\d,]+ ms/, raingarden: /2,524 of 2,722 L caught/ };
+  for (const [id, re] of Object.entries(demos)) {
+    const name = `clips: ${id}'s last stage draws its demo over the still, with a readout from its data`;
+    await step(name, async () => {
+      await at(id, 3);
+      await page.waitForFunction((id) => document.querySelector('#' + id + ' .cl-demo.is-on canvas'), id, { timeout: 15000 });
+      await sleep(600);
+      const box = await page.locator('#' + id + ' .cl-demo canvas').boundingBox();
+      const txt = await readout(id);
+      report(name, box && box.width > 100 && re.test(txt), `readout "${txt}"`);
+    });
+  }
+  const drag = 'clips: the Stress Test slider sets the load, and stops the ramp';
+  await step(drag, async () => {
+    await at('stress-test', 3);
+    await page.locator('#stress-test .cl-ui input[type="range"]').fill('14');
+    await sleep(1600);
+    const a = await readout('stress-test');
+    await sleep(1600);
+    const b = await readout('stress-test');
+    report(drag, /^1,400 req\/s/.test(a) && a === b, `"${a}" then "${b}"`);
+  });
+  const site = 'clips: Drift changes drop site on a button';
+  await step(site, async () => {
+    await at('drift', 3);
+    await page.locator('#drift .cl-ui button', { hasText: 'North Atlantic' }).click();
+    await sleep(500);
+    report(site, /North Atlantic$/.test(await readout('drift')), await readout('drift'));
+  });
+  const wheel = 'clips: a wheel over the Raingarden demo scrolls the page';
+  await step(wheel, async () => {
+    await at('raingarden', 3);
+    const box = await page.locator('#raingarden .cl-demo canvas').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    const y0 = await page.evaluate(() => scrollY);
+    await page.mouse.wheel(0, 300);
+    await sleep(500);
+    report(wheel, (await page.evaluate(() => scrollY)) > y0);
+  });
+  report('clips: no page errors', t.errors.length === 0, t.errors.join(' | '));
+  reportConsole('clips: no console errors', t.logs);
   await t.close();
 }
 
@@ -1490,7 +1548,7 @@ async function checkBttr(browser, url) {
       out.push({ s, j, ok: r.stage === String(s) && r.sel === j && r.shown.every((k) => k === j), r });
     }
     const bad = out.filter((o) => !o.ok);
-    report(tabs, starts.length === 6 && bad.length === 0, bad.map((o) => `tab ${o.j} -> ${JSON.stringify(o.r)}`).join('; ') || `${starts.length} tabs`);
+    report(tabs, starts.length === 7 && bad.length === 0, bad.map((o) => `tab ${o.j} -> ${JSON.stringify(o.r)}`).join('; ') || `${starts.length} tabs`);
   });
 
   const scrub = 'bttr: scrolling within a stage scrubs its clip';
@@ -1506,9 +1564,9 @@ async function checkBttr(browser, url) {
     report(scrub, b > a + 0.2, `currentTime ${a.toFixed(2)} -> ${b.toFixed(2)} s`);
   });
 
-  const flip = 'bttr: at the end of Appearance a puzzle card flips on hover';
+  const flip = 'bttr: at the end of Mereum appearance a puzzle card flips on hover';
   await step(flip, async () => {
-    await page.evaluate((id) => window.__jump(window.__stageY(id, 2) + 0.4 * (window.__track(id).pad / (window.__track(id).n - 1))), id);
+    await page.evaluate((id) => window.__jump(window.__stageY(id, 3) + 0.4 * (window.__track(id).pad / (window.__track(id).n - 1))), id);
     const card = page.locator(`#${id} .bp-card`).nth(2);
     await card.waitFor({ state: 'visible', timeout: 15000 });
     await card.hover();
@@ -1539,12 +1597,12 @@ async function checkBttr(browser, url) {
     await pt.page.evaluate((id) => document.getElementById(id).querySelector('figure').scrollIntoView({ block: 'center', behavior: 'instant' }), id);
     await twoFrames(pt.page);
     const row = await pt.page.$eval(`#${id} .fig-tabs`, (r) => ({ sw: r.scrollWidth, cw: r.clientWidth }));
-    const tab = pt.page.locator(`#${id} .fig-tabs button[data-stage="12"]`);
+    const tab = pt.page.locator(`#${id} .fig-tabs button[data-stage="11"]`);
     await tab.scrollIntoViewIfNeeded();
     await tab.tap();
-    await pt.page.waitForFunction((id) => document.getElementById(id).dataset.stage === '12', id, { timeout: 4000 }).catch(() => {});
+    await pt.page.waitForFunction((id) => document.getElementById(id).dataset.stage === '11', id, { timeout: 4000 }).catch(() => {});
     const r = await pt.page.evaluate((id) => ({ stage: document.getElementById(id).dataset.stage, sw: document.documentElement.scrollWidth, iw: innerWidth }), id);
-    report(phone, row.sw > row.cw && r.stage === '12' && r.sw <= r.iw, `tab row ${row.sw}/${row.cw}, stage ${r.stage}, page ${r.sw}/${r.iw}`);
+    report(phone, row.sw > row.cw && r.stage === '11' && r.sw <= r.iw, `tab row ${row.sw}/${row.cw}, stage ${r.stage}, page ${r.sw}/${r.iw}`);
   });
   await pt.close();
 
@@ -1750,7 +1808,14 @@ async function checkBcwc(browser, url) {
       await toStage(tb.page, 4);
       await tb.page.waitForSelector(`#${id} iframe`, { timeout: 30000 });
       let worst = 0;
-      const ys = await tb.page.evaluate(() => [window.__stageY('bcwc', 4), window.__stageY('terrarium', 2), window.__stageY('howpolluted', 1), window.__stageY('archer-hero', 1)]);
+      // The compact cards have no rail: their figure centred in the viewport.
+      const ys = await tb.page.evaluate(() => {
+        const card = (id) => {
+          const r = document.querySelector('#' + id + ' figure').getBoundingClientRect();
+          return scrollY + r.top + r.height / 2 - innerHeight / 2;
+        };
+        return [window.__stageY('bcwc', 4), window.__stageY('terrarium', 2), card('howpolluted'), card('archer-hero')];
+      });
       for (let k = 0; k < 4; k++) {
         for (const y of [...ys, ...ys.slice().reverse()]) {
           await tb.page.evaluate((y) => window.__jump(y), y);
@@ -1877,6 +1942,7 @@ try {
       await checkTerrariumFail(browser, url);
     },
     bttr: () => checkBttr(browser, url),
+    clips: () => checkClips(browser, url),
     bcwc: () => checkBcwc(browser, url),
     nosource: () => checkNoSource(),
   };

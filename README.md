@@ -3,19 +3,33 @@
 A one-page portfolio. The page is static HTML rendered from `src/content.js`, so it reads completely
 without JavaScript. Live figures in framed plates are an upgrade on top of that:
 - the iceberg from BTTRURSLF;
-- one **track** per project;
+- one **track** per larger project, and a compact card for each smaller one;
 - a stone ring whose particles spell WS.
 
 It is built with Vite and vanilla ES modules, with no framework. The only runtime dependency is
 `three@0.180.0`.
 
+Live at **https://warrensunion.github.io/warren-portfolio/** (GitHub Pages, deployed from `main` by
+`.github/workflows/pages.yml`).
+
 A track is a tall stretch of page. Its text column sticks beside a figure that walks through stages as you
-scroll, then lets you play with it:
-- **BC Window Coverings:** the site itself in a browser frame.
-- **BTTRURSLF:** recorded screens under tabs, plus real stats.
+scroll, then lets you play with it. In page order:
+- **BTTRURSLF** (Building): recorded screens under tabs, plus real stats.
+- **Drift** (Projects): recorded clips of the site, then fragments the Drift model moved, replayed on a flat chart.
+- **Stress Test:** recorded clips, then the simulator's own results for one design under a load you drag.
+- **Raingarden:** recorded clips, then the same storm without and with the garden, split by a handle.
+- **Ghostline:** recorded clips of the duel, the training and the saliency heat.
 - **Terrarium:** a live jar of evolving creatures.
-- **HowPolluted:** a globe, a litter pile and a grade, as a demo.
+- **BC Window Coverings** (Work): recorded clips of the site, then the site itself in a browser frame once deployed.
+
+A compact card is the entry layout (text beside one plate) for a smaller project. Its plate shows the track
+figure's last still, and its live figure pinned at that last, playable stage (`data-pin`; see `trackCtx` in
+`src/figures/host.js`), so it costs no scroll:
+- **HowPolluted:** the litter pile and its grade, as a demo.
 - **Archer Hero:** a short playable stage.
+
+Why this split: nine full tracks came to about 50 stages, over 40 screens of scroll. The four new projects,
+BTTRURSLF, Terrarium and BC Window Coverings keep full tracks; the two smallest keep their live demos in cards.
 
 ## Run it
 
@@ -31,7 +45,9 @@ npm run build      # writes dist/ (prebuild refreshes BTTRURSLF's stats when tha
 npm run preview    # serves dist/ at http://localhost:4173, which is what visitors get
 ```
 
-`dist/` is a plain static site. Any static host can serve it.
+`dist/` is a plain static site. Any static host can serve it. Content paths are relative and figures prefix
+`import.meta.env.BASE_URL`, so a build with `PAGES_BASE=/warren-portfolio/` works under that path and a plain
+build works at `/`.
 
 ## Check it
 
@@ -47,7 +63,7 @@ npm run preview    # serves dist/ at http://localhost:4173, which is what visito
 | `npm run stills` | Writes a plain `[TODO: still]` placeholder for any stage still that is missing. It never overwrites. |
 | `npm run art` | Turns the marble renders in `design/art-src/` into the ring's object textures and silhouettes. A missing render gets a plain placeholder silhouette. |
 | `npm run stats` | Measures BTTRURSLF's numbers into `src/data/bttr-stats.json`: the account count from its Supabase project, plus routes and tests counted from its repo. |
-| `npm run capture:bttr`, `npm run capture:bcwc` | Re-record the BTTRURSLF and BC Window Coverings clips by driving each site's own server with Playwright. Needs ffmpeg on PATH. See `docs/port-notes/captures.md`. |
+| `npm run capture:bttr`, `capture:bcwc`, `capture:drift`, `capture:stress-test`, `capture:raingarden`, `capture:ghostline` | Re-record a track's clips and stills by driving that site with Playwright: the four new projects from their live GitHub Pages demos, BTTRURSLF and bcwc from local builds. Needs ffmpeg on PATH. See `docs/port-notes/captures.md`. |
 | `npm run sync:howpolluted` | Re-copies HowPolluted's art and fonts at the commit its port is pinned to. See `docs/port-notes/howpolluted.md`. |
 
 The browser scripts use Playwright's Chromium with the real GPU (ANGLE on Windows). Each starts and stops
@@ -62,12 +78,12 @@ live in `src/content.js` unless the table says otherwise.
 |---|---|
 | Every figure caption, in bold (`stat`) | one real number per figure |
 | Every project | `role` and `dates` |
-| BC Window Coverings | one result with a real number, and a link to the live site |
+| BC Window Coverings | a link to the live site (the Lighthouse 47 to 98 result is from bcwc's `docs/PERF.md`) |
 | BC Window Coverings, last stage | **deploy bcwc** (it is not deployed: `bcwc.vercel.app` is a 404 and bcwindowcoverings.com is still the old Wix site), then set `fig.data.liveUrl` to its origin. bcwc sends no X-Frame-Options or CSP, so it frames as is. If a CSP is added later, it needs `frame-ancestors` to allow this site. |
 | Terrarium, HowPolluted | one number each (for example a launch date) |
 | Archer Hero | release status, player count, and the part you built |
 | Get in touch | `touch.line`: the co-op term you are looking for |
-| Ring objects | marble renders `design/art-src/terrarium-jar.png` and `howpolluted-globe.png`, then `npm run art` and `npm run posters -- --only=ws-3,ws-4`. Until then they are plain placeholder silhouettes. |
+| Ring objects | marble renders `design/art-src/terrarium-jar.png` and `howpolluted-globe.png`, then `npm run art` and `npm run posters -- --only=ws-5,ws-6`. Until then they are plain placeholder silhouettes. The four new objects (bottle, gauge, rain garden, ghost) are generated marble renders, keyed off a flat grey backdrop. |
 | Contests and awards | each row's `name`, `year`, `result` and `percentile` |
 | Résumé link | `public/resume.pdf` |
 
@@ -132,6 +148,7 @@ live in `src/content.js` unless the table says otherwise.
 |---|---|---|
 | Iceberg, ring | BTTRURSLF-v2 (Warren's, private) | Ported scene code from the earlier build (`docs/port-notes/`). |
 | BTTRURSLF | BTTRURSLF-v2 (private) | Recorded clips only. No BTTRURSLF code is in this repository. The puzzle cards are new code over captured pixels. |
+| Drift, Stress Test, Raingarden, Ghostline | their public repos and live demos | Recorded clips from the live demos. Drift's chart replays `public/drift/tracks.json` (its own model, run offline), Stress Test's view plays `public/stress-test/sample.json` (its own simulator, run offline), and Raingarden's split shows two frames exported from the app with its numbers (`public/raingarden/meta.json`). Nothing is re-simulated on this page. |
 | BC Window Coverings | `Projects/bcwc` (Warren's) | Recorded clips, then the deployed site in an iframe. |
 | Terrarium | `Downloads/terrarium` at 7612a40 | Ported sim, worker, jar, river and brain (`docs/port-notes/terrarium.md`). |
 | HowPolluted | `projects/HowPolluted` at 80f6d06 | Ported globe, pile sim, grades, art and fonts (`docs/port-notes/howpolluted.md`). |
@@ -150,11 +167,14 @@ src/figures/host.js        figure lifetime, the weighted context budget, fallbac
 src/figures/tracks.js      track progress, stages, tabs and the sticky text top
 src/figures/track-math.js  the pure progress, stage and clip maths
 src/figures/stills.js      stage stills follow the stage
-src/figures/player.js      scrubs recorded clips by scroll (bttr, bcwc)
+src/figures/player.js      scrubs recorded clips by scroll (bttr, bcwc and the clip tracks)
+src/figures/clips.js       the newer tracks: clips, plus an optional 2D demo on the last stage
 src/figures/env.js         device and flag rules, kind weights
-src/figures/<kind>/        iceberg, ring, contests, bcwc, bttr, terrarium, howpolluted, archer
+src/figures/<kind>/        iceberg, ring, contests, bcwc, bttr, terrarium, howpolluted, archer, drift, stresstest,
+                           raingarden, ghostline
 public/stills/             one still per track stage
-public/captures/           recorded clips and manifests for bttr and bcwc
+public/captures/           recorded clips and manifests for every clip track
+public/drift/, public/stress-test/, public/raingarden/   the exported data their last-stage demos replay
 public/terrarium/, public/howpolluted/   ported art, fonts and history
 scripts/                   checks, shots, compare, perf, Lighthouse, posters, stills, art, stats, captures, tests
 docs/superpowers/          the design specs and the implementation plans

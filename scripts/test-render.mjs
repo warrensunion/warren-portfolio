@@ -18,11 +18,11 @@ test('exactly one h1', () => {
 
 test('sections appear with the expected ids in order', () => {
   const ids = [...html.matchAll(/<section[^>]*\sid="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(ids, ['work', 'building', 'projects', 'contests', 'contact']);
+  assert.deepEqual(ids, ['building', 'projects', 'work', 'contests', 'contact']);
 });
 
-test('hero bio links into work, building and projects', () => {
-  const hero = html.slice(html.indexOf('class="hero'), html.indexOf('id="work"'));
+test('hero bio links into building, projects and work', () => {
+  const hero = html.slice(html.indexOf('class="hero'), html.indexOf('id="building"'));
   for (const id of ['work', 'building', 'projects']) assert.match(hero, new RegExp(`href="#${id}"`));
 });
 
@@ -79,8 +79,9 @@ test('github, linkedin and resume links appear in header and footer', () => {
 test('index.html <head> (title, meta description) has no em or en dashes', () => {
   const head = readFileSync(new URL('../index.html', import.meta.url), 'utf8').match(/<head>([\s\S]*?)<\/head>/)[1];
   assert.equal(count(head, /[—–]/g), 0);
-  // The description says what the page lists (one website, one game, one Roblox game), no more.
+  // The description says what the page lists, no more.
   assert.doesNotMatch(head, /Websites|Roblox games/);
+  assert.match(head, /University of Waterloo/);
   const desc = head.match(/<meta name="description" content="([^"]*)"/);
   assert.ok(desc && desc[1].length > 0, 'meta description present');
 });
@@ -104,30 +105,31 @@ test('controller rulings: copy email, live status, morph links, drag hint, under
   assert.match(html, /Click to copy, or press e anywhere\./);
 
   const contact = html.slice(html.indexOf('id="contact"'));
-  const morphs = [...contact.matchAll(/data-morph="(\d)"[^>]*>([^<]+)</g)].map((m) => [m[1], m[2]]);
-  assert.deepEqual(morphs, [['0', 'BC Window Coverings'], ['1', 'BTTRURSLF'], ['2', 'Terrarium'], ['3', 'HowPolluted'], ['4', 'Archer Hero']]);
+  const morphs = [...contact.matchAll(/data-morph="(\d+)"[^>]*>([^<]+)</g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(morphs, [['0', 'BTTRURSLF'], ['1', 'Drift'], ['2', 'Stress Test'], ['3', 'Raingarden'], ['4', 'Ghostline'], ['5', 'Terrarium'], ['6', 'HowPolluted'], ['7', 'Archer Hero'], ['8', 'BC Window Coverings']]);
   // No tab stop in the static markup: a still cannot be played; the host adds one once a scene is live.
   assert.equal(count(html, /tabindex=/g), 0);
 
-  assert.match(html, /data-fig="iceberg"[^>]*data-poster-under="\/posters\/iceberg-under\.webp"/);
-  assert.match(html, /<img class="fig-poster" src="\/posters\/iceberg\.webp"[^>]*loading="eager"/);
+  // Relative, so the page works at / and under GitHub Pages' /warren-portfolio/.
+  assert.match(html, /data-fig="iceberg"[^>]*data-poster-under="posters\/iceberg-under\.webp"/);
+  assert.match(html, /<img class="fig-poster" src="posters\/iceberg\.webp"[^>]*loading="eager"/);
 });
 
 test('the ring carries its per-project stills for the reduced-motion cross-fade, in morph-link order', () => {
   const ring = html.match(/<figure class="fig"[^>]*data-fig="ring"[^>]*>/)[0];
   const list = ring.match(/data-poster-morph="([^"]+)"/)[1].split(' ');
-  assert.deepEqual(list, [0, 1, 2, 3, 4].map((i) => `/posters/ws-${i}.webp`));
+  assert.deepEqual(list, [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `posters/ws-${i}.webp`));
   assert.equal(list.length, content.touch.fig.data.objects.length);
 });
 
 const tracks = [...html.matchAll(/<article class="track[^"]*" id="([^"]+)" data-track style="--stages:(\d+)">([\s\S]*?)<\/article>/g)];
 
 test('tracks render in page order', () => {
-  assert.deepEqual(tracks.map((m) => m[1]), ['bcwc', 'bttrurslf', 'terrarium', 'howpolluted', 'archer-hero']);
+  assert.deepEqual(tracks.map((m) => m[1]), ['bttrurslf', 'drift', 'stress-test', 'raingarden', 'ghostline', 'terrarium', 'bcwc']);
 });
 
 test('each track has --stages equal to its stage buttons and stills', () => {
-  const want = { bcwc: 5, bttrurslf: 15, terrarium: 5, howpolluted: 5, 'archer-hero': 4 };
+  const want = { bttrurslf: 15, drift: 4, 'stress-test': 4, raingarden: 4, ghostline: 4, terrarium: 5, bcwc: 5 };
   for (const [, id, n, body] of tracks) {
     assert.equal(Number(n), want[id], id + ' --stages');
     const list = body.slice(body.indexOf('<ol class="fig-stages"'), body.indexOf('</ol>'));
@@ -162,15 +164,40 @@ test('BTTRURSLF renders a tab row whose tabs jump to each tab\'s first stage', (
   assert.match(body, /<nav class="fig-tabs" aria-label="Screens">/);
   assert.doesNotMatch(body, /role="tab/);
   const tabs = [...body.matchAll(/<button type="button" data-stage="(\d+)" data-tab="(\d+)"( aria-current="true")?[^>]*>([^<]+)</g)];
-  assert.deepEqual(tabs.map((t) => [Number(t[1]), t[4]]), [[0, 'Appearance'], [3, 'BTTRshop'], [7, 'Motivator'], [10, 'Knowledge &amp; Sociability'], [12, 'BTTRmap'], [14, 'Stats']]);
-  assert.deepEqual(tabs.map((t) => !!t[3]), [true, false, false, false, false, false]);
+  assert.deepEqual(tabs.map((t) => [Number(t[1]), t[4]]), [[0, 'Climb'], [3, 'Mereum'], [6, 'Face scan'], [9, 'BTTRmap'], [11, 'BTTRshop'], [13, 'Pro'], [14, 'Stats']]);
+  assert.deepEqual(tabs.map((t) => !!t[3]), [true, false, false, false, false, false, false]);
   const lis = [...body.matchAll(/<li data-tab="(\d+)"(?: hidden)?><button type="button" data-stage="(\d+)"/g)].map((m) => [Number(m[1]), Number(m[2])]);
   assert.equal(lis.length, 15);
-  assert.deepEqual(lis.filter(([t]) => t === 1).map(([, s]) => s), [3, 4, 5, 6]);
+  assert.deepEqual(lis.filter(([t]) => t === 1).map(([, s]) => s), [3, 4, 5]);
   // Only the first tab's stages show before any script runs.
   assert.equal(count(body, /<li data-tab="\d+" hidden>/g), 12);
 });
 
 test('tracks without tabs render no tab row', () => {
   for (const [, id, , body] of tracks) if (id !== 'bttrurslf') assert.doesNotMatch(body, /class="fig-tabs"/);
+});
+
+const cards = [...html.matchAll(/<article class="entry entry--card" id="([^"]+)">([\s\S]*?)<\/article>/g)];
+
+test('the smaller projects render as compact cards, their figure pinned at its last stage', () => {
+  assert.deepEqual(cards.map((m) => m[1]), ['howpolluted', 'archer-hero']);
+  for (const [, id, body] of cards) {
+    const fig = body.match(/<figure class="fig fig--card"[^>]*>/)?.[0] || '';
+    const stages = JSON.parse(fig.match(/data-stages='([^']*)'/)[1].replace(/&#39;/g, "'").replace(/&amp;/g, '&'));
+    assert.equal(fig.match(/data-pin="(\d+)"/)?.[1], String(stages.length - 1), id + ' pin');
+    // Its poster is the last stage's still, and it has no rail, stage list or stills to walk.
+    assert.match(body, new RegExp(`<img class="fig-poster" src="stills/${id}-s${stages.length - 1}\\.webp"`));
+    assert.doesNotMatch(body, /fig-stages|fig-still|track-rail/);
+  }
+});
+
+test('every new project links its live demo and its code', () => {
+  for (const id of ['drift', 'stress-test', 'raingarden', 'ghostline']) {
+    const body = tracks.find((m) => m[1] === id)[3];
+    assert.match(body, new RegExp(`<ul class="project-links"><li><a href="https://warrensunion\\.github\\.io/${id}/"[^>]*>Live demo</a></li><li><a href="https://github\\.com/warrensunion/${id}"[^>]*>Code</a></li></ul>`), id);
+  }
+});
+
+test('nothing links to the private BTTRURSLF or bcwc repositories', () => {
+  assert.doesNotMatch(html, /github\.com\/warrensunion\/(BTTRURSLF|bcwc)\b/i);
 });

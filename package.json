@@ -20,7 +20,11 @@
     "capture:bttr": "node scripts/capture/bttr.mjs",
     "sync:howpolluted": "node scripts/sync-howpolluted.mjs",
     "capture:bcwc": "node scripts/capture/bcwc.mjs",
-    "compare": "node scripts/compare.mjs"
+    "compare": "node scripts/compare.mjs",
+    "capture:drift": "node scripts/capture/drift.mjs",
+    "capture:stress-test": "node scripts/capture/stress-test.mjs",
+    "capture:raingarden": "node scripts/capture/raingarden.mjs",
+    "capture:ghostline": "node scripts/capture/ghostline.mjs"
   },
   "dependencies": {
     "three": "0.180.0"
