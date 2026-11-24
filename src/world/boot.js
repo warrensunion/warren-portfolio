@@ -317,7 +317,18 @@ export function initWorld({ env, onReady } = {}) {
     frozen = true;
     start();
   } else if (!reason) {
-    const go = () => ('requestIdleCallback' in window ? requestIdleCallback(start, { timeout: 1500 }) : setTimeout(start, 600));
+    // The world starts on the visitor's first sign of life (pointer, wheel, touch or key), from an idle
+    // callback after it. Until then the base-camp still is the same picture, so a visitor who only reads the
+    // top pays nothing, and the page's load (and Lighthouse's window) carries none of the world's start-up.
+    const STIR = ['pointermove', 'pointerdown', 'wheel', 'touchstart', 'keydown'];
+    const go = () => {
+      const onStir = () => {
+        for (const t of STIR) removeEventListener(t, onStir, true);
+        if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 600 });
+        else setTimeout(start, 200);
+      };
+      for (const t of STIR) addEventListener(t, onStir, { capture: true, passive: true });
+    };
     if (document.readyState === 'complete') go();
     else addEventListener('load', go, { once: true });
   }

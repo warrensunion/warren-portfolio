@@ -185,7 +185,7 @@ Flags: `?static=1` (stills), `?world=0` (the page without its world, for compari
 
 ## Checks
 
-- `npm test`: 138 tests, all passing. New: `scripts/test-climb.mjs` (scroll to altitude, the weather model, the
+- `npm test`: 133 tests, all passing. New: `scripts/test-climb.mjs` (scroll to altitude, the weather model, the
   HUD's text, the ridge's height function) and new render tests (seven logs with rising altitudes, the ice field
   lists every project as a link with a symbol, one world still per log, the HUD labelled as a model,
   BTTRURSLF's lead numbers or TODOs). Existing tests were updated where the page's shape changed (section ids,

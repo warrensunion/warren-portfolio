@@ -1910,7 +1910,12 @@ async function checkTerrariumFail(browser, url) {
 async function checkWorld(browser, url) {
   const t = await open(browser, url);
   const { page } = t;
-  const live = () => page.waitForFunction(() => document.documentElement.classList.contains('world-live'), null, { timeout: 45000 });
+  // the world starts on the visitor's first input
+  const live = async () => {
+    await page.mouse.move(700, 450);
+    await page.mouse.move(720, 460);
+    await page.waitForFunction(() => document.documentElement.classList.contains('world-live'), null, { timeout: 45000 });
+  };
   const hud = () => page.evaluate(() => document.querySelector('[data-hud="alt"]')?.textContent || '');
   await step('world: goes live behind the page and draws a varied scene', async () => {
     await live();

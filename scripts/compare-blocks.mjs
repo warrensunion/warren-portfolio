@@ -29,6 +29,7 @@ try {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, ...(phone ? { isMobile: true, hasTouch: true } : {}) });
     const page = await ctx.newPage();
     await page.goto(server.url, { waitUntil: 'load' });
+    await page.mouse.move(w / 2, h / 2); // the world starts on the first input
     await page.waitForFunction(() => document.documentElement.classList.contains('world-live'), null, { timeout: 60000 });
     for (const [k, ref] of pairs) {
       await page.evaluate((k) => {

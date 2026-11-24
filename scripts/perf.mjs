@@ -101,6 +101,7 @@ async function measureWorld(browser, url, { throttle = 1 } = {}) {
   const logs = [];
   page.on('console', (m) => logs.push(m.text()));
   await page.goto(url, { waitUntil: 'load' });
+  await page.mouse.move(700, 450); // the world starts on the first input
   await page.waitForFunction(() => document.documentElement.classList.contains('world-live'), null, { timeout: 60000 });
   const cdp = await context.newCDPSession(page);
   const rows = [];

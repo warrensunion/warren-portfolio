@@ -88,7 +88,7 @@ export function createPines(shared, { tier }) {
   const up = new THREE.Vector3(0, 1, 0);
   const mats = [];
   let tries = 0;
-  while (mats.length < want && tries < want * 12) {
+  while (mats.length < want && tries < want * 5) {
     tries++;
     // denser near the path, thinning out to 4 km
     const along = 400 - r() * 5600; // z from +400 to -5200
@@ -96,11 +96,11 @@ export function createPines(shared, { tier }) {
     const sNorm = Math.max(0, Math.min(1, -along / 11000));
     const x = crestX(sNorm) + side;
     const z = along;
-    const h = H(x, z, 4);
+    const h = H(x, z, 3);
     if (h > 1150 + r() * 250) continue; // the treeline, ragged
     // keep off steep faces: compare with a neighbour
-    const hx = H(x + 12, z, 3);
-    const hz = H(x, z + 12, 3);
+    const hx = H(x + 12, z, 2);
+    const hz = H(x, z + 12, 2);
     if (Math.hypot(hx - h, hz - h) / 12 > 0.75) continue;
     // a clearing round base camp so the footprints and the igloo read
     if (Math.abs(x) < 34 && z > -260 && z < 60) continue;

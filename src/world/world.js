@@ -271,6 +271,21 @@ export async function createWorld(canvas, { tier = 'high', theme = 'dusk', reduc
   // For scripts/check-figures.mjs and debugging: where things are, and the igloo's count.
   window.__worldStats = () => ({ placed: igloo.placed, total: igloo.total, cam: camera.position.toArray().map(Math.round), igloo: igloo.group.position.toArray().map(Math.round), act: renderPass.scene === scene ? 'mountain' : 'field', dpr, lowered });
 
+  // Link every program before the first frame, off the main thread where the driver allows
+  // (KHR_parallel_shader_compile): the terrain's shaders are big, and linking them inside the first render
+  // was one long task.
+  try {
+    resize(innerWidth, innerHeight);
+    camera.position.set(0, 10, 0);
+    camera.updateMatrixWorld();
+    // into the composer's buffer, as RenderPass draws: a program built for the screen would differ
+    renderer.setRenderTarget(composer.readBuffer);
+    const jobs = [renderer.compileAsync(scene, camera)];
+    if (fieldAct) jobs.push(renderer.compileAsync(fieldAct.scene, fieldAct.camera));
+    renderer.setRenderTarget(null);
+    await Promise.all(jobs);
+  } catch {}
+
   canvas.addEventListener('webglcontextlost', (e) => {
     e.preventDefault();
     lost = true;
