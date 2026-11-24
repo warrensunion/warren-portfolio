@@ -6,6 +6,9 @@ import { initCopyEmail } from './chrome/copyEmail.js';
 import { initFigures } from './figures/host.js';
 import { initTracks } from './figures/tracks.js';
 import { initStills } from './figures/stills.js';
+import { readEnv } from './figures/env.js';
+import { initWorld } from './world/boot.js';
+import { initChrome } from './chrome/index.js';
 
 // <html class="js"> is set by an inline script in index.html, before first paint, so CSS that depends
 // on it (the drag hint) never shifts the layout when this module arrives.
@@ -40,6 +43,7 @@ const loaders = {
   raingarden: () => import('./figures/raingarden/figure.js'),
   stresstest: () => import('./figures/stresstest/figure.js'),
   ghostline: () => import('./figures/ghostline/figure.js'),
+  beatcut: () => import('./figures/beatcut/figure.js'),
 };
 // Tracks first: they set each track's stage from where the page is, so stills and figures start right.
 // Their stage buttons and stills work even if the figure host fails.
@@ -50,8 +54,22 @@ try {
 } catch (err) {
   console.warn('[tracks] failed to start', err);
 }
+// The world behind the page (src/world/): it holds one WebGL context of the page's three, so the
+// figure host is told to leave room for it. A world failure leaves its stills, and the page, as they are.
+const env = readEnv();
+let world = { reserve: 0, setTheme() {} };
 try {
-  initFigures(document, { loaders, tracks });
+  world = initWorld({ env });
+} catch (err) {
+  console.warn('[world] failed to start', err);
+}
+try {
+  initFigures(document, { loaders, tracks, env, reserve: world.reserve });
 } catch (err) {
   console.warn('[fig] host failed to start', err);
+}
+try {
+  initChrome(document, { world, env, content });
+} catch (err) {
+  console.warn('[chrome] failed to start', err);
 }

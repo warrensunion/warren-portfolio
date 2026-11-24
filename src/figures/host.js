@@ -74,14 +74,17 @@ function distance(el) {
   return 0;
 }
 
-export function initFigures(root, { loaders, env, tracks = null } = {}) {
+export function initFigures(root, { loaders, env, tracks = null, reserve = 0 } = {}) {
   if (!loaders) return null;
   const shot = readPoster(location.search);
-  if (shot) return shootPoster(root, loaders, shot);
+  // The world's stills are shot by src/world/boot.js itself, with no figures on the page.
+  if (shot) return shot.kind === 'world' ? null : shootPoster(root, loaders, shot);
   if (!('IntersectionObserver' in window)) return null;
   env = env || readEnv();
 
-  const budget = createBudget(MAX_LIVE);
+  // The world (src/world/) holds its own context behind the page, so the figures get what is left of 3.
+  const cap = Math.max(1, MAX_LIVE - reserve);
+  const budget = createBudget(cap);
   window.__figWeight = () => budget.used(); // for scripts/check-figures.mjs
   const stats = (window.__figStats = window.__figStats || {});
   const states = [];
@@ -187,7 +190,7 @@ export function initFigures(root, { loaders, env, tracks = null } = {}) {
     };
   }
 
-  const freeSlots = () => MAX_LIVE - budget.used();
+  const freeSlots = () => cap - budget.used();
   const budgetEntries = () => budget.entries().map((e) => ({ ...e, building: !!byId.get(e.id)?.build }));
 
   function tryClaim(s) {
@@ -197,7 +200,7 @@ export function initFigures(root, { loaders, env, tracks = null } = {}) {
       s.pendingClaim = null;
       return p.resolve(false);
     }
-    if (mustWait(budgetEntries(), s.id, MAX_LIVE, p.weight)) return; // retried after an install or release
+    if (mustWait(budgetEntries(), s.id, cap, p.weight)) return; // retried after an install or release
     s.pendingClaim = null;
     for (const id of budget.acquire(s.id, () => distance(s.fig), p.weight)) destroy(byId.get(id));
     p.resolve(true);
@@ -266,7 +269,7 @@ export function initFigures(root, { loaders, env, tracks = null } = {}) {
       s.deferred = true;
       return;
     }
-    if (weightOf(s.kind) > 0 && mustWait(budgetEntries(), s.id, MAX_LIVE, weightOf(s.kind))) {
+    if (weightOf(s.kind) > 0 && mustWait(budgetEntries(), s.id, cap, weightOf(s.kind))) {
       s.waiting = true;
       return;
     }

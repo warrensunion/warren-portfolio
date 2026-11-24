@@ -1,0 +1,205 @@
+/* Beatcut's plate: a phone frame playing the clip, its beat grid and ruler beside it; on the last stage
+   the pipeline, one step lit per beat. Sits over the stage stills (fig-canvas-like, absolutely placed). */
+.bc {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 4%;
+  align-items: center;
+  padding: 4% 5%;
+  background: radial-gradient(120% 90% at 30% 40%, #101c30 0%, #070c16 70%);
+  color: #e8eef6;
+  font-family: var(--mono);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.fig.is-live .bc {
+  opacity: 1;
+}
+
+.bc-clip {
+  display: flex;
+  justify-content: center;
+  height: 100%;
+}
+
+.bc-phone {
+  height: 100%;
+  aspect-ratio: 9 / 16;
+  max-width: 100%;
+  border-radius: 22px;
+  padding: 7px;
+  background: linear-gradient(160deg, #2a3446, #121822);
+  box-shadow: 0 0 0 1px rgba(207, 230, 242, 0.25), 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+
+.bc-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  background: #000;
+  display: block;
+}
+
+.bc-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.bc-k {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: #9fd3e6;
+}
+
+.bc-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+}
+
+.bc-beat {
+  aspect-ratio: 1;
+  border: 1px solid rgba(207, 230, 242, 0.28);
+  background: rgba(207, 230, 242, 0.04);
+  transition: background-color 0.12s ease, transform 0.12s ease;
+}
+
+.bc-beat.is-down {
+  border-color: rgba(207, 230, 242, 0.6);
+}
+
+.bc-beat.is-past {
+  background: rgba(159, 211, 230, 0.22);
+}
+
+.bc-beat.is-now {
+  background: #fff;
+  transform: scale(1.12);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+}
+
+.bc-ruler {
+  position: relative;
+  height: 26px;
+  border-top: 1px solid rgba(207, 230, 242, 0.3);
+  border-bottom: 1px solid rgba(207, 230, 242, 0.15);
+}
+
+.bc-cut {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(207, 230, 242, 0.45);
+}
+
+.bc-cut.is-hit {
+  background: #ffb46b;
+  box-shadow: 0 0 10px rgba(255, 180, 107, 0.8);
+}
+
+.bc-head {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: #fff;
+}
+
+.bc-scene,
+.bc-check {
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: rgba(232, 238, 246, 0.72);
+  text-transform: uppercase;
+}
+
+.bc-steps {
+  display: none;
+}
+
+.bc.is-how {
+  grid-template-columns: 1fr;
+}
+
+.bc.is-how .bc-clip,
+.bc.is-how .bc-side {
+  display: none;
+}
+
+.bc.is-how .bc-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  counter-reset: none;
+}
+
+.bc-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(207, 230, 242, 0.2);
+  background: rgba(207, 230, 242, 0.03);
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(232, 238, 246, 0.75);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.bc-steps li b {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.bc-steps li.is-on {
+  border-color: #9fd3e6;
+  background: rgba(159, 211, 230, 0.1);
+}
+
+.bc-n {
+  color: #9fd3e6;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 859px) {
+  .bc {
+    padding: 3%;
+    gap: 3%;
+  }
+
+  .bc-grid {
+    gap: 3px;
+  }
+
+  .bc-k,
+  .bc-scene,
+  .bc-check {
+    font-size: 9.5px;
+  }
+
+  .bc.is-how .bc-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .bc-steps li {
+    padding: 6px;
+    font-size: 9.5px;
+  }
+
+  .bc-steps li b {
+    font-size: 14px;
+  }
+}

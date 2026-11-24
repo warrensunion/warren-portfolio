@@ -25,14 +25,20 @@ const TRACK_STILLS = [
   ...[0, 1, 2, 3].map((i) => ({ file: `stills/archer-hero-s${i}`, q: `poster=archer&stage=${i}`, still: true })),
   // BTTRURSLF's other stills come from its captures; its Stats stage is DOM, so it is shot here.
   { file: 'stills/bttrurslf-s14', q: 'poster=bttr&stage=14', still: true, size: [1600, 1000] },
+  // Beatcut's four stages: a clip's poster in its phone beside its beat grid, and the pipeline.
+  ...[0, 1, 2, 3].map((i) => ({ file: `stills/beatcut-s${i}`, q: `poster=beatcut&stage=${i}`, still: true, size: [1600, 1000] })),
 ];
+// The world's stills (src/world/): the climb held still at each log's altitude, full screen, for the page
+// without WebGL, under reduced motion and ?static=1 (render.js world()).
+const WORLD_ALTS = [0, 900, 2100, 3400, 4600, 5500, 6100];
+const WORLD = WORLD_ALTS.map((alt, i) => ({ file: `world-${i}`, q: `poster=world&alt=${alt}`, world: true }));
 const KIND_INDEX = (q) => {
   const p = new URLSearchParams(q);
   return [p.get('poster'), Number(p.get('i') || 0)];
 };
 
 const only = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
-const ALL = [...SHOTS, ...TRACK_STILLS];
+const ALL = [...SHOTS, ...TRACK_STILLS, ...WORLD];
 const shots = only.length ? ALL.filter((s) => only.includes(s.file)) : ALL;
 
 build();
@@ -42,8 +48,9 @@ let failed = 0;
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
   const stillContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  const worldContext = await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
   for (const shot of shots) {
-    const page = await (shot.still ? stillContext : context).newPage();
+    const page = await (shot.world ? worldContext : shot.still ? stillContext : context).newPage();
     page.on('console', (m) => {
       if (m.type() === 'warning' || m.type() === 'error') console.log(`  [${shot.file}] ${m.text()}`);
     });
@@ -53,6 +60,16 @@ try {
     if (err) {
       console.log(`FAIL ${shot.file}: ${err}`);
       failed++;
+      await page.close();
+      continue;
+    }
+    if (shot.world) {
+      // a moment for the snow and the knoll's skirt to settle, then the whole viewport
+      await page.waitForTimeout(600);
+      const png = await page.screenshot({ type: 'png' });
+      const out = path.join(root, 'public', 'posters', shot.file + '.webp');
+      await sharp(png).webp({ quality: 72, effort: 6 }).toFile(out);
+      console.log(`ok   ${shot.file}.webp ${((await stat(out)).size / 1024).toFixed(0)} KB`);
       await page.close();
       continue;
     }

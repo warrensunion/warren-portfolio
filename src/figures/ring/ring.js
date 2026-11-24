@@ -29,8 +29,9 @@ const DUST_PER = 40;
 // Paper palette (spec 3) as display (sRGB) values for the ShaderMaterials, which write their colour
 // straight to the screen; the stone's MeshStandardMaterial takes THREE.Colors and converts itself.
 export const SRGB = {
-  ink: [0x17 / 255, 0x19 / 255, 0x1c / 255],
-  accent: [0x1f / 255, 0x5f / 255, 0x78 / 255],
+  // Ascent: ink is frost white and the accent glacier cyan, for the dark plate
+  ink: [0xe8 / 255, 0xee / 255, 0xf6 / 255],
+  accent: [0x9f / 255, 0xd3 / 255, 0xe6 / 255],
   plate: [0xfb / 255, 0xfb / 255, 0xf8 / 255],
 };
 const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);

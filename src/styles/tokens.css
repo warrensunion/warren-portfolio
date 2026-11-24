@@ -35,18 +35,23 @@
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  --paper: #f4f3ee;
-  --plate: #fbfbf8;
-  --ink: #17191c;
-  --ink-2: rgba(23, 25, 28, 0.72);
-  --ink-3: rgba(23, 25, 28, 0.62);
-  --hair: rgba(23, 25, 28, 0.14);
-  --accent: #1f5f78;
-  --ice: #dfe9ee;
+  /* Ascent: a dark, cold page over the climb. Blue hour by default; [data-theme="night"] below. */
+  --bg: #0b1626;
+  --paper: rgba(9, 17, 30, 0.72);
+  --plate: rgba(13, 24, 41, 0.78);
+  --ink: #e8eef6;
+  --ink-2: rgba(232, 238, 246, 0.8);
+  --ink-3: rgba(232, 238, 246, 0.64);
+  --hair: rgba(205, 222, 245, 0.16);
+  --accent: #9fd3e6;
+  --ice: #cfe6f2;
   --deep: #2c5466;
-  --stage: #eef0f1;
+  --stage: #0e1a2b;
+  --warm: #ffb46b;
+  --frost: rgba(220, 236, 255, 0.07);
+  --scrim: rgba(7, 13, 24, 0.7);
 
   --serif: 'Source Serif 4', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
   --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
@@ -74,4 +79,13 @@
     --fs-body: 17px;
     --fs-lede: 18px;
   }
+}
+
+:root[data-theme='night'] {
+  --bg: #05080f;
+  --paper: rgba(4, 8, 16, 0.78);
+  --plate: rgba(7, 12, 22, 0.82);
+  --stage: #070c16;
+  --scrim: rgba(3, 6, 12, 0.72);
+  --accent: #a9e6d6;
 }

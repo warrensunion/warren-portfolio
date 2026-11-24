@@ -36,30 +36,63 @@ export const content = {
       'projects</a> and <a href="#work">websites</a>.',
   ],
 
+  // Log 01: the hero. The page is a climb up a made-up 6,100 m peak (src/world/); its HUD is a live model
+  // of that climb, labelled as one, never a measurement.
   hero: {
-    fig: {
-      kind: 'iceberg',
-      title: 'Ascent',
-      stat: '[TODO: stat]',
-      caption: 'The iceberg from the BTTRURSLF start screen, built from ice blocks. Scroll and the camera sinks below the waterline.',
-      alt: 'An iceberg made of stacked ice blocks floating in still water, seen above and then below the waterline.',
-      poster: 'posters/iceberg.webp',
-      posterUnder: 'posters/iceberg-under.webp',
-      size: [1200, 1200],
-      data: {},
+    log: { n: 1, alt: 0, name: 'Base camp' },
+    hud: {
+      caption:
+        'The climb, modelled live: a made-up 6,100 m peak at blue hour. Altitude follows your scroll, the air ' +
+        'cools 6.5 °C a kilometre, and the igloo gains a block as you climb.',
+      hint: 'Scroll to build it. Drag to look around.',
+      rows: [
+        ['Altitude', 'alt', '0 m'],
+        ['Temperature', 'temp', '−4.0 °C'],
+        ['Wind', 'wind', '12 km/h'],
+        ['Snowfall', 'snow', '1.3 cm/h'],
+        ['Blocks placed', 'blocks', '0 / 214'],
+        ['Visibility', 'vis', '11 km'],
+        ['Seed', 'seed', 'ascent → 0x5e7c1a'],
+      ],
     },
+  },
+
+  // Log 02: every project as a block of ice in the cloud (src/world/field/). Each block links to its
+  // project below; without WebGL it is this list of links.
+  index: {
+    log: { n: 2, alt: 900, name: 'Treeline', line: 'Above the trees the cloud closes in. Everything I have built is frozen in it, one block each.' },
+    title: 'Every project, in ice',
+    lede: 'One block per project. Scroll past them, or click one to open it.',
   },
 
   sections: [
     {
       id: 'building',
       title: 'Building',
+      log: { n: 3, alt: 2100, name: 'Icefall', line: 'Out of the cloud the ice starts to move. This is what I am building now.' },
       entries: [
         {
           id: 'bttrurslf',
           feature: true,
+          symbol: 'bttr',
+          ring: 'summit-flag',
           title: 'BTTRURSLF',
           href: null,
+          pitch: 'A self-improvement game where every day you show up moves you up a mountain.',
+          // The lead row above the track: the iceberg from its start screen, live, and the real numbers.
+          lead: {
+            fig: {
+              kind: 'iceberg',
+              title: 'The iceberg',
+              stat: '[TODO: stat]',
+              caption: 'The iceberg from the BTTRURSLF start screen, built from ice blocks. Scroll and the camera sinks below the waterline.',
+              alt: 'An iceberg made of stacked ice blocks floating in still water, seen above and then below the waterline.',
+              poster: 'posters/iceberg.webp',
+              posterUnder: 'posters/iceberg-under.webp',
+              size: [1200, 1200],
+              data: {},
+            },
+          },
           role: '[TODO: role]',
           dates: '[TODO: dates]',
           body: [
@@ -98,14 +131,47 @@ export const content = {
             ],
           }),
         },
+        {
+          id: 'beatcut',
+          symbol: 'clapper',
+          title: 'Beatcut',
+          href: null,
+          role: '[TODO: role]',
+          dates: '[TODO: dates]',
+          body: [
+            'Beatcut turns an audio clip, an optional reference video, a description and one of five styles into a ' +
+              'vertical short cut on the beat. A Python worker finds the beats, downbeats, sections and drops with ' +
+              'librosa; given a reference, PySceneDetect finds its cuts and Claude reads twelve of its frames into a ' +
+              'style profile.',
+            'Claude then plans the scenes through one tool call, in beats. Code snaps them to the beat grid, checks ' +
+              'them with Zod and renders them in Remotion from hand-written templates: kinetic type, stick figures, ' +
+              'icons, counters and chat bubbles. A self-check measures where every cut lands against the beat.',
+          ],
+          tags: ['TypeScript', 'Next.js', 'React', 'Remotion', 'Claude API', 'Zod', 'Python', 'FastAPI', 'librosa', 'PySceneDetect'],
+          fig: trackFig('beatcut', 'beatcut', {
+            title: 'Cut on every beat',
+            caption: 'Beatcut’s own renders of three of its styles, muted here. The grid under each clip lights its beats and its cuts as it plays.',
+            alt: 'Three vertical motion-graphics clips made by Beatcut: stick figures on a spotlit track, line icons and counters, and glitch text, each beside a grid of its beats.',
+            size: [1600, 1000],
+            stages: [
+              ['Spotlight stage', 'Stick figures run on a spotlit track under kinetic type, each cut on a beat.'],
+              ['Line explainer', 'Line icons pop in, a dial and a counter tick up, one change per beat.'],
+              ['Glitch popup', 'Glitch text and error popups flash on the beat.'],
+              ['How it works', 'The pipeline: audio analysis, an optional reference, Claude’s plan in beats, Remotion, and the self-check.'],
+            ],
+          }),
+        },
       ],
     },
     {
       id: 'projects',
       title: 'Projects',
+      log: { n: 4, alt: 3400, name: 'The ridge', line: 'A long ridge of smaller climbs: machine learning, simulation and games, one at a time.' },
       entries: [
         {
           id: 'drift',
+          symbol: 'bottle',
+          ring: 'drift-bottle',
           title: 'Drift',
           href: 'https://warrensunion.github.io/drift/',
           links: [
@@ -139,6 +205,8 @@ export const content = {
         },
         {
           id: 'stress-test',
+          symbol: 'rack',
+          ring: 'stress-gauge',
           title: 'Stress Test',
           href: 'https://warrensunion.github.io/stress-test/',
           links: [
@@ -172,6 +240,8 @@ export const content = {
         },
         {
           id: 'raingarden',
+          symbol: 'drop',
+          ring: 'raingarden-plant',
           title: 'Raingarden',
           href: 'https://warrensunion.github.io/raingarden/',
           links: [
@@ -206,6 +276,8 @@ export const content = {
         },
         {
           id: 'ghostline',
+          symbol: 'bow',
+          ring: 'ghostline-ghost',
           title: 'Ghostline',
           href: 'https://warrensunion.github.io/ghostline/',
           links: [
@@ -238,6 +310,8 @@ export const content = {
         },
         {
           id: 'terrarium',
+          symbol: 'jar',
+          ring: 'terrarium-jar',
           title: 'Terrarium',
           href: null,
           links: [{ label: 'Code', href: 'https://github.com/warrensunion/terrarium' }],
@@ -260,6 +334,8 @@ export const content = {
         },
         {
           id: 'howpolluted',
+          symbol: 'globe',
+          ring: 'howpolluted-globe',
           compact: true,
           title: 'HowPolluted',
           href: null,
@@ -282,6 +358,8 @@ export const content = {
         },
         {
           id: 'archer-hero',
+          symbol: 'target',
+          ring: 'archer-bow',
           compact: true,
           title: 'Archer Hero',
           href: null,
@@ -306,14 +384,41 @@ export const content = {
             stages: [['Valley'], ['Auto-aim'], ['Boss'], ['Your turn']],
           }),
         },
+        {
+          id: 'waterloodle',
+          compact: true,
+          symbol: 'goose',
+          title: 'WATERLOODLE',
+          href: null,
+          role: 'Questions and round flow, team of six',
+          dates: 'Fall 2026, in progress',
+          body: [
+            'A team project for SE 101 at the University of Waterloo, built by six students and still in progress. ' +
+              'It is two campus games in Flask: drag a campus object to scale beside a 1.8 m person, and a trivia ' +
+              'round where rarer right answers score more, with accounts, a leaderboard and a practice mode.',
+            'My part so far: the size game’s five Waterloo questions with their sources and SVG art, the trivia ' +
+              'game’s Flask routes, templates and front end, and a redesign of the layout, navigation and home ' +
+              'page that is waiting to be merged.',
+          ],
+          tags: ['Python', 'Flask', 'MySQL', 'Jinja', 'JavaScript', 'SVG', 'pytest', 'GitLab'],
+          fig: trackFig('waterloodle', 'waterloodle', {
+            title: 'WATERLOODLE',
+            caption: 'The home page from my redesign, waiting to be merged. The code is on the university’s GitLab, so there is no public link.',
+            alt: 'The WATERLOODLE home page: a cream page with a goose mascot, the two games and the navigation.',
+            stages: [['Home']],
+          }),
+        },
       ],
     },
     {
       id: 'work',
       title: 'Work',
+      log: { n: 5, alt: 4600, name: 'Crevasse field', line: 'Work for a real client, where the cracks have to be found before a customer does.' },
       entries: [
         {
           id: 'bcwc',
+          symbol: 'window',
+          ring: 'window-blind',
           title: 'BC Window Coverings',
           href: null,
           role: '[TODO: role]',
@@ -347,7 +452,8 @@ export const content = {
     },
     {
       id: 'contests',
-      title: 'Contests and awards',
+      title: 'Record',
+      log: { n: 6, alt: 5500, name: 'High camp', line: 'Thin air. Contests, awards and the tools I reach for.' },
       lede: 'Each dot is one contest, placed by how far up the field I finished.',
       entries: [],
       fig: {
@@ -360,7 +466,21 @@ export const content = {
         data: {},
       },
     },
-    { id: 'contact', title: 'Get in touch', entries: [] },
+    {
+      id: 'contact',
+      title: 'Get in touch',
+      log: { n: 7, alt: 6100, name: 'Summit', line: 'The last block is in and the igloo is sealed. Come in out of the cold.' },
+      entries: [],
+    },
+  ],
+
+  // High camp's toolkit: only tools the projects on this page use (their tags), grouped.
+  toolkit: [
+    ['Languages', ['JavaScript', 'TypeScript', 'Python', 'Lua']],
+    ['Graphics', ['three.js', 'WebGPU', 'React Three Fiber', 'Canvas 2D', 'SVG', 'Remotion']],
+    ['Machine learning', ['PyTorch', 'TensorFlow.js', 'ONNX Runtime Web', 'Depth Anything V2', 'NEAT', 'librosa', 'MediaPipe']],
+    ['Web and servers', ['React', 'Next.js', 'Vite', 'Node.js', 'Flask', 'FastAPI', 'Supabase', 'Stripe', 'MySQL']],
+    ['Testing', ['Playwright', 'Vitest', 'pytest']],
   ],
 
   contests: [

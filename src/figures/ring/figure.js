@@ -20,7 +20,8 @@ import { nextTask, warmDraws } from '../warm.js';
 
 const FOV = 35;
 const TAN = Math.tan(((FOV / 2) * Math.PI) / 180);
-const PLATE = '#fbfbf8';
+// Ascent: the plate is the night page's, so the ring stands on the dark like the hub's did on its fog.
+const PLATE = '#0e1a2b';
 const ENV_TINT = '#e4e6e9'; // the room the stone reflects, a light grey toward the plate
 const POINTS = { high: 48000, low: 20000 };
 // Dot diameter in css px: the hub's dots were ~0.75% of its figure's height; at this stage's size that

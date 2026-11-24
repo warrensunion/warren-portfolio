@@ -1,0 +1,750 @@
+/* Ascent: the climb's layer over the original layout. The world sits fixed behind everything; the page
+   reads on a scrim down its text column; sections are numbered logs; plates are frosted ice glass. */
+
+html {
+  background: var(--bg);
+}
+
+body {
+  background: transparent;
+  color: var(--ink);
+  position: relative;
+}
+
+/* ---- the world: stills (no WebGL), the canvas, the scrim ---- */
+
+.world {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.world-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.world-still.is-on {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-still {
+    transition: none;
+  }
+}
+
+.world-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.world.is-live .world-canvas {
+  opacity: 1;
+}
+
+/* The scrim keeps the text column readable over bright snow: dark on the left (where the text is),
+   clear on the right (where the igloo and the plates are). Phones get an even veil. */
+.world-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--scrim) 0%, color-mix(in srgb, var(--scrim) 80%, transparent) 34%, transparent 62%),
+    linear-gradient(180deg, rgba(5, 10, 18, 0.35) 0%, transparent 18%, transparent 80%, rgba(5, 10, 18, 0.45) 100%);
+}
+
+@media (max-width: 859px) {
+  .world-scrim {
+    background: linear-gradient(180deg, rgba(5, 10, 18, 0.5) 0%, rgba(5, 10, 18, 0.62) 100%);
+  }
+}
+
+main,
+.foot {
+  position: relative;
+  z-index: 1;
+}
+
+html.is-dragging,
+html.is-dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/* ---- the bar: frosted, with the live readout ---- */
+
+.bar {
+  background: var(--paper);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  backdrop-filter: blur(14px) saturate(1.15);
+  border-bottom: 1px solid var(--hair);
+}
+
+.bar.is-scrolled {
+  border-bottom-color: var(--hair);
+}
+
+.bar-id {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  min-width: 0;
+}
+
+.bar-read {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1023px) {
+  .bar-read {
+    display: none;
+  }
+}
+
+.bar-name {
+  color: var(--ink);
+}
+
+.bar-links a {
+  color: var(--ink-2);
+}
+
+.email-btn {
+  color: var(--ink);
+  border-color: var(--hair);
+}
+
+.email-btn:hover {
+  background: rgba(220, 236, 255, 0.08);
+  border-color: rgba(220, 236, 255, 0.35);
+}
+
+/* ---- log marks and lines ---- */
+
+.log-mark {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.log-of {
+  color: var(--ink-3);
+}
+
+.log-alt::before,
+.log-name::before {
+  content: '\00b7';
+  margin-right: 14px;
+  color: var(--ink-3);
+}
+
+.log-line {
+  padding: 18svh 0 12svh;
+  max-width: 34em;
+}
+
+.log-say {
+  margin-top: 18px;
+  font-size: clamp(24px, 2.4vw, 34px);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.section {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.section h2.log-h {
+  font-size: clamp(40px, 4.6vw, 64px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+/* ---- the hero: base camp ---- */
+
+.hero {
+  display: block;
+  min-height: 100svh;
+  padding-top: 13svh;
+  padding-bottom: 14svh;
+}
+
+.hero-text {
+  max-width: 560px;
+  padding-top: 0;
+}
+
+.hero .log-mark {
+  margin-bottom: 28px;
+}
+
+.hero h1 {
+  font-size: clamp(64px, 9vw, 128px);
+  margin-bottom: 28px;
+  text-shadow: 0 2px 30px rgba(4, 8, 16, 0.45);
+}
+
+.lede {
+  color: var(--ink-2);
+}
+
+.lede a {
+  color: var(--ink);
+}
+
+/* The HUD: yuzeli's figure caption and stat table, in mono, live (src/world/boot.js). */
+.hud {
+  margin-top: 44px;
+  max-width: 440px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.hud-cap {
+  color: var(--ink-3);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.hud-n {
+  color: var(--ink);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.hud-grid {
+  margin: 16px 0 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.hud-row dt {
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11.5px;
+}
+
+.hud-row dd {
+  margin: 0;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.hud-hint {
+  margin-top: 14px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+/* ---- log 02: the ice field ---- */
+
+.section--index {
+  position: relative;
+}
+
+.ice-head {
+  max-width: 34em;
+}
+
+.ice-head .lede {
+  margin-top: 12px;
+}
+
+.ice-list {
+  margin-top: 40px;
+  counter-reset: ice;
+  max-width: 560px;
+  border-top: 1px solid var(--hair);
+}
+
+.ice-list li {
+  border-bottom: 1px solid var(--hair);
+}
+
+.ice-link {
+  display: grid;
+  grid-template-columns: 104px 1fr;
+  gap: 2px 16px;
+  padding: 12px 0;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.ice-code {
+  grid-row: span 2;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  padding-top: 4px;
+}
+
+.ice-name {
+  font-size: var(--fs-h3);
+  font-weight: 600;
+}
+
+.ice-what {
+  color: var(--ink-3);
+  font-size: 15px;
+}
+
+.ice-link:hover .ice-name,
+.ice-link:focus-visible .ice-name {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+/* With the world live, the field takes one 90svh pitch per block; the list stays the keyboard path,
+   visually tucked under the stage's labels (src/world/field/). */
+.ice-stage {
+  display: none;
+}
+
+/* ---- BTTRURSLF's lead row ---- */
+
+.lead {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  column-gap: var(--col-gap);
+  align-items: center;
+  padding: 40px 0 24px;
+}
+
+.lead-kicker {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.lead-pitch {
+  margin-top: 14px;
+  font-size: clamp(24px, 2.3vw, 32px);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.lead-stats {
+  margin: 28px 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  border-top: 1px solid var(--hair);
+  padding-top: 16px;
+}
+
+.lead-stats dt {
+  font-family: var(--mono);
+  font-size: clamp(26px, 2.6vw, 38px);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.lead-stats dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+
+.lead-note {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+/* ---- text over the scene ---- */
+
+.entry-text p,
+.track-text p,
+.touch-side {
+  color: var(--ink-2);
+}
+
+.entry h3 a,
+.track h3 a {
+  color: var(--ink);
+}
+
+.entry-text .meta,
+.track-text .meta,
+.entry-text .tags,
+.track-text .tags {
+  color: var(--ink-3);
+}
+
+.project-links a {
+  color: var(--accent);
+}
+
+h3.sub {
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.entry--contests .entry-text > h3.sub + p {
+  margin-top: 8px;
+}
+
+.kit {
+  margin: 12px 0 0;
+  border-top: 1px solid var(--hair);
+}
+
+.kit-row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 4px 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.kit-row dt {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-top: 3px;
+}
+
+.kit-row dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.contest-name {
+  color: var(--ink);
+}
+
+.touch-projects a {
+  color: var(--ink);
+}
+
+.touch-projects a:hover,
+.touch-projects a:focus-visible {
+  color: var(--accent);
+}
+
+.foot {
+  background: var(--paper);
+  border-top: 1px solid var(--hair);
+}
+
+.foot-in {
+  color: var(--ink-3);
+}
+
+.foot-links a {
+  color: var(--ink-2);
+}
+
+::selection {
+  background: rgba(159, 211, 230, 0.35);
+  color: #fff;
+}
+
+:focus-visible {
+  outline-color: var(--accent);
+}
+
+.skip {
+  background: var(--stage);
+  color: var(--ink);
+}
+
+/* Phone and narrow tablet */
+@media (max-width: 859px) {
+  .hero {
+    min-height: 0;
+    padding-top: 40px;
+    padding-bottom: 72px;
+  }
+
+  .lead {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 32px;
+  }
+
+  .log-line {
+    padding: 72px 0 40px;
+  }
+
+  .ice-link {
+    grid-template-columns: 1fr;
+  }
+
+  .ice-code {
+    grid-row: auto;
+  }
+
+  .kit-row {
+    grid-template-columns: 1fr;
+  }
+
+  .lead-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+/* The world's poster mode (scripts/posters.mjs): only the scene. */
+html.poster-world .bar,
+html.poster-world main,
+html.poster-world .foot,
+html.poster-world .skip,
+html.poster-world .world-scrim {
+  display: none !important;
+}
+
+/* ---- log 02 with the world live: the blocks float up through the cloud ---- */
+
+html.world-live .section--index {
+  min-height: calc((var(--blocks) + 0.7) * 90svh);
+}
+
+html.world-live .ice-pin {
+  position: sticky;
+  top: calc(var(--bar-h) + 40px);
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+/* The project links become the hub's side index: a square per block, filled for the one in view. */
+html.world-live .ice-list {
+  margin: 0;
+  border: 0;
+  max-width: 240px;
+  pointer-events: auto;
+  padding-left: 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+html.world-live .ice-list li {
+  border: 0;
+}
+
+html.world-live .ice-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 1px rgba(22, 26, 36, 0.95), 0 0 8px rgba(22, 26, 36, 0.5);
+}
+
+html.world-live .ice-link::before {
+  content: '';
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 4px rgba(22, 26, 36, 0.6);
+}
+
+html.world-live .ice-link.is-here::before {
+  background: #fff;
+}
+
+html.world-live .ice-code {
+  display: none;
+}
+
+html.world-live .ice-name {
+  font-size: inherit;
+  font-weight: 500;
+}
+
+html.world-live .ice-what {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+html.world-live .ice-stage {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  --ice-label: clamp(13px, 1.18vw, 17px);
+  --ice-read: clamp(11px, 0.97vw, 14px);
+}
+
+html.ice-hover main {
+  cursor: pointer;
+}
+
+.ice-lines {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.ice-g {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.ice-g.is-on {
+  opacity: 1;
+}
+
+.ice-ln {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.78);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.ice-dot {
+  fill: #fff;
+}
+
+.ice-block {
+  position: absolute;
+  inset: 0 auto auto 0;
+  display: none;
+}
+
+.ice-block.is-on {
+  display: block;
+}
+
+.ice-label,
+.ice-read,
+.ice-enter {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: pre;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.3), 0 0 12px rgba(34, 39, 52, 0.45), 0 0 2px rgba(34, 39, 52, 0.5);
+  font-variant-numeric: tabular-nums;
+  will-change: transform;
+}
+
+.ice-label {
+  font-size: var(--ice-label);
+  line-height: 1.2;
+}
+
+.ice-read,
+.ice-enter {
+  font-size: var(--ice-read);
+  line-height: 1.35;
+}
+
+.ice-enter {
+  align-items: flex-end;
+  padding: 0 0 14px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.ice-enter.is-hot,
+.ice-enter:hover {
+  color: var(--accent);
+}
+
+.ice-label span,
+.ice-read span,
+.ice-enter span {
+  display: block;
+  min-height: 1.2em;
+}
+
+.ice-label i,
+.ice-read i,
+.ice-enter i {
+  font-style: normal;
+}
+
+.ice-label i.is-b,
+.ice-read i.is-b,
+.ice-enter i.is-b {
+  background: #fff;
+  color: #fff;
+}
+
+.ice-label i.is-i,
+.ice-read i.is-i,
+.ice-enter i.is-i {
+  background: #fff;
+  color: #2a2f3c;
+  text-shadow: none;
+}
+
+@media (max-width: 859px) {
+  html.world-live .ice-pin {
+    top: calc(var(--bar-h) + 12px);
+  }
+
+  html.world-live .ice-list {
+    max-width: 150px;
+    padding-left: 10px;
+  }
+
+  html.world-live .ice-link {
+    font-size: 10px;
+    gap: 8px;
+    padding: 3px 0;
+  }
+}

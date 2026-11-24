@@ -1,16 +1,22 @@
 // Turns src/content.js into the page's static HTML at dev and build time, so the page reads
 // fully without JavaScript and the figure host only upgrades markup that is already there.
 // Pure string functions with no DOM, so Node tests and the Vite plugin can both call them.
+//
+// The page is a climb (the Ascent redesign): every section is a numbered log with an altitude
+// (data-alt), which the world (src/world/) reads to move its camera, and which the page shows as a log
+// line. Behind it all sits the world's backdrop: a still per log for the page without WebGL.
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
 import { contestsLabel } from './figures/contests/figure.js';
 
-
 const ext = (href) => /^https?:/.test(href);
 const link = (href, text, attrs = '') =>
   `<a href="${esc(href)}"${attrs}${ext(href) ? ' rel="me noopener"' : ''}>${esc(text)}</a>`;
+const pad2 = (n) => String(n).padStart(2, '0');
+const metres = (m) => `${Number(m).toLocaleString('en-US')} m`;
+const strip = (html) => String(html).replace(/<[^>]+>/g, '').replace(/&rsquo;/g, '’').replace(/&amp;/g, '&').replace(/&[a-z]+;/g, ' ');
 
 function linkList(links, cls) {
   return (
@@ -22,8 +28,13 @@ function linkList(links, cls) {
   );
 }
 
+// A log's marker line: LOG 03 · 2,100 m · Icefall, in the mono voice.
+const logMark = (log, total) =>
+  `<p class="log-mark"><span class="log-n">LOG ${pad2(log.n)}<span class="log-of"> / ${pad2(total)}</span></span>` +
+  `<span class="log-alt">${esc(metres(log.alt))}</span><span class="log-name">${esc(log.name)}</span></p>`;
+
 // Figures are numbered in document order; the counter is threaded through one render call.
-function figure(fig, n, { hero = false } = {}) {
+function figure(fig, n, { eager = false } = {}) {
   const [w, h] = fig.size || [1200, 900];
   // Single-quoted attribute: only & and ' need escaping, so the JSON stays readable in the source.
   const json = JSON.stringify(fig.data || {}).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
@@ -42,16 +53,30 @@ function figure(fig, n, { hero = false } = {}) {
     `<span class="fig-readout" aria-hidden="true"></span></div>` +
     `<div class="fig-stage" role="img" aria-label="${esc(fig.alt || fig.title)}">` +
     `<img class="fig-poster" src="${esc(fig.poster)}" alt="" width="${w}" height="${h}" ` +
-    `loading="${hero ? 'eager' : 'lazy'}"${hero ? ' fetchpriority="high"' : ''} decoding="async"></div>` +
+    `loading="${eager ? 'eager' : 'lazy'}"${eager ? ' fetchpriority="high"' : ''} decoding="async"></div>` +
     `<figcaption><strong>${esc(fig.stat)}</strong> <em>${esc(fig.caption)}</em>` +
     `</figcaption></figure>`
   );
 }
 
+// The world's backdrop: a still of the climb for each log (the page without WebGL, reduced motion,
+// ?static=1), under a scrim that keeps the text column readable. The canvas joins it once the world runs.
+function world(logs) {
+  const stills = logs
+    .map(
+      (l, i) =>
+        `<img class="world-still${i === 0 ? ' is-on' : ''}" data-log="${i}" src="posters/world-${i}.webp" alt="" ` +
+        `width="1600" height="1000" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async"${i === 0 ? ' fetchpriority="high"' : ''}>`,
+    )
+    .join('');
+  return `<div class="world" aria-hidden="true">${stills}<div class="world-scrim"></div></div>`;
+}
+
 function header(c) {
   return (
     `<header class="bar"><div class="bar-in">` +
-    `<a class="bar-name" href="#top" translate="no">${esc(c.name)}</a>` +
+    `<p class="bar-id"><a class="bar-name" href="#top" translate="no">${esc(c.name)}</a>` +
+    `<span class="bar-read" data-hud="bar" aria-hidden="true">LOG 01 · 0 m · −4.0 °C</span></p>` +
     `<nav class="bar-nav" aria-label="Links">${linkList(c.links, 'bar-links')}` +
     `<button type="button" class="email-btn" data-copy-email translate="no"><span data-email>${esc(c.email)}</span></button>` +
     `<span class="copy-status" data-copy-status role="status" aria-live="polite"></span>` +
@@ -59,12 +84,55 @@ function header(c) {
   );
 }
 
-function hero(c, next) {
+function hud(h) {
+  const rows = h.rows
+    .map(([label, key, v]) => `<div class="hud-row"><dt>${esc(label)}</dt><dd data-hud="${esc(key)}">${esc(v)}</dd></div>`)
+    .join('');
   return (
-    `<div class="hero" id="top"><div class="hero-text">` +
+    `<div class="hud" role="group" aria-label="The climb, modelled">` +
+    `<p class="hud-cap"><span class="hud-n">Fig. 0</span> ${esc(h.caption)}</p>` +
+    `<dl class="hud-grid">${rows}</dl>` +
+    `<p class="hud-hint">${esc(h.hint)}</p></div>`
+  );
+}
+
+function hero(c, total) {
+  return (
+    `<div class="hero log" id="top" data-alt="${c.hero.log.alt}"><div class="hero-text">` +
+    logMark(c.hero.log, total) +
     `<h1 translate="no">${esc(c.name)}</h1>` +
     c.bio.map((p) => `<p class="lede">${p}</p>`).join('') +
-    `</div><div class="hero-fig">${figure(c.hero.fig, next(), { hero: true })}</div></div>`
+    hud(c.hero.hud) +
+    `</div></div>`
+  );
+}
+
+// The line that opens a log: its marker and one sentence, in the big quiet voice of yuzeli's logs.
+const logLine = (log, total) =>
+  `<div class="log-line">${logMark(log, total)}${log.line ? `<p class="log-say">${esc(log.line)}</p>` : ''}</div>`;
+
+// Log 02: every project as a block of ice. Without WebGL (or JS) it is this ordered list of links; with
+// it, the list stays the keyboard path and the blocks float up through the sticky stage beside it.
+function index(c, total) {
+  const all = c.sections.flatMap((s) => s.entries || []);
+  const items = all
+    .map((e, i) => {
+      const first = strip(e.pitch || e.body[0]).split(/(?<=\.)\s/)[0];
+      return (
+        `<li><a class="ice-link" href="#${esc(e.id)}" data-block="${i}" data-symbol="${esc(e.symbol || '')}" ` +
+        `data-meta="${esc(e.tags.slice(0, 2).join(' / '))}" data-date="${esc(/TODO/.test(e.dates) ? '' : e.dates)}">` +
+        `<span class="ice-code" aria-hidden="true">PROJECT_${pad2(i + 1)}</span>` +
+        `<span class="ice-name">${esc(e.title)}</span><span class="ice-what">${esc(first)}</span></a></li>`
+      );
+    })
+    .join('');
+  return (
+    `<section class="section section--index log" id="index" data-alt="${c.index.log.alt}" aria-labelledby="index-h" style="--blocks:${all.length}">` +
+    logLine(c.index.log, total) +
+    `<div class="ice-head"><h2 id="index-h" class="log-h">${esc(c.index.title)}</h2><p class="lede">${esc(c.index.lede)}</p></div>` +
+    `<div class="ice-pin"><ol class="ice-list">${items}</ol>` +
+    `<div class="ice-stage" aria-hidden="true"></div></div>` +
+    `</section>`
   );
 }
 
@@ -168,9 +236,31 @@ function card(e, next) {
   );
 }
 
-function track(e, next) {
+// BTTRURSLF's lead row, yuzeli's lead work entry: the pitch, the real numbers (src/data/bttr-stats.json,
+// a visible TODO for any that could not be measured) and the live iceberg from its start screen.
+function lead(e, next, stats) {
+  const fmt = (n) => (Number.isFinite(n) && n > 0 ? Number(n).toLocaleString('en-US') : null);
+  const nums = [
+    [fmt(stats?.routes), 'screens you can open', 'screen count'],
+    [fmt(stats?.apiRoutes), 'server routes', 'server route count'],
+    [fmt(stats?.tests), 'automated tests', 'test count'],
+  ];
+  return (
+    `<div class="lead"><div class="lead-text">` +
+    `<p class="lead-kicker">PROJECT_01 · The one I am building</p>` +
+    `<p class="lead-pitch">${esc(e.pitch)}</p>` +
+    `<dl class="lead-stats">` +
+    nums.map(([n, what, todo]) => `<div><dt>${esc(n || `[TODO: ${todo}]`)}</dt><dd>${esc(what)}</dd></div>`).join('') +
+    `</dl>` +
+    (stats?.measuredAt ? `<p class="lead-note">Counted from its repository on ${esc(stats.measuredAt)}.</p>` : '') +
+    `</div><div class="lead-fig">${figure(e.lead.fig, next())}</div></div>`
+  );
+}
+
+function track(e, next, stats) {
   const title = e.href ? link(e.href, e.title) : esc(e.title);
   return (
+    (e.lead ? lead(e, next, stats) : '') +
     `<article class="track${e.feature ? ' track--feature' : ''}" id="${esc(e.id)}" data-track style="--stages:${e.fig.stages.length}">` +
     `<div class="track-text"><h3>${title}</h3>` +
     `<p class="meta"><span>${esc(e.role)}</span><span>${esc(e.dates)}</span></p>` +
@@ -189,20 +279,35 @@ function contests(c, s, next) {
         `<span class="contest-meta">${esc(r.year)}, ${esc(r.result)}</span></li>`,
     )
     .join('');
+  // Only tools the projects on the page actually carry in their tags.
+  const used = new Set(c.sections.flatMap((x) => (x.entries || []).flatMap((e) => e.tags)));
+  const kit = (c.toolkit || [])
+    .map(([group, tools]) => [group, tools.filter((t) => used.has(t))])
+    .filter(([, tools]) => tools.length)
+    .map(([group, tools]) => `<div class="kit-row"><dt>${esc(group)}</dt><dd translate="no">${esc(tools.join(', '))}</dd></div>`)
+    .join('');
   return (
     `<div class="entry entry--contests"><div class="entry-text">` +
+    `<h3 class="sub">Contests and awards</h3>` +
     (s.lede ? `<p>${esc(s.lede)}</p>` : '') +
     `<ol class="contest-list">${rows}</ol>` +
+    (kit ? `<h3 class="sub">Toolkit</h3><dl class="kit">${kit}</dl>` : '') +
     `</div><div class="entry-fig">${figure({ ...s.fig, alt: contestsLabel(c.contests) }, next())}</div></div>`
   );
 }
 
 function touch(c, s, next) {
+  // Each project that has a ring object morphs the particles into it (data-morph = its object's index).
+  const objects = c.touch.fig.data.objects.map((o) => o.slug);
   const projects = c.sections
-    .flatMap((sec) => (sec.entries || []).map((e) => ({ id: e.id || sec.id, title: e.title })))
-    .map((p, i) => `<li><a href="#${esc(p.id)}" data-morph="${i}">${esc(p.title)}</a></li>`)
+    .flatMap((sec) => (sec.entries || []).map((e) => ({ id: e.id || sec.id, title: e.title, ring: e.ring })))
+    .map((p) => {
+      const k = p.ring ? objects.indexOf(p.ring) : -1;
+      return `<li><a href="#${esc(p.id)}"${k >= 0 ? ` data-morph="${k}"` : ''}>${esc(p.title)}</a></li>`;
+    })
     .join('');
   return (
+    `<div class="touch-fig">${figure(c.touch.fig, next())}</div>` +
     `<div class="touch"><div class="touch-text">` +
     `<p class="lede">${c.touch.line}</p>` +
     `<p class="touch-email"><button type="button" class="email-btn email-btn--big" data-copy-email translate="no"><span data-email>${esc(c.email)}</span></button>` +
@@ -210,18 +315,20 @@ function touch(c, s, next) {
     `<p class="hint">${esc(c.touch.hint)}</p>` +
     linkList(c.links, 'inline-links') +
     `</div><div class="touch-side"><p>${esc(c.touch.projectsLine)}</p>` +
-    `<ul class="touch-projects">${projects}</ul></div></div>` +
-    `<div class="touch-fig">${figure(c.touch.fig, next())}</div>`
+    `<ul class="touch-projects">${projects}</ul></div></div>`
   );
 }
 
-function section(c, s, next) {
+function section(c, s, next, total, stats) {
   let inner;
   if (s.id === 'contests') inner = contests(c, s, next);
   else if (s.id === 'contact') inner = touch(c, s, next);
-  else inner = s.entries.map((e) => (e.compact ? card(e, next) : e.fig && e.fig.stages ? track(e, next) : entry(e, next))).join('');
-  return `<section class="section" id="${esc(s.id)}" aria-labelledby="${esc(s.id)}-h">` +
-    `<h2 id="${esc(s.id)}-h">${esc(s.title)}</h2>${inner}</section>`;
+  else inner = s.entries.map((e) => (e.compact ? card(e, next) : e.fig && e.fig.stages ? track(e, next, stats) : entry(e, next))).join('');
+  return (
+    `<section class="section log" id="${esc(s.id)}"${s.log ? ` data-alt="${s.log.alt}"` : ''} aria-labelledby="${esc(s.id)}-h">` +
+    (s.log ? logLine(s.log, total) : '') +
+    `<h2 id="${esc(s.id)}-h" class="log-h">${esc(s.title)}</h2>${inner}</section>`
+  );
 }
 
 function footer(c, updated) {
@@ -234,15 +341,19 @@ function footer(c, updated) {
   );
 }
 
-export function renderPage(content, { updated = new Date() } = {}) {
+export function renderPage(content, { updated = new Date(), stats = null } = {}) {
   let n = 0;
   const next = () => ++n;
+  const logs = [content.hero.log, content.index.log, ...content.sections.filter((s) => s.log).map((s) => s.log)];
+  const total = logs.length;
   return (
     `<a class="skip" href="#main">Skip to content</a>` +
+    world(logs) +
     header(content) +
     `<main id="main">` +
-    hero(content, next) +
-    content.sections.map((s) => section(content, s, next)).join('') +
+    hero(content, total) +
+    index(content, total) +
+    content.sections.map((s) => section(content, s, next, total, stats)).join('') +
     `</main>` +
     footer(content, updated)
   );

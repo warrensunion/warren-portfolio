@@ -157,7 +157,8 @@ const PART_VERT = /* glsl */ `
     float obj = mix(of, ot, e);
     float lit = clamp(tone * (mix(0.32, 0.14, obj) + mix(0.6, 0.8, obj) * diff + top), 0.0, 1.15) * mix(0.8, 1.0, obj);
     // Paper: slate to a capped light end, so even the lightest dots stay darker than the plate.
-    vec3 rest = mix(vec3(0.14, 0.155, 0.195), vec3(0.55, 0.58, 0.62), clamp(lit, 0.0, 1.0));
+    // Ascent: on the dark plate the dots are frost, from a cold slate to near white.
+    vec3 rest = mix(vec3(0.32, 0.37, 0.46), vec3(0.92, 0.95, 1.0), clamp(lit, 0.0, 1.0));
     vec3 glow = mix(uAccent, uCloudCol, cloud);
     float h = max(clamp(heat, 0.0, 1.0), cloud);
     vColor = mix(mix(rest, glow, h), uAccent, lift * 0.85);

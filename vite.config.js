@@ -2,8 +2,18 @@
 // renders src/content.js into index.html's <!--content--> slot. In dev it loads content through
 // Vite's SSR loader so edits to content.js or render.js reload the page instead of needing a restart.
 import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
 
-const SOURCES = ['/src/content.js', '/src/render.js'];
+// BTTRURSLF's measured numbers for its lead row (written by scripts/bttr-stats.mjs; absent is fine).
+const readStats = () => {
+  try {
+    return JSON.parse(readFileSync(new URL('./src/data/bttr-stats.json', import.meta.url), 'utf8'));
+  } catch {
+    return null;
+  }
+};
+
+const SOURCES = ['/src/content.js', '/src/render.js', '/src/data/bttr-stats.json'];
 
 function contentPlugin() {
   let server = null;
@@ -21,7 +31,7 @@ function contentPlugin() {
         ({ content } = await import('./src/content.js'));
         ({ renderPage } = await import('./src/render.js'));
       }
-      const rendered = renderPage(content, { updated: new Date() });
+      const rendered = renderPage(content, { updated: new Date(), stats: readStats() });
       // Function replacer: a string replacement would expand $-patterns that appear in the copy.
       return html.replace('<!--content-->', () => rendered);
     },

@@ -1,0 +1,551 @@
+/* The chrome over the climb: bar tools, the altimeter, the palette, and the snow effects (src/chrome/). */
+
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- bar tools ---- */
+.bar-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 6px;
+}
+
+.bar-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--hair);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.bar-tool:hover {
+  color: var(--ink);
+  border-color: rgba(220, 236, 255, 0.35);
+}
+
+.bar-sound-bar {
+  width: 26px;
+  height: 1px;
+  background: rgba(220, 236, 255, 0.25);
+  position: relative;
+}
+
+.bar-sound-bar i {
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  transform-origin: left;
+  transform: scaleX(0.15);
+}
+
+@media (max-width: 1179px) {
+  .bar-sound-bar {
+    display: none;
+  }
+}
+
+@media (max-width: 859px) {
+  .bar-k,
+  .bar-sound {
+    display: none;
+  }
+
+  .bar-tools {
+    margin-right: 0;
+  }
+}
+
+/* ---- the altimeter ---- */
+html.has-alti {
+  scrollbar-width: none;
+}
+
+html.has-alti::-webkit-scrollbar {
+  display: none;
+}
+
+.alti {
+  position: fixed;
+  right: 14px;
+  top: calc(var(--bar-h) + 28px);
+  bottom: 28px;
+  width: 62px;
+  z-index: 9;
+  pointer-events: none;
+  font-family: var(--mono);
+}
+
+.alti-track {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  pointer-events: auto;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.alti-track::before {
+  content: '';
+  position: absolute;
+  right: 6px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: repeating-linear-gradient(to bottom, rgba(220, 236, 255, 0.4) 0 1px, transparent 1px 8px);
+}
+
+.alti-fill {
+  position: absolute;
+  right: 6px;
+  bottom: 0;
+  height: 100%;
+  width: 1px;
+  background: var(--accent);
+  transform-origin: bottom;
+  transform: scaleY(0);
+}
+
+.alti-needle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 14px;
+  height: 1px;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+.alti-read {
+  position: absolute;
+  right: 0;
+  top: 6px;
+  font-size: 11px;
+  color: #fff;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 6px rgba(4, 8, 16, 0.8);
+}
+
+.alti ol {
+  position: absolute;
+  inset: 0 20px 0 0;
+  margin: 0;
+}
+
+.alti li {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+}
+
+.alti a {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 2px 0;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  pointer-events: auto;
+  text-shadow: 0 0 6px rgba(4, 8, 16, 0.9);
+}
+
+.alti-name {
+  position: absolute;
+  right: 100%;
+  margin-right: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.alti a:hover .alti-name,
+.alti a:focus-visible .alti-name {
+  opacity: 1;
+}
+
+.alti a[aria-current] {
+  color: var(--accent);
+}
+
+.alti a::after {
+  content: '';
+  width: 7px;
+  height: 1px;
+  background: currentColor;
+}
+
+@media (max-width: 1023px) {
+  .alti {
+    display: none;
+  }
+
+  html.has-alti {
+    scrollbar-width: auto;
+  }
+
+  html.has-alti::-webkit-scrollbar {
+    display: initial;
+  }
+}
+
+/* ---- the palette ---- */
+.palette {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(70svh, 560px);
+  margin: 14svh auto auto;
+  padding: 0;
+  border: 1px solid rgba(220, 236, 255, 0.22);
+  background: rgba(9, 16, 28, 0.86);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  color: var(--ink);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+
+.palette::backdrop {
+  background: rgba(3, 6, 12, 0.45);
+}
+
+.pal-box {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+}
+
+.pal-in {
+  width: 100%;
+  padding: 16px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--hair);
+  background: transparent;
+  color: var(--ink);
+  font: 16px var(--mono);
+  outline: none;
+}
+
+.pal-list {
+  overflow: auto;
+  padding: 6px 0;
+}
+
+.pal-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 18px;
+  font-size: 15px;
+  cursor: pointer;
+  white-space: pre;
+}
+
+.pal-list li[aria-selected="true"] {
+  background: rgba(159, 211, 230, 0.14);
+  color: #fff;
+}
+
+.pal-list .pal-g {
+  padding: 10px 18px 4px;
+  font: 10.5px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  cursor: default;
+}
+
+.pal-empty {
+  color: var(--ink-3);
+}
+
+.pal-foot {
+  padding: 10px 18px;
+  border-top: 1px solid var(--hair);
+  font: 11px var(--mono);
+  color: var(--ink-3);
+}
+
+.palette kbd {
+  font: 10.5px var(--mono);
+  padding: 1px 5px;
+  margin: 0 3px;
+  border: 1px solid var(--hair);
+  color: var(--ink-2);
+}
+
+/* ---- snow drifts on the UI (--drift 0..1, src/chrome/effects.js) ---- */
+.fig,
+.lead-stats,
+h2.log-h {
+  position: relative;
+}
+
+.fig::before,
+.lead-stats::before,
+h2.log-h::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 0;
+  height: calc(var(--drift, 0) * 9px + 1px);
+  transform: translateY(-82%);
+  background:
+    radial-gradient(9px 6px at 10% 100%, #fff 60%, transparent 62%) 0 0 / 46px 100% repeat-x,
+    radial-gradient(14px 7px at 60% 100%, #f1f6ff 60%, transparent 62%) 0 0 / 71px 100% repeat-x,
+    linear-gradient(to top, #fff 0 45%, transparent 46%);
+  opacity: calc(var(--drift, 0) * 0.95);
+  pointer-events: none;
+  z-index: 2;
+  filter: drop-shadow(0 1px 1px rgba(10, 20, 40, 0.35));
+  transition: height 0.6s ease, opacity 0.6s ease;
+}
+
+.bar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: calc(var(--drift, 0) * 4px);
+  background:
+    radial-gradient(9px 4px at 10% 0%, #fff 60%, transparent 62%) 0 0 / 46px 100% repeat-x,
+    linear-gradient(to bottom, #fff 0 40%, transparent 41%);
+  opacity: calc(var(--drift, 0) * 0.9);
+  pointer-events: none;
+  transition: height 0.6s ease, opacity 0.6s ease;
+}
+
+/* ---- frost from the corners, melting round the cursor ---- */
+.frost {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  opacity: calc(var(--frost, 0) * 0.85);
+  -webkit-mask: radial-gradient(circle 130px at var(--mx, -400px) var(--my, -400px), transparent 0 55%, #000 100%),
+    radial-gradient(ellipse 78% 72% at 50% 50%, transparent calc(62% + (1 - var(--frost, 0)) * 30%), #000 100%);
+  -webkit-mask-composite: source-in;
+  mask: radial-gradient(circle 130px at var(--mx, -400px) var(--my, -400px), transparent 0 55%, #000 100%),
+    radial-gradient(ellipse 78% 72% at 50% 50%, transparent calc(62% + (1 - var(--frost, 0)) * 30%), #000 100%);
+  mask-composite: intersect;
+}
+
+/* ---- breath fog at a resting cursor ---- */
+.breath {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.breath::before {
+  content: '';
+  position: absolute;
+  left: -70px;
+  top: -70px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(235, 244, 255, 0.28), rgba(235, 244, 255, 0.08) 45%, transparent 70%);
+  filter: blur(6px);
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.breath.is-on::before {
+  animation: breath 2.6s ease-out forwards;
+}
+
+@keyframes breath {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translate(0, 0);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5) translate(10px, -26px);
+  }
+}
+
+/* ---- icicles under the bar ---- */
+.icicles {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  width: 100%;
+  height: 16px;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.icicles path {
+  fill: rgba(225, 238, 252, 0.3);
+}
+
+.icicles .drip {
+  fill: rgba(225, 238, 252, 0.9);
+  opacity: 0;
+  animation: drip 19s linear infinite;
+}
+
+@keyframes drip {
+  0%,
+  86% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  88% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+}
+
+/* ---- cracks at log boundaries ---- */
+.cracks {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 7;
+  pointer-events: none;
+}
+
+.crack-main,
+.crack-branch {
+  fill: none;
+  stroke: rgba(230, 242, 255, 0.85);
+  stroke-width: 1.4;
+  stroke-dasharray: 3000;
+  stroke-dashoffset: 3000;
+  filter: drop-shadow(0 0 3px rgba(159, 211, 230, 0.9));
+  animation: crack 1.5s ease-out forwards;
+}
+
+.crack-branch {
+  stroke-width: 0.9;
+  animation-delay: 0.18s;
+}
+
+@keyframes crack {
+  0% {
+    stroke-dashoffset: 3000;
+    opacity: 1;
+  }
+  45% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/* ---- carved text: headings chiselled out of ice, a glint sweeping across ---- */
+html.fx-carve h2.log-h,
+html.fx-carve .log-say {
+  opacity: 0;
+}
+
+html.fx-carve h2.log-h.is-carved {
+  opacity: 1;
+  background: linear-gradient(100deg, var(--ink) 0 40%, #ffffff 46%, #cfe6f2 50%, var(--ink) 56% 100%) 120% 0 / 260% 100% no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: carve 1.3s cubic-bezier(0.2, 0.7, 0.2, 1) both, glint 1.6s 0.5s ease-out both;
+}
+
+html.fx-carve .log-line.is-carved .log-say {
+  opacity: 1;
+  animation: shatter 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes carve {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    letter-spacing: 0.04em;
+    clip-path: polygon(0 0, 12% 0, 4% 100%, 0 100%);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: -0.02em;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+@keyframes glint {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -20% 0;
+  }
+}
+
+@keyframes shatter {
+  0% {
+    opacity: 0;
+    clip-path: polygon(0 0, 30% 0, 18% 40%, 34% 100%, 0 100%);
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    clip-path: polygon(0 0, 100% 0, 100% 0, 100% 100%, 0 100%);
+    transform: none;
+  }
+}
+
+/* ---- snow globes ---- */
+.globe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breath,
+  .cracks,
+  .icicles .drip {
+    display: none;
+  }
+}

@@ -4,10 +4,11 @@
 import { content } from '../../content.js';
 
 const EMPTY = 'Contest results go here. Add them to contests in src/content.js.';
-const INK = '#17191c';
-const ACCENT = '#1f5f78';
-const PLATE = '#fbfbf8';
-const HAIR = 'rgba(23,25,28,0.22)';
+// Ascent: the dark page's palette (src/styles/tokens.css).
+const INK = '#e8eef6';
+const ACCENT = '#9fd3e6';
+const PLATE = '#0e1a2b';
+const HAIR = 'rgba(205,222,245,0.22)';
 const MONO = "'IBM Plex Mono', ui-monospace, monospace";
 const SERIF = "'Source Serif 4', Georgia, serif";
 

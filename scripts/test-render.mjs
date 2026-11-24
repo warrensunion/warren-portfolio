@@ -18,17 +18,17 @@ test('exactly one h1', () => {
 
 test('sections appear with the expected ids in order', () => {
   const ids = [...html.matchAll(/<section[^>]*\sid="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(ids, ['building', 'projects', 'work', 'contests', 'contact']);
+  assert.deepEqual(ids, ['index', 'building', 'projects', 'work', 'contests', 'contact']);
 });
 
 test('hero bio links into building, projects and work', () => {
-  const hero = html.slice(html.indexOf('class="hero'), html.indexOf('id="building"'));
+  const hero = html.slice(html.indexOf('class="hero'), html.indexOf('id="index"'));
   for (const id of ['work', 'building', 'projects']) assert.match(hero, new RegExp(`href="#${id}"`));
 });
 
 test('hero bio is one paragraph of at most 220 visible characters', () => {
-  const hero = html.slice(html.indexOf('class="hero-text'), html.indexOf('class="hero-fig'));
-  const paras = [...hero.matchAll(/<p[\s>][\s\S]*?<\/p>/g)].map((m) => m[0]);
+  const hero = html.slice(html.indexOf('class="hero-text'), html.indexOf('class="hud"'));
+  const paras = [...hero.matchAll(/<p class="lede">[\s\S]*?<\/p>/g)].map((m) => m[0]);
   assert.equal(content.bio.length, 1);
   assert.equal(paras.length, 1);
   const visible = paras[0].replace(/<[^>]+>/g, '').replace(/&[a-z]+;|&#\d+;/g, 'x');
@@ -112,7 +112,10 @@ test('controller rulings: copy email, live status, morph links, drag hint, under
 
   // Relative, so the page works at / and under GitHub Pages' /warren-portfolio/.
   assert.match(html, /data-fig="iceberg"[^>]*data-poster-under="posters\/iceberg-under\.webp"/);
-  assert.match(html, /<img class="fig-poster" src="posters\/iceberg\.webp"[^>]*loading="eager"/);
+  // The iceberg now leads BTTRURSLF's entry, below the fold, so its poster loads lazily; the page's
+  // first paint is the hero's text over the base-camp still.
+  assert.match(html, /<img class="fig-poster" src="posters\/iceberg\.webp"[^>]*loading="lazy"/);
+  assert.match(html, /<img class="world-still is-on" data-log="0" src="posters\/world-0\.webp"[^>]*loading="eager"/);
 });
 
 test('the ring carries its per-project stills for the reduced-motion cross-fade, in morph-link order', () => {
@@ -125,11 +128,11 @@ test('the ring carries its per-project stills for the reduced-motion cross-fade,
 const tracks = [...html.matchAll(/<article class="track[^"]*" id="([^"]+)" data-track style="--stages:(\d+)">([\s\S]*?)<\/article>/g)];
 
 test('tracks render in page order', () => {
-  assert.deepEqual(tracks.map((m) => m[1]), ['bttrurslf', 'drift', 'stress-test', 'raingarden', 'ghostline', 'terrarium', 'bcwc']);
+  assert.deepEqual(tracks.map((m) => m[1]), ['bttrurslf', 'beatcut', 'drift', 'stress-test', 'raingarden', 'ghostline', 'terrarium', 'bcwc']);
 });
 
 test('each track has --stages equal to its stage buttons and stills', () => {
-  const want = { bttrurslf: 15, drift: 4, 'stress-test': 4, raingarden: 4, ghostline: 4, terrarium: 5, bcwc: 5 };
+  const want = { bttrurslf: 15, beatcut: 4, drift: 4, 'stress-test': 4, raingarden: 4, ghostline: 4, terrarium: 5, bcwc: 5 };
   for (const [, id, n, body] of tracks) {
     assert.equal(Number(n), want[id], id + ' --stages');
     const list = body.slice(body.indexOf('<ol class="fig-stages"'), body.indexOf('</ol>'));
@@ -180,7 +183,7 @@ test('tracks without tabs render no tab row', () => {
 const cards = [...html.matchAll(/<article class="entry entry--card" id="([^"]+)">([\s\S]*?)<\/article>/g)];
 
 test('the smaller projects render as compact cards, their figure pinned at its last stage', () => {
-  assert.deepEqual(cards.map((m) => m[1]), ['howpolluted', 'archer-hero']);
+  assert.deepEqual(cards.map((m) => m[1]), ['howpolluted', 'archer-hero', 'waterloodle']);
   for (const [, id, body] of cards) {
     const fig = body.match(/<figure class="fig fig--card"[^>]*>/)?.[0] || '';
     const stages = JSON.parse(fig.match(/data-stages='([^']*)'/)[1].replace(/&#39;/g, "'").replace(/&amp;/g, '&'));
@@ -200,4 +203,49 @@ test('every new project links its live demo and its code', () => {
 
 test('nothing links to the private BTTRURSLF or bcwc repositories', () => {
   assert.doesNotMatch(html, /github\.com\/warrensunion\/(BTTRURSLF|bcwc)\b/i);
+});
+
+// The climb (src/world/): every section is a numbered log with an altitude, in order, and the ice field's
+// list links to every project on the page.
+test('logs: seven numbered logs, altitudes rising from base camp to the summit', () => {
+  const alts = [...html.matchAll(/data-alt="(\d+)"/g)].map((m) => Number(m[1]));
+  assert.deepEqual(alts, [0, 900, 2100, 3400, 4600, 5500, 6100]);
+  const marks = [...html.matchAll(/<span class="log-n">LOG (\d\d)<span class="log-of"> \/ (\d\d)<\/span>/g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(marks.map((m) => m[0]), ['01', '02', '03', '04', '05', '06', '07']);
+  assert.ok(marks.every((m) => m[1] === '07'));
+});
+
+test('the ice field lists every project, in page order, as a link to its entry', () => {
+  const field = html.slice(html.indexOf('id="index"'), html.indexOf('id="building"'));
+  const hrefs = [...field.matchAll(/<a class="ice-link" href="#([^"]+)" data-block="(\d+)"/g)].map((m) => m[1]);
+  const ids = content.sections.flatMap((s) => (s.entries || []).map((e) => e.id));
+  assert.deepEqual(hrefs, ids);
+  for (const id of ids) assert.match(html, new RegExp(`<article class="[^"]*" id="${id}"`));
+  const syms = [...field.matchAll(/data-symbol="([^"]*)"/g)].map((m) => m[1]);
+  assert.ok(syms.length === ids.length && syms.every(Boolean), 'every project has a symbol');
+});
+
+test('the world backdrop has one still per log, only the first eager', () => {
+  const stills = [...html.matchAll(/<img class="world-still[^"]*" data-log="(\d)" src="posters\/world-(\d)\.webp"[^>]*loading="(\w+)"/g)];
+  assert.equal(stills.length, 7);
+  assert.deepEqual(stills.map((m) => m[3]), ['eager', 'lazy', 'lazy', 'lazy', 'lazy', 'lazy', 'lazy']);
+  assert.match(html, /<div class="world" aria-hidden="true">/);
+});
+
+test('the HUD reads as a labelled model, never a measurement', () => {
+  const at = html.indexOf('class="hud"');
+  const hud = html.slice(at, html.indexOf('</dl>', at));
+  assert.match(hud, /modelled/);
+  for (const k of ['alt', 'temp', 'wind', 'snow', 'blocks', 'vis', 'seed']) assert.match(hud, new RegExp(`data-hud="${k}"`));
+});
+
+test('BTTRURSLF leads with its pitch, its measured numbers (or TODOs) and the iceberg', () => {
+  const stats = { routes: 34, apiRoutes: 38, tests: 640, measuredAt: '2026-10-14' };
+  const page = renderPage(content, { updated: new Date('2026-10-10'), stats });
+  const lead = page.slice(page.indexOf('class="lead"'), page.indexOf('id="bttrurslf"'));
+  assert.match(lead, /<dt>34<\/dt>/);
+  assert.match(lead, /<dt>640<\/dt>/);
+  assert.match(lead, /data-fig="iceberg"/);
+  const none = html.slice(html.indexOf('class="lead"'), html.indexOf('id="bttrurslf"'));
+  assert.match(none, /\[TODO: screen count\]/);
 });
