@@ -64,8 +64,9 @@ try {
       const context = await browser.newContext({ viewport: vp, deviceScaleFactor: 1 });
       const page = await context.newPage();
       // yuzeli.ca's load event can take over a minute (its scene streams in), so it is given time instead
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
-      await page.evaluate(() => document.fonts.ready);
+      await page.goto(url, { waitUntil: 'commit', timeout: 120000 });
+      await page.waitForSelector('h1', { timeout: 120000 }).catch(() => {});
+      await page.evaluate(() => document.fonts.ready).catch(() => {});
       await page.mouse.move(2, vp.height - 2); // also starts this page's world (it waits for a first input)
       await sleep(side === 'theirs' ? 15000 : 5000);
       shots[side] = {};
