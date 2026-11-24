@@ -64,7 +64,13 @@ try {
     await page.mouse.move(2, vp.height - 2);
     const shot = async (name, opts = {}) => {
       const file = path.join(outDir, `${tag}-${name}.png`);
-      await page.screenshot({ path: file, ...opts });
+      // A loaded machine can take a while to hand over a frame; one slow shot is logged, not fatal.
+      try {
+        await page.screenshot({ path: file, timeout: 120000, ...opts });
+      } catch (err) {
+        console.log(`FAIL ${tag}-${name}.png: ${String(err.message).split('\n')[0]}`);
+        return;
+      }
       written.push(path.relative(root, file));
       console.log(`ok   ${tag}-${name}.png`);
     };
