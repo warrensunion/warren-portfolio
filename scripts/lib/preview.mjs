@@ -30,7 +30,7 @@ export async function startPreview(port) {
     if (child.exitCode == null) child.kill();
   };
   process.once('exit', stop);
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 400; i++) { // up to a minute: a loaded machine can be slow to start node
     if (child.exitCode != null) throw new Error('vite preview exited:\n' + out);
     try {
       const res = await fetch(url);

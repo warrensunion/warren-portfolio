@@ -37,11 +37,15 @@ async function measure(browser, url, ids, { throttle = 1 } = {}) {
       const r = fig.getBoundingClientRect();
       scrollTo({ top: scrollY + r.top + r.height / 2 - innerHeight / 2, behavior: 'instant' });
     }, id);
-    await page.waitForFunction(
-      (id) => document.querySelector(`figure.fig[data-fig-id="${id}"]`)?.classList.contains('is-live'),
-      id,
-      { timeout: 60000 },
-    );
+    // A figure that will not go live in a minute (a loaded machine) is a row of its own, not a crash.
+    const live = await page
+      .waitForFunction((id) => document.querySelector(`figure.fig[data-fig-id="${id}"]`)?.classList.contains('is-live'), id, { timeout: 60000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!live) {
+      rows.push({ id: id + ' (not live within 60 s)', frames: 0, fps: NaN, p95: NaN, max: NaN });
+      continue;
+    }
     if (throttle > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: throttle });
     await sleep(WARMUP_MS);
     await page.evaluate((id) => {
