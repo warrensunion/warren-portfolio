@@ -6,10 +6,11 @@
 // scrubbed. No WebGL: weight 0. Reduced motion, save-data and ?static=1 keep the stage stills.
 import './figure.css';
 
+// at: the poster frame's time (public/beatcut/<slug>-poster.webp); a clip starts there, lit, not on its fade
 const CLIPS = [
-  { slug: 'spotlight-stage', label: 'SPOTLIGHT STAGE' },
-  { slug: 'line-explainer', label: 'LINE EXPLAINER' },
-  { slug: 'glitch-popup', label: 'GLITCH POPUP' },
+  { slug: 'spotlight-stage', label: 'SPOTLIGHT STAGE', at: 4.3 },
+  { slug: 'line-explainer', label: 'LINE EXPLAINER', at: 4.0 },
+  { slug: 'glitch-popup', label: 'GLITCH POPUP', at: 3.8 },
 ];
 const STEPS = [
   ['01', 'Audio', 'librosa: beats, downbeats, sections, drops'],
@@ -71,6 +72,7 @@ export async function create(stage, ctx) {
     video.poster = `${base()}beatcut/${c.slug}-poster.webp`;
     video.innerHTML = `<source src="${base()}beatcut/${c.slug}.webm" type="video/webm"><source src="${base()}beatcut/${c.slug}.mp4" type="video/mp4">`;
     video.load();
+    video.addEventListener('loadedmetadata', () => (video.currentTime = c.at), { once: true });
     if (running && !still) video.play().catch(() => {});
     nameEl.textContent = c.label;
     bpmEl.textContent = `${Math.round(d.tempo)} BPM`;

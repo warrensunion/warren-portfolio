@@ -79,6 +79,7 @@ try {
     await shot('top');
 
     // The ice field (log 02): the first two blocks centred in turn (src/world/field/field.js passage).
+    await page.waitForFunction(() => document.documentElement.classList.contains('world-live'), null, { timeout: 120000 }).catch(() => {});
     for (const k of [0, 1]) {
       await jump(page, (k) => {
         const sec = document.getElementById('index');
