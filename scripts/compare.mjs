@@ -63,9 +63,11 @@ try {
     for (const [side, url] of [['theirs', THEIRS], ['ours', server.url]]) {
       const context = await browser.newContext({ viewport: vp, deviceScaleFactor: 1 });
       const page = await context.newPage();
-      await page.goto(url, { waitUntil: 'networkidle' }).catch(() => page.goto(url, { waitUntil: 'load' }));
+      // yuzeli.ca's load event can take over a minute (its scene streams in), so it is given time instead
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
       await page.evaluate(() => document.fonts.ready);
-      await page.mouse.move(2, vp.height - 2);
+      await page.mouse.move(2, vp.height - 2); // also starts this page's world (it waits for a first input)
+      await sleep(side === 'theirs' ? 15000 : 5000);
       shots[side] = {};
       for (const p of POSITIONS) {
         await go(page, p[side]);

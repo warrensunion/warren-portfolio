@@ -159,9 +159,10 @@ try {
     await page.evaluate(() => document.fonts.ready);
     await settle(page, 600);
     await shot('static-top');
-    await halfHero();
+    // The static field: the project list instead of the blocks.
+    await jump(page, () => document.getElementById('index').scrollIntoView({ block: 'start', behavior: 'instant' }));
     await settle(page, 900);
-    await shot('static-hero-under');
+    await shot('static-index');
     await jump(page, () => document.querySelector('#contact figure.fig').scrollIntoView({ block: 'center', behavior: 'instant' }));
     await settle(page, 600);
     await shot('static-contact-fig');
