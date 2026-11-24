@@ -79,6 +79,7 @@ export const content = {
           title: 'BTTRURSLF',
           href: null,
           pitch: 'A self-improvement game where every day you show up moves you up a mountain.',
+          links: [{ label: 'Live site', href: 'https://bttrurslf.com/' }],
           // The lead row above the track: the iceberg from its start screen, live, and the real numbers.
           lead: {
             fig: {
