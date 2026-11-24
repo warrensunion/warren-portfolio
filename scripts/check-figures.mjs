@@ -18,7 +18,7 @@ const only = ([...argv].find((a) => a.startsWith('--only=')) || '').slice(7).spl
 const WEBGL_IDS = ['iceberg-0', 'ring-0', 'howpolluted-0', 'archer-0', 'terrarium-0'];
 // The tracks on the page, and the compact cards (render.js card()): a card's figure is pinned at its last stage.
 const TRACKS = 8;
-const CARDS = ['howpolluted', 'archer-hero', 'waterloodle'];
+const CARDS = ['howpolluted', 'waterloodle', 'archer-hero'];
 const KIND_COUNT = { iceberg: 1, ring: 1, howpolluted: 1, archer: 1, terrarium: 1 }; // WebGL figures per kind: one fallback log each
 // The capture figures (clips, no WebGL of their own) fall back too: both under ?static=1 and reduced
 // motion, and bcwc also without WebGL2, since its live stage frames a WebGL site (env.js).
@@ -158,6 +158,8 @@ const canvasCounts = (page) =>
 const liveCount = (counts) => Object.values(counts).filter((n) => n > 0).length;
 // WebGL contexts the page holds right now (made and not lost), and the most it ever held at once.
 const gl = (page) => page.evaluate(() => ({ alive: window.__glAlive(), peak: window.__glPeak }));
+// The world behind the page (src/world/) holds one context of its own while it is live.
+const worldGl = (page) => page.evaluate(() => (document.querySelector('.world.is-live .world-canvas') ? 1 : 0));
 // Console output that means trouble: any error, or a warning about WebGL or a context. The host's own
 // "fallback: context-lost" line is info, so the context-loss check's expected log never counts.
 const consoleProblems = (logs) =>
@@ -276,7 +278,7 @@ async function checkRaces(browser, url) {
   const { page } = t;
   const settle = async (label, id) => {
     await scrollToFig(page, id);
-    await sleep(4000);
+    await sleep(7000);
     const counts = await canvasCounts(page);
     const state = await page.evaluate(() =>
       [...document.querySelectorAll('figure.fig[data-fig-id]')].map((f) => {
@@ -297,7 +299,8 @@ async function checkRaces(browser, url) {
     // Each live figure holds exactly one WebGL context; any more alive is a leak (a canvas dropped
     // without loseContext(), or a cancelled build that kept its context).
     const g = await gl(page);
-    if (g.alive !== liveCount(counts)) problems.push(`${g.alive} WebGL contexts alive for ${liveCount(counts)} live figures`);
+    const wg = await worldGl(page);
+    if (g.alive !== liveCount(counts) + wg) problems.push(`${g.alive} WebGL contexts alive for ${liveCount(counts)} live figures and ${wg} world`);
     if (g.peak > 3) problems.push(`context peak ${g.peak}`);
     const f0 = await frames(page, id);
     await sleep(500);
@@ -413,6 +416,7 @@ async function checkContextLoss(browser, url) {
   const { page } = t;
   const sel = figSel('iceberg-0');
   await step('context loss: the hero goes back to its poster and logs context-lost', async () => {
+    await scrollToFig(page, 'iceberg-0'); // it leads BTTRURSLF's entry now, below the fold
     await waitLive(page, 'iceberg-0');
     await page.evaluate((sel) => {
       const c = document.querySelector(sel + ' canvas.fig-canvas');
@@ -427,7 +431,7 @@ async function checkContextLoss(browser, url) {
     }, sel);
     const logged = t.logs.filter((l) => l.text === '[fig:iceberg] fallback: context-lost').length;
     const alive = (await gl(page)).alive;
-    const holders = liveCount(await canvasCounts(page));
+    const holders = liveCount(await canvasCounts(page)) + (await worldGl(page));
     report('context loss: the hero goes back to its poster and logs context-lost', s.canvases === 0 && s.hidden == null && s.opacity === '1' && s.fb === 'context-lost' && logged === 1 && alive === holders, JSON.stringify({ ...s, logged, contextsAlive: alive, figuresHolding: holders }));
   });
   await step('context loss: the hero comes back live after the 5 s cooldown', async () => {
@@ -438,7 +442,7 @@ async function checkContextLoss(browser, url) {
     const s = await page.evaluate((sel) => ({ fb: document.querySelector(sel).dataset.fallback || '', canvases: document.querySelectorAll(sel + ' canvas').length }), sel);
     const px = await pixelSpread(page, 'iceberg-0');
     const alive = (await gl(page)).alive;
-    const holders = liveCount(await canvasCounts(page));
+    const holders = liveCount(await canvasCounts(page)) + (await worldGl(page));
     report('context loss: the hero comes back live after the 5 s cooldown', f1 > f0 && s.fb === '' && s.canvases === CANVASES.iceberg && px.distinct > 8 && alive === holders, `frames ${f0} -> ${f1}, ${s.canvases} canvases, fallback "${s.fb}", ${px.distinct} colours, ${alive} contexts for ${holders} figures`);
   });
   report('context loss: no page errors', t.errors.length === 0, t.errors.join(' | '));
@@ -505,23 +509,23 @@ async function checkReduced(browser, url) {
     const rest = await op();
     for (let i = 0; i < n; i++) {
       await page.hover(`[data-morph="${i}"]`);
-      await sleep(700);
+      await sleep(900);
       out.push(`hover ${i}: ${await op()}`);
     }
     await page.mouse.move(5, 5);
-    await sleep(700);
+    await sleep(900);
     const left = await op();
     await page.focus('[data-morph="1"]');
-    await sleep(700);
+    await sleep(900);
     const focus1 = await op();
     await page.hover(`[data-morph="${n - 1}"]`); // hover wins over focus
-    await sleep(700);
+    await sleep(900);
     const both = await op();
     await page.mouse.move(5, 5); // leaving shows the focused link's still again
-    await sleep(700);
+    await sleep(900);
     const backToFocus = await op();
     await page.evaluate(() => document.activeElement.blur());
-    await sleep(700);
+    await sleep(900);
     const blurred = await op();
     const ok =
       n >= 3 &&
@@ -1895,7 +1899,8 @@ async function checkTerrariumFail(browser, url) {
     await page.waitForFunction(() => document.querySelector('#terrarium figure')?.dataset.fallback === 'error', null, { timeout: 30000 });
     await sleep(800);
     const r = await page.evaluate(() => ({ alive: window.__glAlive(), weight: window.__figWeight(), layers: document.querySelectorAll('.tr-layer').length, canvases: document.querySelectorAll('#terrarium canvas').length }));
-    report(name, r.alive <= r.weight && r.layers === 0 && r.canvases === 0, JSON.stringify(r));
+    const wg = await worldGl(page); // the world behind the page holds one of its own
+    report(name, r.alive <= r.weight + wg && r.layers === 0 && r.canvases === 0, JSON.stringify({ ...r, world: wg }));
   });
   await t.close();
 }

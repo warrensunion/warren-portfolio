@@ -169,3 +169,20 @@ j. phone, reduced motion, static, no JS k. perf tuning, then the full check, com
   not presented as Beatcut output.
 - WATERLOODLE: an in-progress SE 101 team project (six students, Fall 2026), no public link.
   **Decision:** added as a compact card that says it is in progress and names only Warren's own work.
+- Phase b: the world, the climb and the HUD. First look: too bright and flat, the camera stared up a smooth
+  ramp and the igloo hid behind the plates. Fixed by a darker palette, crest steps and flank detail, views
+  turned outward from the ridge per log, and the igloo on its own knoll right of the view. Cloud decks are
+  drawn only from above (from below they ran the terrain maths on every sky pixel and halved the frame rate).
+- Phase c: the ice field ported from the hub; the symbols' gain lowered from 2.1 to 1.45 (blown out at first).
+- Phase d: blocks seated by a jump land quietly (no glow); the knoll's skirt is shaped on the CPU so its normals
+  follow its slope, and it melts into the slope instead of ending in a hard edge.
+- Phase e: the plateau and glacier became mesas with cliffs at first; they are now the slope with its rough
+  detail smoothed away. The glacier moved above the treeline cloud so the icefall shows.
+- Phase f: bar tools, altimeter, palette. The bar must stay sticky (an early rule made it relative).
+- Phase g: the iceberg, its overlay and its snow re-keyed from paper to blue hour; bttrurslf.com linked.
+- Phase h: Beatcut's figure; its stills hold the poster frame (the clips open on a fade from black).
+- Phase i: drifts, frost, breath, icicles, cracks, carved headings, snow globes, sound.
+- Phase j: on phones the bar keeps one line (the theme tool waits for 440 px), the field frames each block to
+  fit across, and its index stays the keyboard path out of sight until focused. Taps open blocks.
+- Checks: a `world` group in `npm run check` (HUD, field, Enter into a block, palette, altimeter, the 3-context
+  budget with the world in it, the reduced-motion and static fallbacks).

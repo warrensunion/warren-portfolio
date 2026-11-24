@@ -207,6 +207,7 @@ export function initWorld({ env, onReady } = {}) {
   if (!root) reason = 'no-root';
   else if (posterMode) reason = null;
   else if (env.forced) reason = 'forced';
+  else if (posterQ.get('world') === '0') reason = 'off'; // ?world=0: the page without its world, for comparisons
   else if (!env.webgl2) reason = 'no-webgl2';
   else if (env.saveData) reason = 'save-data';
   else if (env.reduced) reason = 'reduced-motion';
@@ -290,7 +291,11 @@ export function initWorld({ env, onReady } = {}) {
           state.live = false;
         });
         // give way while project figures hold contexts (the host's weight)
-        setInterval(() => w.setLoad(typeof window.__figWeight === 'function' ? window.__figWeight() : 0), 700);
+        setInterval(() => {
+          w.setLoad(typeof window.__figWeight === 'function' ? window.__figWeight() : 0);
+          // a track or card running in the middle half of the screen has the visitor: the world eases off
+          w.setBusy(!!document.querySelector('figure.fig[data-running]') && state.act !== 'field');
+        }, 500);
         if (!document.hidden) w.start();
         return w;
       } catch (err) {

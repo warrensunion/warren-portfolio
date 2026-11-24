@@ -183,7 +183,9 @@ test('tracks without tabs render no tab row', () => {
 const cards = [...html.matchAll(/<article class="entry entry--card" id="([^"]+)">([\s\S]*?)<\/article>/g)];
 
 test('the smaller projects render as compact cards, their figure pinned at its last stage', () => {
-  assert.deepEqual(cards.map((m) => m[1]), ['howpolluted', 'archer-hero', 'waterloodle']);
+  // WATERLOODLE (no WebGL) sits between the two WebGL cards, so with the world's context only two scenes
+  // are ever on screen at once (src/figures/host.js reserve).
+  assert.deepEqual(cards.map((m) => m[1]), ['howpolluted', 'waterloodle', 'archer-hero']);
   for (const [, id, body] of cards) {
     const fig = body.match(/<figure class="fig fig--card"[^>]*>/)?.[0] || '';
     const stages = JSON.parse(fig.match(/data-stages='([^']*)'/)[1].replace(/&#39;/g, "'").replace(/&amp;/g, '&'));

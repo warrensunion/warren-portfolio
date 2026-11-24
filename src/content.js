@@ -358,6 +358,30 @@ export const content = {
           }),
         },
         {
+          id: 'waterloodle',
+          compact: true,
+          symbol: 'goose',
+          title: 'WATERLOODLE',
+          href: null,
+          role: 'Questions and round flow, team of six',
+          dates: 'Fall 2026, in progress',
+          body: [
+            'A team project for SE 101 at the University of Waterloo, built by six students and still in progress. ' +
+              'It is two campus games in Flask: drag a campus object to scale beside a 1.8 m person, and a trivia ' +
+              'round where rarer right answers score more, with accounts, a leaderboard and a practice mode.',
+            'My part so far: the size game’s five Waterloo questions with their sources and SVG art, the trivia ' +
+              'game’s Flask routes, templates and front end, and a redesign of the layout, navigation and home ' +
+              'page that is waiting to be merged.',
+          ],
+          tags: ['Python', 'Flask', 'MySQL', 'Jinja', 'JavaScript', 'SVG', 'pytest', 'GitLab'],
+          fig: trackFig('waterloodle', 'waterloodle', {
+            title: 'WATERLOODLE',
+            caption: 'The home page from my redesign, waiting to be merged. The code is on the university’s GitLab, so there is no public link.',
+            alt: 'The WATERLOODLE home page: a cream page with a goose mascot, the two games and the navigation.',
+            stages: [['Home']],
+          }),
+        },
+        {
           id: 'archer-hero',
           symbol: 'target',
           ring: 'archer-bow',
@@ -383,30 +407,6 @@ export const content = {
             alt: 'A low-poly archer on a dirt path through a green valley, shooting at enemies with health bars.',
             data: { roblox: 'https://www.roblox.com/games/126065886236053/archer-game' },
             stages: [['Valley'], ['Auto-aim'], ['Boss'], ['Your turn']],
-          }),
-        },
-        {
-          id: 'waterloodle',
-          compact: true,
-          symbol: 'goose',
-          title: 'WATERLOODLE',
-          href: null,
-          role: 'Questions and round flow, team of six',
-          dates: 'Fall 2026, in progress',
-          body: [
-            'A team project for SE 101 at the University of Waterloo, built by six students and still in progress. ' +
-              'It is two campus games in Flask: drag a campus object to scale beside a 1.8 m person, and a trivia ' +
-              'round where rarer right answers score more, with accounts, a leaderboard and a practice mode.',
-            'My part so far: the size game’s five Waterloo questions with their sources and SVG art, the trivia ' +
-              'game’s Flask routes, templates and front end, and a redesign of the layout, navigation and home ' +
-              'page that is waiting to be merged.',
-          ],
-          tags: ['Python', 'Flask', 'MySQL', 'Jinja', 'JavaScript', 'SVG', 'pytest', 'GitLab'],
-          fig: trackFig('waterloodle', 'waterloodle', {
-            title: 'WATERLOODLE',
-            caption: 'The home page from my redesign, waiting to be merged. The code is on the university’s GitLab, so there is no public link.',
-            alt: 'The WATERLOODLE home page: a cream page with a goose mascot, the two games and the navigation.',
-            stages: [['Home']],
           }),
         },
       ],

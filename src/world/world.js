@@ -121,6 +121,8 @@ export async function createWorld(canvas, { tier = 'high', theme = 'dusk', reduc
   let pickTick = 0;
   let disposed = false;
   let lost = false;
+  let busy = false; // a project figure has the visitor's attention: draw every other frame
+  let skip = 0;
 
   function resize(cw, ch) {
     w = Math.max(1, cw);
@@ -149,6 +151,7 @@ export async function createWorld(canvas, { tier = 'high', theme = 'dusk', reduc
   function frame(now) {
     raf = running ? requestAnimationFrame(frame) : 0;
     if (disposed || lost) return;
+    if (busy && (skip++ & 1)) return;
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 1 / 60);
     last = now;
     const st = read();
@@ -306,6 +309,17 @@ export async function createWorld(canvas, { tier = 'high', theme = 'dusk', reduc
       }
       snow.setLoad(n > 0 || lowered ? 0.5 : 1);
       if (bloom) bloom.enabled = !(n > 0 || lowered);
+    },
+    /** A figure runs mid-screen (its plate covers most of the view): half the frames, DPR 1. */
+    setBusy(on) {
+      if (on === busy) return;
+      busy = on;
+      const d = on || load > 0 || lowered || low ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+      if (d !== dpr) {
+        dpr = d;
+        renderer.setPixelRatio(dpr);
+        resize(w, h);
+      }
     },
     /** One frame now (reduced motion: the page redraws only when the scroll moves). */
     renderOnce() {
