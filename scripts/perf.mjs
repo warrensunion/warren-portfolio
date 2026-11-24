@@ -132,9 +132,11 @@ async function measureWorld(browser, url, { throttle = 1 } = {}) {
 if (!argv.includes('--no-build')) build();
 const server = await startPreview(Number(process.env.PREVIEW_PORT) || 4321);
 const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
-let high, low, thr, wHigh, wLow, wThr;
+let high, low, thr, wHigh, wLow, wThr, noWorld;
 try {
   high = await measure(browser, server.url + '?tier=high', FIGS);
+  // the same figures with the world switched off, measured under the same load: the world's own cost
+  noWorld = await measure(browser, server.url + '?tier=high&world=0', FIGS);
   low = await measure(browser, server.url + '?tier=low', FIGS);
   thr = await measure(browser, server.url + '?tier=high', ['iceberg-0'], { throttle: 4 });
   wHigh = await measureWorld(browser, server.url + '?tier=high');
@@ -176,6 +178,13 @@ ${table(high)}
 
 Quality steps taken by the runtime adapt:
 ${adaptNote(high)}
+
+## High tier without the world (?tier=high&world=0), for comparison
+
+${table(noWorld)}
+
+The same figures, the same machine and the same minutes, with the world behind the page switched off: the
+difference from the table above is the world's own cost to the figures.
 
 ## Low tier (?tier=low, what phones, touch screens and machines with 4 cores or fewer get)
 
