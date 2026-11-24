@@ -150,4 +150,60 @@ project links. Without JavaScript the page is the same document as before, over 
 - No BTTRURSLF source, keys, selectors or app data came over: the ported field code is the hub's rendering only
   (shapes, materials, dissolve, labels), and the `nosource` check still scans `dist/`.
 
-<!-- REPORT-NUMBERS -->
+## TODOs left for you
+
+All of the earlier ones still stand (roles, dates, one stat per figure caption, the co-op term, contests and
+awards, a real résumé PDF, deploying bcwc). New or changed:
+1. **Beatcut:** its `role` and `dates`, and whether you want the page to say how it was built (its commits
+   are co-authored by Claude Code). No public link: the repo has no remote. If you publish it, add a "Code" link.
+2. **WATERLOODLE:** check the wording once your merge requests (#45, #46, #47) land, then change "waiting to
+   be merged" and, if you like, the role line. The plate is the redesign's home page; reshoot it once it is live.
+3. **BTTRURSLF tabs for Lodge and Mobile:** they need new captures (`npm run capture:bttr`), which drive the
+   app; the fresh screenshots in `claude-videos-build/output-beat/site/` are stills only.
+4. **A reel**, if you ever film one: the brief's "film slot" was left out (Decision 9).
+5. **Look at the world on a laptop GPU** (see the perf notes below: this machine was saturated by other work
+   all night, so its numbers are pessimistic for the CPU and optimistic for the GPU).
+
+## Where each effect runs
+
+| effect | file | notes |
+|---|---|---|
+| the range, sky, aurora, haze, cloud seas, god-rays | `src/world/{land,terrain,sky,shared,features,world}.js` | one canvas, weight 1 |
+| igloo build, puffs, hover polygons, warm seams | `src/world/igloo.js` | 143 instances, CPU work only for blocks in the air |
+| GPU snow, wind, gusts, cursor wind, avalanche | `src/world/snow.js` | vertex shader only |
+| footprints | `src/world/terrain.js` | in the near terrain's fragment shader |
+| camera, drag to look, parallax | `src/world/rig.js` | |
+| scroll to altitude, HUD, the page's one loop | `src/world/boot.js`, `climb.js` | no scroll listeners |
+| the ice field, symbols, labels, dissolve | `src/world/field/` | its own scene on the world's renderer |
+| altimeter | `src/chrome/altimeter.js` | desktop (1024 px and up) |
+| command palette | `src/chrome/palette.js` | a native `<dialog>` |
+| sound | `src/chrome/sound.js` | WebAudio, off by default, no files |
+| drifts, frost, breath, icicles, cracks, carved text, snow globes | `src/chrome/effects.js`, `src/styles/chrome.css` | CSS where it can be |
+
+Flags: `?static=1` (stills), `?world=0` (the page without its world, for comparisons), `?tier=low|high`,
+`?fps=1`. Ctrl+K anywhere; `e` copies the email.
+
+## Checks
+
+- `npm test`: 138 tests, all passing. New: `scripts/test-climb.mjs` (scroll to altitude, the weather model, the
+  HUD's text, the ridge's height function) and new render tests (seven logs with rising altitudes, the ice field
+  lists every project as a link with a symbol, one world still per log, the HUD labelled as a model,
+  BTTRURSLF's lead numbers or TODOs). Existing tests were updated where the page's shape changed (section ids,
+  the hero without a plate, the new track and card), never loosened.
+- `npm run check`: a new `world` group (the world goes live and draws, the HUD climbs with the scroll and the
+  igloo gains blocks, log 02 switches to the field with labels on the block in view, Enter on a block's link
+  dollies in and lands on that project with its heading focused, Ctrl+K filters and goes, the altimeter marks
+  all seven logs and follows the page, at most 3 WebGL contexts top to bottom with the world in them, and the
+  reduced-motion and `?static=1` fallbacks). The budget, races, context-loss and Terrarium checks now count the
+  world's own context.
+- The first full run on this build found real problems, all fixed:
+  - **Three WebGL figures on screen at once** (the end of Terrarium's track, HowPolluted, Archer Hero) with
+    only two slots left by the world, so the centred card never went live. WATERLOODLE's card (no WebGL) now
+    sits between the two WebGL cards.
+  - **The iceberg's under-water still** kept a stale state when a jump carried it past its line unseen; its
+    observer's root now reaches from far above the page to the middle line.
+  - **Clips seeking slowly** while the world rendered at full rate behind the plates: the world now drops to
+    half rate at DPR 1 while a figure runs mid-screen.
+  - Checks that assumed the iceberg sits at the page top, or one context per live figure, were updated.
+
+<!-- REPORT-FINAL -->

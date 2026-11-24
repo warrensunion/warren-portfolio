@@ -34,7 +34,6 @@ async function measure(browser, url, ids, { throttle = 1 } = {}) {
   for (const id of ids) {
     await page.evaluate((id) => {
       const fig = document.querySelector(`figure.fig[data-fig-id="${id}"]`);
-      if (id.startsWith('iceberg')) return scrollTo({ top: 0, behavior: 'instant' });
       const r = fig.getBoundingClientRect();
       scrollTo({ top: scrollY + r.top + r.height / 2 - innerHeight / 2, behavior: 'instant' });
     }, id);
