@@ -59,22 +59,23 @@ import { nextTask } from '../warm.js';
     near-black so the cross-section sits on the plate instead of punching a
     hole in it. The ice keeps the source's colours: it was already pale. */
 const C = (hex) => new THREE.Color(hex);
-const SKY_TOP = C('#f4f3ee');
-const SKY_HORIZON = C('#e9ecee');
-const FOG = C('#e3e7ea');
-const LOADER = C('#eef0f1');
+// Ascent: re-keyed once more, from paper to the climb's blue hour, so the plate sits in the night.
+const SKY_TOP = C('#0c1a33');
+const SKY_HORIZON = C('#56709e');
+const FOG = C('#4b6190');
+const LOADER = C('#0e1a2b');
 const ROCK = C('#4a525d');
 const ROCK_LIGHT = C('#8a929d');
-const SNOW = C('#eef1f4');
+const SNOW = C('#c9d6ec');
 const ICE_WHITE = C('#e9f0f7');
 const ICE_PALE = C('#a9c6e2');
 const ICE_SHADE = C('#7fa5d6');
 const ICE_CYAN = C('#56c8ea');
 const ICE_BLUE = C('#1b4fb0');
-const WATER_TOP = C('#2c5466');
-const WATER_DEEP = C('#13324a');
-const GLACIER = C('#d3e0ec');
-const GLACIER_DARK = C('#57779e');
+const WATER_TOP = C('#1d3a52');
+const WATER_DEEP = C('#0a1a2b');
+const GLACIER = C('#a8bbd6');
+const GLACIER_DARK = C('#3c5679');
 const CORE = C('#ffffff');
 const CORE_WATER = C('#bff3ff');
 /** The waterline's thin line and the light shafts: they were additive white
@@ -1212,7 +1213,7 @@ export class IcebergScene {
       uWindX: { value: 0 },
       uWindV: { value: WIND.calm },
       uAlpha: { value: 0 },
-      uCol: { value: INK },
+      uCol: { value: C('#e8eef6') }, // Ascent: snow is white on the night water
       uBox: { value: new THREE.Vector3(75, 42, 48) },
       uBoxAt: { value: new THREE.Vector3(0, 0, -28) },
     });

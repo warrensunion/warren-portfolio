@@ -1,0 +1,15 @@
+renderer: ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 (0x00002503) Direct3D11 vs_5_0 ps_5_0, D3D11)
+
+PASS live: iceberg-0 draws a non-uniform canvas and counts > 30 frames  (188 colours, luminance range 189, 332 frames)
+PASS live: ring-0 draws a non-uniform canvas and counts > 30 frames  (76 colours, luminance range 158, 111 frames)
+FAIL live: howpolluted-0 draws a non-uniform canvas and counts > 30 frames  (page.waitForFunction: Timeout 30000ms exceeded.)
+PASS live: archer-0 draws a non-uniform canvas and counts > 30 frames  (319 colours, luminance range 219, 942 frames)
+PASS live: terrarium-0 draws a non-uniform canvas and counts > 30 frames  (764 colours, luminance range 182, 858 frames)
+PASS live: contests-0 draws its SVG chart
+PASS off-screen: a figure just below the viewport stops counting frames for 1 s  (frames 185 -> 185 off screen, 223 after scrolling back, canvas kept: true)
+PASS live: no page errors
+PASS budget: at most 3 live WebGL figures, 3 WebGL contexts and a host weight of 3 at every 200 px step, top to bottom and back  (figures max 2 at 42496; contexts max 3 at 42496, peak at any creation 3; weight max 2 at 41600)
+PASS budget: no page errors while scrolling
+PASS budget: no figure failed while scrolling
+PASS budget: no console errors or WebGL/context warnings
+PASS no JavaScript: every track shows all its stage stills in flow with the stage buttons hidden, every figure keeps its poster  (8 tracks, every still in flow; 6 other posters)

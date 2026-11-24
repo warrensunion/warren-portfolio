@@ -111,14 +111,14 @@ export class BergDiagram {
     g.lineCap = 'butt';
     // A soft paper halo under everything, so ink lines and numbers read on
     // the deep water as well as on the pale ice.
-    g.shadowColor = 'rgba(244, 243, 238, 0.9)';
+    g.shadowColor = 'rgba(8, 14, 24, 0.9)';
     g.shadowBlur = 3;
     for (const [p, q] of edges) {
       const [from, to] = p.born <= q.born ? [p, q] : [q, p];
       const grow = this.reduced ? 1 : Math.min(1, (now - to.born) / GROW);
       const a = Math.min(p.a, q.a) * LINE_ALPHA;
       if (a <= 0.01 || grow <= 0) continue;
-      g.strokeStyle = `rgba(23, 25, 28, ${a})`;
+      g.strokeStyle = `rgba(232, 238, 246, ${a})`;
       g.beginPath();
       g.moveTo(crisp(from.x), crisp(from.y));
       g.lineTo(crisp(from.x + (to.x - from.x) * grow), crisp(from.y + (to.y - from.y) * grow));
@@ -133,8 +133,8 @@ export class BergDiagram {
       if (v.a <= 0.01) continue;
       const x = crisp(v.x);
       const y = crisp(v.y);
-      g.strokeStyle = `rgba(23, 25, 28, ${v.a})`;
-      g.fillStyle = `rgba(23, 25, 28, ${v.a})`;
+      g.strokeStyle = `rgba(232, 238, 246, ${v.a})`;
+      g.fillStyle = `rgba(232, 238, 246, ${v.a})`;
       const age = now - v.born;
       if (!this.reduced && age < 60) {
         g.fillRect(x - 1, y - 1, 2, 2); // pops in as a dot
@@ -149,12 +149,12 @@ export class BergDiagram {
       const text = this._label(v, now);
       if (!text) continue;
       g.shadowBlur = 6;
-      g.shadowColor = 'rgba(244, 243, 238, 0.95)';
+      g.shadowColor = 'rgba(8, 14, 24, 0.95)';
       const onRight = v === right && verts.length > 1;
       g.textAlign = onRight ? 'left' : 'right';
       g.fillText(text, onRight ? x + LABEL[0] : x - LABEL[0], y - LABEL[1]);
       g.shadowBlur = 3;
-      g.shadowColor = 'rgba(244, 243, 238, 0.85)';
+      g.shadowColor = 'rgba(8, 14, 24, 0.85)';
     }
   }
 

@@ -17,12 +17,12 @@ const only = ([...argv].find((a) => a.startsWith('--only=')) || '').slice(7).spl
 // kind to KIND_COUNT and CANVASES) as its demo lands.
 const WEBGL_IDS = ['iceberg-0', 'ring-0', 'howpolluted-0', 'archer-0', 'terrarium-0'];
 // The tracks on the page, and the compact cards (render.js card()): a card's figure is pinned at its last stage.
-const TRACKS = 7;
-const CARDS = ['howpolluted', 'archer-hero'];
+const TRACKS = 8;
+const CARDS = ['howpolluted', 'archer-hero', 'waterloodle'];
 const KIND_COUNT = { iceberg: 1, ring: 1, howpolluted: 1, archer: 1, terrarium: 1 }; // WebGL figures per kind: one fallback log each
 // The capture figures (clips, no WebGL of their own) fall back too: both under ?static=1 and reduced
 // motion, and bcwc also without WebGL2, since its live stage frames a WebGL site (env.js).
-const STILLED = { ...KIND_COUNT, bcwc: 1, bttr: 1, drift: 1, stresstest: 1, raingarden: 1, ghostline: 1 };
+const STILLED = { ...KIND_COUNT, bcwc: 1, bttr: 1, drift: 1, stresstest: 1, raingarden: 1, ghostline: 1, beatcut: 1 };
 const NO_GL2 = { ...KIND_COUNT, bcwc: 1 };
 const CANVASES = { iceberg: 2, ring: 1, howpolluted: 2, archer: 1, terrarium: 4 }; // the iceberg's scene plus its 2D overlay; the globe plus the 2D litter scene; the jar plus its river and two brains
 // Kinds that hold a WebGL context once live (env.js WEIGHTS > 0), whether their demo has landed or not.
@@ -105,7 +105,7 @@ async function scrollToFig(page, id) {
       const r = el.getBoundingClientRect();
       window.__jump(Math.max(0, window.scrollY + r.top + r.height / 2 - innerHeight / 2));
     },
-    [figSel(id), id === 'iceberg-0'],
+    [figSel(id), false], // the iceberg now leads BTTRURSLF's entry, like any other figure
   );
 }
 
@@ -460,7 +460,7 @@ async function checkReduced(browser, url) {
     const per = fallbackLogs(t.logs, 'reduced-motion');
     report('reduced motion: no canvases or iframes anywhere, one "fallback: reduced-motion" per WebGL figure', canv === 0 && frames === 0 && sameCounts(per, STILLED), `canvases ${canv}, iframes ${frames}, logs ${JSON.stringify(per)}`);
   });
-  await step('reduced motion: the hero poster cross-fades to the under-water one past half the hero, and back', async () => {
+  await step('reduced motion: the iceberg poster cross-fades to the under-water one past its midpoint, and back', async () => {
     const sel = figSel('iceberg-0');
     const read = () =>
       page.evaluate((sel) => {
@@ -472,11 +472,12 @@ async function checkReduced(browser, url) {
     await page.evaluate(() => window.__jump(0));
     await sleep(700);
     const top = await read();
-    await page.evaluate(() => {
-      const h = document.querySelector('.hero');
-      const r = h.getBoundingClientRect();
-      window.__jump(window.scrollY + r.top + (r.height - innerHeight) * 0.5 + 40);
-    });
+    // The iceberg leads BTTRURSLF's entry now: its stage's midpoint crossing the viewport's middle swaps it.
+    await page.evaluate((sel) => {
+      const st = document.querySelector(sel + ' .fig-stage');
+      const r = st.getBoundingClientRect();
+      window.__jump(window.scrollY + r.top + r.height / 2 - innerHeight / 2 + 60);
+    }, sel);
     await page.waitForTimeout(100);
     const mid = await read(); // 100 ms into a 400 ms fade: on its way, not swapped
     await sleep(700);
@@ -486,7 +487,7 @@ async function checkReduced(browser, url) {
     const back = await read();
     const fading = Number(mid.opacity) > 0 && Number(mid.opacity) < 1;
     report(
-      'reduced motion: the hero poster cross-fades to the under-water one past half the hero, and back',
+      'reduced motion: the iceberg poster cross-fades to the under-water one past its midpoint, and back',
       !top.under && top.opacity === '0' && half.under && half.opacity === '1' && half.loaded && /opacity|all/.test(half.prop) && half.dur === '0.4s' && fading && !back.under && back.opacity === '0',
       `top ${top.opacity}, 100 ms in ${mid.opacity}, half ${half.opacity} (${half.dur}), back ${back.opacity}`,
     );
@@ -1899,6 +1900,116 @@ async function checkTerrariumFail(browser, url) {
   await t.close();
 }
 
+/* ── the world (src/world/): the climb behind the page, the ice field, the chrome ── */
+
+async function checkWorld(browser, url) {
+  const t = await open(browser, url);
+  const { page } = t;
+  const live = () => page.waitForFunction(() => document.documentElement.classList.contains('world-live'), null, { timeout: 45000 });
+  const hud = () => page.evaluate(() => document.querySelector('[data-hud="alt"]')?.textContent || '');
+  await step('world: goes live behind the page and draws a varied scene', async () => {
+    await live();
+    await sleep(600);
+    const px = await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          requestAnimationFrame(() => {
+            const c = document.querySelector('.world-canvas');
+            const tc = document.createElement('canvas');
+            tc.width = tc.height = 48;
+            const g = tc.getContext('2d', { willReadFrequently: true });
+            g.drawImage(c, 0, 0, 48, 48);
+            const d = g.getImageData(0, 0, 48, 48).data;
+            const seen = new Set();
+            for (let i = 0; i < d.length; i += 4) seen.add((d[i] >> 3) * 1024 + (d[i + 1] >> 3) * 32 + (d[i + 2] >> 3));
+            resolve(seen.size);
+          });
+        }),
+    );
+    const st = await page.evaluate(() => window.__worldStats());
+    report('world: goes live behind the page and draws a varied scene', px > 20 && st.total > 100 && st.act === 'mountain', `${px} colours, ${st.total} igloo blocks, act ${st.act}`);
+  });
+  await step('world: the HUD climbs with the scroll and the igloo gains blocks', async () => {
+    const a0 = await hud();
+    const p0 = (await page.evaluate(() => window.__worldStats())).placed;
+    await page.evaluate(() => window.__jump(document.getElementById('work').getBoundingClientRect().top + scrollY));
+    await sleep(2500);
+    const a1 = await hud();
+    const p1 = (await page.evaluate(() => window.__worldStats())).placed;
+    const n1 = Number(a1.replace(/[^\d]/g, ''));
+    report('world: the HUD climbs with the scroll and the igloo gains blocks', a0 === '0 m' && n1 >= 4400 && n1 <= 5000 && p1 > p0 + 50, `${a0} -> ${a1}, blocks ${p0} -> ${p1}`);
+  });
+  await step('world: log 02 switches to the ice field, with labels on the block in view', async () => {
+    await page.evaluate(() => {
+      const s = document.getElementById('index');
+      const r = s.getBoundingClientRect();
+      const n = Number(getComputedStyle(s).getPropertyValue('--blocks')) || 11;
+      window.__jump(r.top + scrollY + (0.85 / (n + 0.7)) * r.height - innerHeight / 2);
+    });
+    await sleep(2500);
+    const st = await page.evaluate(() => ({ act: window.__worldStats().act, labels: document.querySelectorAll('.ice-block.is-on').length, here: document.querySelector('.ice-link.is-here')?.getAttribute('href') }));
+    report('world: log 02 switches to the ice field, with labels on the block in view', st.act === 'field' && st.labels >= 1 && st.here === '#bttrurslf', JSON.stringify(st));
+  });
+  await step('world: Enter on a block link dollies in and lands on that project, its heading focused', async () => {
+    await page.focus('.ice-link[data-block="2"]');
+    await sleep(1500);
+    await page.keyboard.press('Enter');
+    await sleep(2600);
+    const r = await page.evaluate(() => ({ top: Math.round(document.getElementById('drift').getBoundingClientRect().top), focus: document.activeElement?.closest('#drift') ? 'in #drift' : document.activeElement?.tagName, hash: location.hash }));
+    report('world: Enter on a block link dollies in and lands on that project, its heading focused', Math.abs(r.top - 72) < 40 && r.focus === 'in #drift' && r.hash === '#drift', JSON.stringify(r));
+  });
+  await step('world: Ctrl+K opens the palette, typing filters, Enter goes, Esc closes', async () => {
+    await page.keyboard.press('Control+k');
+    await sleep(300);
+    const open1 = await page.evaluate(() => !!document.querySelector('dialog.palette[open]'));
+    await page.keyboard.type('raingarden');
+    await sleep(200);
+    const first = await page.evaluate(() => document.querySelector('.pal-list [aria-selected="true"]')?.textContent);
+    await page.keyboard.press('Enter');
+    await sleep(1800);
+    const at = await page.evaluate(() => Math.round(document.getElementById('raingarden').getBoundingClientRect().top));
+    await page.keyboard.press('Control+k');
+    await sleep(200);
+    await page.keyboard.press('Escape');
+    await sleep(200);
+    const closed = await page.evaluate(() => !document.querySelector('dialog.palette[open]'));
+    report('world: Ctrl+K opens the palette, typing filters, Enter goes, Esc closes', open1 && first === 'Raingarden' && Math.abs(at - 76) < 60 && closed, `open ${open1}, first "${first}", landed at ${at}px, closed ${closed}`);
+  });
+  await step('world: the altimeter marks all seven logs and follows the page', async () => {
+    const r = await page.evaluate(() => ({ n: document.querySelectorAll('.alti a').length, cur: document.querySelector('.alti a[aria-current]')?.getAttribute('href') }));
+    report('world: the altimeter marks all seven logs and follows the page', r.n === 7 && r.cur === '#projects', JSON.stringify(r));
+  });
+  await step('world: at most 3 WebGL contexts with the world in them, top to bottom', async () => {
+    await page.evaluate(() => (window.__glPeak = window.__glAlive()));
+    await scrollThrough(page, 450, 140);
+    const g = await gl(page);
+    report('world: at most 3 WebGL contexts with the world in them, top to bottom', g.peak <= 3, `peak ${g.peak}, now ${g.alive}`);
+  });
+  report('world: no page errors', t.errors.length === 0, t.errors.join(' | '));
+  reportConsole('world: no console errors or WebGL/context warnings', t.logs);
+  await t.close();
+
+  for (const [name, opts, q, reason] of [
+    ['reduced motion', { reducedMotion: 'reduce' }, '', 'reduced-motion'],
+    ['?static=1', {}, '?static=1', 'forced'],
+  ]) {
+    const r = await open(browser, url + q, opts);
+    await step(`world, ${name}: no world canvas, its stills instead, one "[world] fallback: ${reason}"`, async () => {
+      await sleep(2500);
+      const st = await r.page.evaluate(() => ({
+        canvas: document.querySelectorAll('.world-canvas').length,
+        still: (() => {
+          const i = document.querySelector('.world-still.is-on');
+          return !!i && i.complete && i.naturalWidth > 0;
+        })(),
+      }));
+      const logs = r.logs.filter((l) => l.text === `[world] fallback: ${reason}`).length;
+      report(`world, ${name}: no world canvas, its stills instead, one "[world] fallback: ${reason}"`, st.canvas === 0 && st.still && logs === 1, `${JSON.stringify(st)}, ${logs} log(s)`);
+    });
+    await r.close();
+  }
+}
+
 /* ── run ── */
 
 if (!argv.has('--no-build')) build();
@@ -1945,6 +2056,7 @@ try {
     clips: () => checkClips(browser, url),
     bcwc: () => checkBcwc(browser, url),
     nosource: () => checkNoSource(),
+    world: () => checkWorld(browser, url),
   };
   for (const [name, run] of Object.entries(checks)) if (!only.length || only.includes(name)) await run();
 } finally {

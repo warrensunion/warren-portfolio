@@ -168,19 +168,28 @@ export async function createField({ renderer, composer, insertBefore, dpr, tier,
   section.addEventListener('focusin', onFocus);
   section.addEventListener('click', onClick);
 
+  const ray = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
   // Mouse: a click on a block (not on any control) opens it.
   let hovered = -1;
   let active = false;
   const NOT = 'a, button, input, textarea, select, label, summary, [tabindex], figure, nav, header, footer, .palette';
+  // A click or a tap picks the block under it then and there (a tap has no hover before it).
+  const pickAt = (x, y) => {
+    ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const vis = blocks.filter((b) => b.root.visible);
+    const hits = ray.intersectObjects(vis.map((b) => b.ice), false);
+    return hits.length ? blocks.indexOf(vis.find((b) => b.ice === hits[0].object)) : -1;
+  };
   const onWindowClick = (e) => {
-    if (!active || hovered < 0 || e.button !== 0) return;
+    if (!active || e.button !== 0 || move) return;
     if (e.target.closest && e.target.closest(NOT)) return;
-    open(hovered);
+    const i = pickAt(e.clientX, e.clientY);
+    if (i >= 0) open(i);
   };
   addEventListener('click', onWindowClick);
 
-  const ray = new THREE.Raycaster();
-  const ndc = new THREE.Vector2();
   let current = -1;
 
   return {

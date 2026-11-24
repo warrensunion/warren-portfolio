@@ -14,7 +14,7 @@ const SIZES = [
   { width: 1920, height: 1080 },
   { width: 390, height: 844 },
 ];
-const SECTIONS = ['work', 'building', 'projects', 'contests', 'contact'];
+const SECTIONS = ['index', 'building', 'projects', 'work', 'contests', 'contact'];
 const argv = process.argv.slice(2);
 const only = (argv.find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
 const outDir = path.join(root, 'design/shots');
@@ -72,19 +72,17 @@ try {
     await settle(page, 1500);
     await shot('top');
 
-    // Half way through the hero: on desktop the sticky track, on the phone the figure's own travel.
-    const halfHero = () => jump(page, () => {
-      const hero = document.querySelector('.hero');
-      const fig = hero.querySelector('figure');
-      const desk = matchMedia('(min-width: 860px)').matches;
-      const y = desk
-        ? hero.offsetTop + (hero.offsetHeight - innerHeight) / 2 + 24 // just past the half-way line
-        : (fig.getBoundingClientRect().top + scrollY) / 2; // heroProgress 0.5 on the phone
-      scrollTo({ top: Math.max(0, y), behavior: 'instant' });
-    });
-    await halfHero();
-    await settle(page, 1500);
-    await shot('hero-under');
+    // The ice field (log 02): the first two blocks centred in turn (src/world/field/field.js passage).
+    for (const k of [0, 1]) {
+      await jump(page, (k) => {
+        const sec = document.getElementById('index');
+        const r = sec.getBoundingClientRect();
+        const n = Number(getComputedStyle(sec).getPropertyValue('--blocks')) || 11;
+        scrollTo({ top: r.top + scrollY + ((k + 0.85) / (n + 0.7)) * r.height - innerHeight / 2, behavior: 'instant' });
+      }, k);
+      await settle(page, 2500);
+      await shot('field-' + k);
+    }
 
     for (const id of SECTIONS) {
       await jump(page, (id) => document.getElementById(id).scrollIntoView({ block: 'start', behavior: 'instant' }), id);
