@@ -78,7 +78,7 @@ try {
         const sec = document.getElementById('index');
         const r = sec.getBoundingClientRect();
         const n = Number(getComputedStyle(sec).getPropertyValue('--blocks')) || 11;
-        scrollTo({ top: r.top + scrollY + ((k + 0.85) / (n + 0.7)) * r.height - innerHeight / 2, behavior: 'instant' });
+        scrollTo({ top: window.__fieldY ? window.__fieldY(k) : r.top + scrollY + ((k + 0.85) / (n + 0.7)) * r.height - innerHeight / 2, behavior: 'instant' });
       }, k);
       await settle(page, 2500);
       await shot('field-' + k);

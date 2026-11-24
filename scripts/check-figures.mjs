@@ -1954,7 +1954,7 @@ async function checkWorld(browser, url) {
       const s = document.getElementById('index');
       const r = s.getBoundingClientRect();
       const n = Number(getComputedStyle(s).getPropertyValue('--blocks')) || 11;
-      window.__jump(r.top + scrollY + (0.85 / (n + 0.7)) * r.height - innerHeight / 2);
+      window.__jump(window.__fieldY ? window.__fieldY(0) : r.top + scrollY + (0.85 / (n + 0.7)) * r.height - innerHeight / 2);
     });
     await sleep(2500);
     const st = await page.evaluate(() => ({ act: window.__worldStats().act, labels: document.querySelectorAll('.ice-block.is-on').length, here: document.querySelector('.ice-link.is-here')?.getAttribute('href') }));

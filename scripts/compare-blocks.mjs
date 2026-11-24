@@ -36,7 +36,7 @@ try {
         const s = document.getElementById('index');
         const r = s.getBoundingClientRect();
         const n = Number(getComputedStyle(s).getPropertyValue('--blocks')) || 11;
-        window.scrollTo({ top: r.top + scrollY + ((k + 0.85) / (n + 0.7)) * r.height - innerHeight / 2, behavior: 'instant' });
+        window.scrollTo({ top: window.__fieldY ? window.__fieldY(k) : r.top + scrollY + ((k + 0.85) / (n + 0.7)) * r.height - innerHeight / 2, behavior: 'instant' });
       }, k);
       await sleep(3000);
       const ours = await page.screenshot();

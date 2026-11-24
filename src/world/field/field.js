@@ -99,9 +99,16 @@ export async function createField({ renderer, composer, insertBefore, dpr, tier,
   const dissolve = new Dissolve({ reduced, dpr, colors: FOG });
   composer.insertPass(dissolve.pass, Math.max(1, composer.passes.indexOf(insertBefore)));
 
-  // ---- passage: block i is centred at fieldP = p_i; each is on screen for 2/3 of its pitch ----
-  const P = N + 0.7;
-  const centreOf = (i) => (i + 0.85) / P;
+  // ---- passage: block i is centred at fieldP = p_i; each is on screen for 2/3 of its pitch. The first
+  // arrives once the section's heading has scrolled away (it would sit on the first block's labels). ----
+  const P = N + 1.3;
+  const centreOf = (i) => (i + 1.4) / P;
+  // where the page must be for block i to be centred (the checks, shots and the keyboard glide use it)
+  const yOf = (i) => {
+    const r = section.getBoundingClientRect();
+    return Math.max(0, r.top + scrollY + centreOf(i) * r.height - innerHeight * 0.5);
+  };
+  window.__fieldY = yOf;
   const passage = (i, p) => (p - centreOf(i)) * P * 1.5;
 
   // ---- the move into a block ----
@@ -148,12 +155,7 @@ export async function createField({ renderer, composer, insertBefore, dpr, tier,
   const labels = createLabels(stageEl, data, { onOpen: open, reduced });
 
   // Keyboard: focusing a project's link glides the page to its block; Enter (a click) plays the move.
-  const glide = (i) => {
-    const r = section.getBoundingClientRect();
-    const top = r.top + scrollY;
-    const y = top + centreOf(i) * r.height - innerHeight * 0.5;
-    window.scrollTo({ top: Math.max(0, y), behavior: reduced ? 'instant' : 'smooth' });
-  };
+  const glide = (i) => window.scrollTo({ top: yOf(i), behavior: reduced ? 'instant' : 'smooth' });
   const onFocus = (e) => {
     const a = e.target.closest?.('.ice-link');
     if (a && document.documentElement.classList.contains('world-live')) glide(Number(a.dataset.block));
@@ -201,7 +203,7 @@ export async function createField({ renderer, composer, insertBefore, dpr, tier,
       h = ch;
       camera.aspect = w / h;
       // portrait: pulled back only as far as a block needs to fit across (the hub framed them at ~60 %)
-      frame = Math.max(1, (camera.aspect < 1 ? 0.7 : 0.95) / camera.aspect);
+      frame = Math.max(1, (camera.aspect < 1 ? 0.55 : 0.95) / camera.aspect);
       camera.updateProjectionMatrix();
     },
     /** Every frame, whichever act is on: the dissolve's amount, the move's flash. */

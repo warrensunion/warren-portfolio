@@ -86,7 +86,7 @@ const WORLD_SPOTS = [
     const s = document.getElementById('index');
     const r = s.getBoundingClientRect();
     const n = Number(getComputedStyle(s).getPropertyValue('--blocks')) || 11;
-    return r.top + scrollY + (0.85 / (n + 0.7)) * r.height - innerHeight / 2;
+    return window.__fieldY ? window.__fieldY(0) : r.top + scrollY + (0.85 / (n + 0.7)) * r.height - innerHeight / 2;
   }],
   ['beside Terrarium', () => {
     const f = document.querySelector('#terrarium figure');

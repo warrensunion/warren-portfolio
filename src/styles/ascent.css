@@ -545,7 +545,7 @@ html.poster-world .cracks {
 /* ---- log 02 with the world live: the blocks float up through the cloud ---- */
 
 html.world-live .section--index {
-  min-height: calc((var(--blocks) + 0.7) * 90svh);
+  min-height: calc((var(--blocks) + 1.3) * 90svh);
 }
 
 html.world-live .ice-pin {
