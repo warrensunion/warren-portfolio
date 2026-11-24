@@ -186,3 +186,10 @@ j. phone, reduced motion, static, no JS k. perf tuning, then the full check, com
   fit across, and its index stays the keyboard path out of sight until focused. Taps open blocks.
 - Checks: a `world` group in `npm run check` (HUD, field, Enter into a block, palette, altimeter, the 3-context
   budget with the world in it, the reduced-motion and static fallbacks).
+- Phase k: the first full check found three WebGL figures on screen at once with two slots (WATERLOODLE's card
+  now sits between the WebGL cards), a stale under-water still after jumps (fixed in the host), and slow clip
+  seeks while the world rendered at full rate (it eases off while a figure runs). Lighthouse went 55 -> 98 once
+  the world started on the first input, linked its shaders asynchronously and the untouched page stayed still.
+  The field's first block now arrives after its heading has gone, and phones frame the blocks full width.
+- The machine was saturated by other sessions for the whole run; every perf number and several check timeouts
+  reflect that. See `SNOW_REPORT.md`.

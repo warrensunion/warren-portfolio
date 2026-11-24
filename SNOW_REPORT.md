@@ -220,4 +220,82 @@ Flags: `?static=1` (stills), `?world=0` (the page without its world, for compari
   `design/ref-yuzeli/` and `design/ref-igloo/` are local only.
 - `public/posters/world-0..6.webp`: the world's still per log, which is also what reduced motion shows.
 
-<!-- REPORT-FINAL -->
+## Performance, before and after
+
+**Read this first:** this machine was saturated all day (other sessions' builds, browsers and dev servers kept
+the CPU at 100%), so every number below is pessimistic for the CPU. The October numbers in
+`design/baseline/perf-before.md` were taken on an idle machine. Compare like with like: the "without the world"
+row was measured in the same minutes as the "with" row.
+
+**Lighthouse** (desktop preset, 3 runs, median; `design/baseline/lighthouse-before.json` vs `design/lighthouse.json`):
+
+| | before (main, this morning, same busy machine) | after (`snow-ascent`) |
+|---|---|---|
+| Performance | 95 (runs 95, 99, 49) | **98** (runs 99, 95, 98) |
+| Accessibility | 100 | 100 |
+| Best practices | 100 | 100 |
+| SEO | 92 (no robots.txt, as before) | 92 |
+
+It took two fixes to get there. The first build scored 55 with 9 to 11 s of total blocking time: the world
+built itself during the page load. Now it starts on the visitor's first input (the base-camp still is the same
+picture until then), links its shaders off the main thread, and a page nobody has touched stays still (the HUD's
+gusts and the icicles' drips wait for that first input too), so the load carries none of it.
+
+**Frame rates** (`npm run perf`, 1440x900, RTX 3060, `design/perf.md`; 5 s per row after a warm-up):
+
+| | high tier, with the world | high tier, without (`?world=0`) | low tier |
+|---|---|---|---|
+| iceberg | 57.2 fps | 55.6 | 58.4 |
+| ring | 58.1 | 54.3 | 54.4 |
+| HowPolluted | 55.6 | 51.8 | 52.6 |
+| Archer Hero | 56.2 | 58.4 | 56.5 |
+| Terrarium | 43.5 | 54.9 | 57.0 |
+
+| the world itself | high tier | low tier | 4x CPU slowdown |
+|---|---|---|---|
+| base camp | 57.2 fps | 60.0 | 33.8 |
+| inside the ice field | 58.8 | 57.2 | 25.1 |
+| beside a running figure (Terrarium) | 29.7 (half rate by design) | 24.2 | 20.3 |
+| summit | 58.0 | 60.0 | 37.2 |
+
+- The figures run at about the same rate with and without the world, within this machine's noise, except
+  Terrarium (43.5 against 54.9): its simulation and the world compete for the same starved CPU. While a
+  figure runs mid-screen the world draws every other frame at DPR 1, which is the "beside Terrarium" row.
+- Under a 4x CPU slowdown the world falls to 20 to 37 fps and the iceberg to 12.5 (60 in October, idle). That
+  slowdown on top of a saturated CPU is far below a normal laptop; check on a real laptop before shipping.
+- The world adapts on its own: after 2 s over 22 ms a frame it drops to DPR 1, half the snow and no bloom
+  ("lowered quality" in the console), and it always pauses when the tab is hidden.
+
+## Checks on the final code
+
+- `npm test`: 133 of 133.
+- `npm run check`, in groups (a full run takes over 35 minutes on this machine, so the final build was checked
+  group by group): `world`, `budget`, `live`, `phone` 25 of 25; `world`, `clips`, `static`, `reduced` 28 of 29.
+- Under the machine's load these checks failed in at least one run and passed in another, always as a timeout
+  or a timing read, never as a wrong result: the races settle (a figure still building after 7 s), context loss,
+  the ring's reduced-motion cross-fade (0.996 instead of 1 after 900 ms), three Archer Hero input checks, three
+  Terrarium checks, Drift's site button and two clip stages. Terrarium was traced: at its stage it goes live
+  after about 4 s here and stays live; the check read it after 300 ms (it now waits for the jar).
+  **Run `npm run check` once on an idle machine before merging.**
+- `npm run compare` could not run at the end: the machine lost its internet connection
+  (`ERR_INTERNET_DISCONNECTED` for yuzeli.ca), and earlier yuzeli.ca would not finish loading within 90 s.
+  `design/compare/*.png` (other than `blocks-*`) are still October's. The block comparison ran.
+
+## How the blocks compare with the BTTRshop hub
+
+Side by side at the same sizes (`design/compare/blocks-*.png`) the blocks match the hub's look: the same smoky
+transmission ice with its frost shell, cracks and glints, the white geodesic wire, the leader lines and
+scrambling labels, the side index. One thing is clearly below the reference and worth raising: **the frozen
+objects.** The hub's are photographic white renders with soft occlusion and texture; this page's symbols are
+real geometry in a simple frosted shader, so they read flatter (the B is clear, the clapperboard reads less
+well on a phone). Baking an ambient-occlusion pass into the symbols, or rendering them once and freezing the
+render like the hub, would close that gap.
+
+## Known limits
+
+- The world is drawn behind the plates even where a plate covers it; it eases off while a figure runs, but a
+  page that hid it entirely behind opaque plates would save more.
+- The igloo's knoll is a separate mesh that melts into the slope; at a few camera angles its edge still shows.
+- On phones the theme toggle is hidden below 440 px wide (the bar keeps one line), and there is no altimeter
+  or palette (they need a keyboard or room).
+- `?world=0` turns the world off for comparisons; it is not linked from the page.

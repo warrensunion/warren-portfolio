@@ -9,3 +9,7 @@ scripts/_*.mjs
 # third-party reference screenshots stay local (design/ref-bttrshop is Warren's own app and is kept)
 design/ref-yuzeli/
 design/ref-igloo/
+
+# run logs from the checks, shots and posters
+design/*.log
+design/baseline/posters-run*.log

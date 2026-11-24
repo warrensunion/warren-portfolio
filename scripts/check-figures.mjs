@@ -1458,8 +1458,9 @@ async function checkTerrarium(browser, url) {
     const n7 = 'terrarium: scrolling back to stage 0 resets the world to gen 0 or 1';
     await step(n7, async () => {
       await at(page, 2);
-      await sleep(300);
-      const before = await page.evaluate(() => window.__terra.gen());
+      // the jar may have been rebuilt on the way here: wait for it (a loaded machine takes seconds)
+      await page.waitForFunction(() => window.__terra && window.__terra.gen() > 1, null, { timeout: 20000 }).catch(() => {});
+      const before = await page.evaluate(() => (window.__terra ? window.__terra.gen() : -1));
       await at(page, 0);
       await page.waitForFunction(() => window.__terra.gen() <= 1, null, { timeout: 4000 }).catch(() => {});
       const after = await page.evaluate(() => window.__terra.gen());
