@@ -1,0 +1,15 @@
+
+> warren-portfolio@0.1.0 lighthouse
+> node scripts/lighthouse.mjs
+
+run 1: performance 95  FCP 674 ms  LCP 1176 ms  TBT 136 ms  CLS 0.001  SI 981 ms
+       LCP element: <img class="fig-poster" src="posters/iceberg.webp" alt="" width="1200" height="1200" loading="eager" fetchpriority="high
+       long tasks: 647+160 index-CmYv5qJ9.js, 1275+110 page, 1450+110 page, 1198+77 Unattributable, 854+56 index-CmYv5qJ9.js, 1385+53 page
+run 2: performance 99  FCP 462 ms  LCP 511 ms  TBT 119 ms  CLS 0.001  SI 691 ms
+       LCP element: <img class="fig-poster" src="posters/iceberg.webp" alt="" width="1200" height="1200" loading="eager" fetchpriority="high
+       long tasks: 346+130 index-CmYv5qJ9.js, 798+118 page, 968+107 page, 732+66 Unattributable, 511+54 index-CmYv5qJ9.js, 916+52 page
+run 3: performance 49  FCP 2617 ms  LCP 2665 ms  TBT 434 ms  CLS 0.001  SI 4309 ms
+       LCP element: <img class="fig-poster" src="posters/iceberg.webp" alt="" width="1200" height="1200" loading="eager" fetchpriority="high
+       long tasks: 688+2248 index-CmYv5qJ9.js, 3187+151 page, 3422+136 page, 2974+95 index-CmYv5qJ9.js, 3338+70 page, 3120+67 Unattributable
+scores: 95, 99, 49  median: 95  (target 85)
+design/lighthouse.json holds the median run

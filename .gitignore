@@ -5,3 +5,7 @@ design/art-src/*.log
 .capture-work
 scripts/_*.mjs
 .claude/
+
+# third-party reference screenshots stay local (design/ref-bttrshop is Warren's own app and is kept)
+design/ref-yuzeli/
+design/ref-igloo/
