@@ -91,6 +91,7 @@ uniform vec3 uWarmCol;
 uniform vec3 uDoor;
 varying vec3 vWorld;
 varying vec3 vN;
+varying float vR;
 void main() {
   vec3 n = normalize(vN);
   float wrap = dot(n, normalize(uMoonDir)) * 0.5 + 0.5;
@@ -103,16 +104,21 @@ void main() {
   float d = length(vWorld - uDoor);
   col += uWarmCol * uWarmth * exp(-d * 0.55) * 0.9;
   col = applyHaze(col, vWorld);
-  gl_FragColor = vec4(col, 1.0);
+  // the skirt melts into the slope: no hard edge where it ends
+  float a = 1.0 - smoothstep(0.6, 1.0, vR);
+  gl_FragColor = vec4(col, a);
   #include <colorspace_fragment>
 }
 `;
 const MOUND_VERT = /* glsl */ `
 attribute float aSkirt;
+attribute float aR;
 uniform float uSkirt;
 varying vec3 vWorld;
 varying vec3 vN;
+varying float vR;
 void main() {
+  vR = aR;
   vec3 p = position;
   vec4 wp = modelMatrix * vec4(p, 1.0);
   vWorld = wp.xyz;
@@ -239,6 +245,7 @@ export function createIgloo(shared, { dpr = 1 } = {}) {
   const SECT = 72;
   const kp = [];
   const ks = [];
+  const kr = [];
   const idx = [];
   for (let i = 0; i <= RINGS; i++) {
     const t = i / RINGS;
@@ -250,6 +257,7 @@ export function createIgloo(shared, { dpr = 1 } = {}) {
       const wob = 1 + 0.06 * Math.sin(a * 3 + 1.3) + 0.04 * Math.sin(a * 7);
       kp.push(Math.cos(a) * r * (t < 0.5 ? 1 : wob), top, Math.sin(a) * r * (t < 0.5 ? 1 : wob));
       ks.push(sk);
+      kr.push(t);
     }
   }
   for (let i = 0; i < RINGS; i++) {
@@ -262,6 +270,7 @@ export function createIgloo(shared, { dpr = 1 } = {}) {
   const mg = new THREE.BufferGeometry();
   mg.setAttribute('position', new THREE.Float32BufferAttribute(kp, 3));
   mg.setAttribute('aSkirt', new THREE.Float32BufferAttribute(ks, 1));
+  mg.setAttribute('aR', new THREE.Float32BufferAttribute(kr, 1));
   mg.setIndex(idx);
   mg.computeVertexNormals();
   const doorWorld = new THREE.Vector3();
@@ -269,6 +278,7 @@ export function createIgloo(shared, { dpr = 1 } = {}) {
     uniforms: { ...shared, uWarmth: mat.uniforms.uWarmth, uWarmCol: { value: warmCol }, uDoor: { value: doorWorld }, uSkirt: { value: 4 } },
     vertexShader: MOUND_VERT,
     fragmentShader: MOUND_FRAG,
+    transparent: true,
   });
   // The skirt is shaped on the CPU when its depth changes by more than a few centimetres, so its normals
   // follow its real slope (a shader displacement kept the flat dome's normals and read as a grey table).
@@ -282,7 +292,7 @@ export function createIgloo(shared, { dpr = 1 } = {}) {
       const sk = ks[i];
       const x = base[i * 3];
       const z = base[i * 3 + 2];
-      const spread = 1 + sk * k * 0.09;
+      const spread = 1 + sk * k * 0.05;
       const bump = sk > 0 ? Math.sin(x * 0.7 + z * 0.4) * Math.cos(z * 0.6 - x * 0.2) * 0.6 * sk * Math.min(1, k / 6) : 0;
       pa.setXYZ(i, x * spread, base[i * 3 + 1] - sk * k + bump, z * spread);
     }

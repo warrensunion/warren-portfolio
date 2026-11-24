@@ -78,14 +78,68 @@ async function measure(browser, url, ids, { throttle = 1 } = {}) {
   return { rows, gpu, adapt };
 }
 
+// The world behind the page (src/world/): its own frame times through window.__worldFrames, at four spots
+// of the climb: base camp, inside the ice field (transmission ice), beside a live WebGL figure (the world
+// gives way then) and at the summit.
+const WORLD_SPOTS = [
+  ['base camp', () => 0],
+  ['ice field', () => {
+    const s = document.getElementById('index');
+    const r = s.getBoundingClientRect();
+    const n = Number(getComputedStyle(s).getPropertyValue('--blocks')) || 11;
+    return r.top + scrollY + (0.85 / (n + 0.7)) * r.height - innerHeight / 2;
+  }],
+  ['beside Terrarium', () => {
+    const f = document.querySelector('#terrarium figure');
+    const r = f.getBoundingClientRect();
+    return r.top + scrollY + r.height / 2 - innerHeight / 2;
+  }],
+  ['summit', () => document.documentElement.scrollHeight],
+];
+async function measureWorld(browser, url, { throttle = 1 } = {}) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  const logs = [];
+  page.on('console', (m) => logs.push(m.text()));
+  await page.goto(url, { waitUntil: 'load' });
+  await page.waitForFunction(() => document.documentElement.classList.contains('world-live'), null, { timeout: 60000 });
+  const cdp = await context.newCDPSession(page);
+  const rows = [];
+  for (const [name, where] of WORLD_SPOTS) {
+    await page.evaluate((src) => window.scrollTo({ top: Math.max(0, new Function('return (' + src + ')()')()), behavior: 'instant' }), where.toString());
+    if (throttle > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: throttle });
+    await sleep(WARMUP_MS + 1000);
+    await page.evaluate(() => {
+      const st = window.__worldFrames;
+      st.dts = [];
+      st.mark = { frames: st.frames, dtSum: st.dtSum };
+    });
+    await sleep(SECONDS * 1000);
+    const r = await page.evaluate(() => {
+      const st = window.__worldFrames;
+      const out = { frames: st.frames - st.mark.frames, dtSum: st.dtSum - st.mark.dtSum, dts: st.dts, stats: window.__worldStats() };
+      st.dts = null;
+      return out;
+    });
+    if (throttle > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    rows.push({ id: `world: ${name} (${r.stats.act}, dpr ${r.stats.dpr})`, frames: r.frames, fps: r.dtSum > 0 ? (1000 * r.frames) / r.dtSum : 0, p95: pct(r.dts, 95), max: Math.max(...r.dts) });
+  }
+  const adapt = logs.filter((l) => /lowered quality/.test(l));
+  await context.close();
+  return { rows, adapt };
+}
+
 if (!argv.includes('--no-build')) build();
 const server = await startPreview(Number(process.env.PREVIEW_PORT) || 4321);
 const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
-let high, low, thr;
+let high, low, thr, wHigh, wLow, wThr;
 try {
   high = await measure(browser, server.url + '?tier=high', FIGS);
   low = await measure(browser, server.url + '?tier=low', FIGS);
   thr = await measure(browser, server.url + '?tier=high', ['iceberg-0'], { throttle: 4 });
+  wHigh = await measureWorld(browser, server.url + '?tier=high');
+  wLow = await measureWorld(browser, server.url + '?tier=low');
+  wThr = await measureWorld(browser, server.url + '?tier=high', { throttle: 4 });
 } finally {
   await browser.close();
   server.stop();
@@ -97,7 +151,7 @@ const table = (res) =>
     .concat(res.rows.map((r) => `| ${r.id} | ${r.frames} | ${f1(r.fps)} | ${f1(r.p95)} | ${f1(r.max)} |`))
     .join('\n');
 const adaptNote = (res) => (res.adapt.length ? res.adapt.map((l) => `- ${l}`).join('\n') : '- none');
-const below = [...high.rows, ...low.rows].filter((r) => r.fps < 58);
+const below = [...high.rows, ...low.rows, ...wHigh.rows, ...wLow.rows].filter((r) => r.fps < 58);
 
 const md = `# Figure frame rates
 
@@ -130,7 +184,25 @@ ${table(low)}
 Quality steps taken by the runtime adapt:
 ${adaptNote(low)}
 
-## Laptop proxy: hero at high tier under a 4x CPU slowdown
+## The world behind the page (src/world/), high tier
+
+${table(wHigh)}
+
+Quality steps taken by the world's own adapt:
+${adaptNote(wHigh)}
+
+## The world, low tier
+
+${table(wLow)}
+
+## The world under a 4x CPU slowdown (high tier)
+
+${table(wThr)}
+
+Quality steps taken by the world's own adapt:
+${adaptNote(wThr)}
+
+## Laptop proxy: the iceberg at high tier under a 4x CPU slowdown
 
 ${table(thr)}
 
@@ -142,7 +214,7 @@ CPU work (water simulation, scroll read, overlay drawing) still fits a 16.7 ms f
 
 ## Verdict
 
-${below.length ? 'Below the 58 fps target: ' + below.map((r) => `${r.id} ${f1(r.fps)} fps`).join(', ') + '.' : 'Every figure averages 58 fps or more at both tiers on this machine.'}
+${below.length ? 'Below the 58 fps target: ' + below.map((r) => `${r.id} ${f1(r.fps)} fps`).join(', ') + '.' : 'Every figure and every world spot averages 58 fps or more at both tiers on this machine.'}
 ${thr.rows[0].fps < 58 ? `The hero under a 4x CPU throttle averages ${f1(thr.rows[0].fps)} fps.` : `The hero still averages ${f1(thr.rows[0].fps)} fps under a 4x CPU throttle.`}
 `;
 await writeFile(path.join(root, 'design/perf.md'), md);

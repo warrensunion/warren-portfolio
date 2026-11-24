@@ -24,6 +24,8 @@ const base = () => (import.meta.env?.BASE_URL || '/').replace(/\/?$/, '/');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 export async function create(stage, ctx) {
+  // a stage still (scripts/posters.mjs) holds the clip's poster frame: the clips open on a fade from black
+  const still = !!ctx.data?.posterState;
   const root = document.createElement('div');
   root.className = 'bc';
   root.innerHTML =
@@ -69,7 +71,7 @@ export async function create(stage, ctx) {
     video.poster = `${base()}beatcut/${c.slug}-poster.webp`;
     video.innerHTML = `<source src="${base()}beatcut/${c.slug}.webm" type="video/webm"><source src="${base()}beatcut/${c.slug}.mp4" type="video/mp4">`;
     video.load();
-    if (running) video.play().catch(() => {});
+    if (running && !still) video.play().catch(() => {});
     nameEl.textContent = c.label;
     bpmEl.textContent = `${Math.round(d.tempo)} BPM`;
     checkEl.textContent = `${d.check.visibleCuts} of ${d.check.plannedCuts} planned cuts on screen · mean ${Math.round(d.check.meanCutToBeatMs)} ms from the beat`;
@@ -121,7 +123,9 @@ export async function create(stage, ctx) {
     }
     if (sc !== lastScene) {
       lastScene = sc;
-      sceneEl.textContent = `SCENE ${String(sc + 1).padStart(2, '0')} · ${d.templates[sc] || ''}`;
+      // the plan's template names are CamelCase (SpotlightTrack): spaced for reading
+      const tpl = String(d.templates[sc] || '').replace(/([a-z])([A-Z])/g, '$1 $2');
+      sceneEl.textContent = `SCENE ${String(sc + 1).padStart(2, '0')} · ${tpl}`;
     }
   };
 
@@ -138,7 +142,7 @@ export async function create(stage, ctx) {
     start() {
       if (running) return;
       running = true;
-      if (shown < CLIPS.length) video.play().catch(() => {});
+      if (shown < CLIPS.length && !still) video.play().catch(() => {});
       raf = requestAnimationFrame(frame);
     },
     stop() {

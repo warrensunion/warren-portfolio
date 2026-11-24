@@ -466,7 +466,10 @@ export function initFigures(root, { loaders, env, tracks = null, reserve = 0 } =
       } else {
         sentinel.style.top = '50%';
         s.stage.append(sentinel);
-        rootMargin = '0px 0px -50% 0px'; // root ends at the viewport middle, so crossings fire there
+        // The root runs from far above the page down to the viewport's middle, so 'past the line' is an
+        // intersection state: a jump that carries the figure across the line without ever showing it
+        // (the iceberg leads an entry far down the page now) still flips it.
+        rootMargin = '100000px 0px -50% 0px';
         line = (e) => (e.rootBounds ? e.rootBounds.bottom : innerHeight / 2);
       }
       io = new IntersectionObserver(

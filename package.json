@@ -24,7 +24,8 @@
     "capture:drift": "node scripts/capture/drift.mjs",
     "capture:stress-test": "node scripts/capture/stress-test.mjs",
     "capture:raingarden": "node scripts/capture/raingarden.mjs",
-    "capture:ghostline": "node scripts/capture/ghostline.mjs"
+    "capture:ghostline": "node scripts/capture/ghostline.mjs",
+    "compare:blocks": "node scripts/compare-blocks.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

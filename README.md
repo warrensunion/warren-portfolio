@@ -2,9 +2,18 @@
 
 A one-page portfolio. The page is static HTML rendered from `src/content.js`, so it reads completely
 without JavaScript. Live figures in framed plates are an upgrade on top of that:
-- the iceberg from BTTRURSLF;
+- the iceberg from BTTRURSLF, leading its entry;
 - one **track** per larger project, and a compact card for each smaller one;
 - a stone ring whose particles spell WS.
+
+**Ascent** (the `snow-ascent` redesign, see `SNOW_REPORT.md` and `design/SNOW_PLAN.md`): the page is a climb.
+Behind it, one persistent WebGL canvas (`src/world/`) draws a made-up 6,100 m range at blue hour; scrolling
+climbs the camera from base camp to the summit through seven numbered logs while an igloo is built block by
+block. Log 02 is the ice field: every project as a block of ice in the treeline cloud (the BTTRshop hub's
+technique, ported), each with a 3D symbol frozen inside; click one, or press Enter on its link, to open it.
+The chrome (`src/chrome/`) adds the altimeter, the Ctrl+K palette, theme and sound toggles and the snow
+effects. Without WebGL, under reduced motion and with `?static=1`, the world is a still per log
+(`public/posters/world-<n>.webp`) and the ice field is a plain list of project links.
 
 It is built with Vite and vanilla ES modules, with no framework. The only runtime dependency is
 `three@0.180.0`.
@@ -161,7 +170,14 @@ index.html                 shell; the content plugin fills <!--content--> at dev
 vite.config.js             the content plugin, and three.js as its own lazy chunk
 src/content.js             every word, link, TODO, track and figure spec (edit this one)
 src/render.js              content -> HTML strings (pure, also used by the tests)
-src/main.js                boot: email copy, bar hairline, tracks, figure host
+src/main.js                boot: email copy, bar hairline, tracks, the world, figure host, chrome
+src/world/boot.js          the world's DOM half and the page's one loop: scroll to altitude, HUD, fallbacks
+src/world/climb.js         the pure climb maths: altitude, log, temperature, wind, snow, visibility (tested)
+src/world/land.js          the range's height function, in JS and GLSL with the same hash (tested)
+src/world/world.js         the one WebGL canvas: renderer, post, the mountain act and the field act
+src/world/{sky,terrain,pines,features,igloo,snow,rig}.js   the mountain act's parts and the camera rig
+src/world/field/           the ice field (log 02), ported from the BTTRshop hub, and the 3D symbols
+src/chrome/                altimeter, Ctrl+K palette, theme, sound, snow effects (drift, frost, cracks...)
 src/data/bttr-stats.json   BTTRURSLF's measured numbers (npm run stats)
 src/figures/host.js        figure lifetime, the weighted context budget, fallbacks, posters, readouts
 src/figures/tracks.js      track progress, stages, tabs and the sticky text top
@@ -171,7 +187,9 @@ src/figures/player.js      scrubs recorded clips by scroll (bttr, bcwc and the c
 src/figures/clips.js       the newer tracks: clips, plus an optional 2D demo on the last stage
 src/figures/env.js         device and flag rules, kind weights
 src/figures/<kind>/        iceberg, ring, contests, bcwc, bttr, terrarium, howpolluted, archer, drift, stresstest,
-                           raingarden, ghostline
+                           raingarden, ghostline, beatcut
+public/beatcut/            Beatcut's three renders (muted web encodes), their posters and beat data
+public/posters/world-*.webp  the world's still per log (npm run posters)
 public/stills/             one still per track stage
 public/captures/           recorded clips and manifests for every clip track
 public/drift/, public/stress-test/, public/raingarden/   the exported data their last-stage demos replay

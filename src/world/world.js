@@ -256,6 +256,11 @@ export async function createWorld(canvas, { tier = 'high', theme = 'dusk', reduc
       slow = frameMs > 22 ? slow + dt : Math.max(0, slow - dt * 0.5);
       if (slow > 2) lowerQuality();
     }
+    // frame stats for scripts/perf.mjs, like the figures' __figStats (dts only while it asks)
+    const fs = (window.__worldFrames ||= { frames: 0, dtSum: 0, dts: null });
+    fs.frames++;
+    fs.dtSum += dt * 1000;
+    if (fs.dts) fs.dts.push(dt * 1000);
     onFrame?.({ dt: dt * 1000, placed: igloo.placed, total: igloo.total, first: firstFrame });
     firstFrame = false;
   }

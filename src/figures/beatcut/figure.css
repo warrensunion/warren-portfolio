@@ -47,7 +47,10 @@
 .bc-side {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  justify-content: center;
+  gap: 12px;
+  max-height: 100%;
+  overflow: hidden;
   min-width: 0;
 }
 
@@ -61,8 +64,8 @@
 
 .bc-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 5px;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
 }
 
 .bc-beat {

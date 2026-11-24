@@ -69,6 +69,13 @@
   }
 }
 
+/* The smallest phones keep the name and the three links on one line; the theme waits for a wider screen. */
+@media (max-width: 439px) {
+  .bar-tools {
+    display: none;
+  }
+}
+
 /* ---- the altimeter ---- */
 html.has-alti {
   scrollbar-width: none;

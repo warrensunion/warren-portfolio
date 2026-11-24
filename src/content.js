@@ -50,7 +50,7 @@ export const content = {
         ['Temperature', 'temp', '−4.0 °C'],
         ['Wind', 'wind', '12 km/h'],
         ['Snowfall', 'snow', '1.3 cm/h'],
-        ['Blocks placed', 'blocks', '0 / 214'],
+        ['Blocks placed', 'blocks', '3 / 143'],
         ['Visibility', 'vis', '11 km'],
         ['Seed', 'seed', 'ascent → 0x5e7c1a'],
       ],

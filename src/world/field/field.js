@@ -200,7 +200,8 @@ export async function createField({ renderer, composer, insertBefore, dpr, tier,
       w = cw;
       h = ch;
       camera.aspect = w / h;
-      frame = Math.max(1, 0.95 / camera.aspect);
+      // portrait: pulled back only as far as a block needs to fit across (the hub framed them at ~60 %)
+      frame = Math.max(1, (camera.aspect < 1 ? 0.7 : 0.95) / camera.aspect);
       camera.updateProjectionMatrix();
     },
     /** Every frame, whichever act is on: the dissolve's amount, the move's flash. */

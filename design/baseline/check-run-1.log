@@ -13,3 +13,24 @@ PASS budget: no page errors while scrolling
 PASS budget: no figure failed while scrolling
 PASS budget: no console errors or WebGL/context warnings
 PASS no JavaScript: every track shows all its stage stills in flow with the stage buttons hidden, every figure keeps its poster  (8 tracks, every still in flow; 6 other posters)
+FAIL fallback ?static=1: no canvases, every poster and current stage still loaded and shown, one "fallback: forced" per WebGL and capture figure  (canvases 0, posters 14 (bad: stills/beatcut-s3.webp), logs {"iceberg":1,"bttr":1,"beatcut":1,"drift":1,"stresstest":1,"raingarden":1,"ghostline":1,"terrarium":1,"howpolluted":1,"archer":1,"bcwc":1,"ring":1})
+PASS fallback ?static=1: no page errors
+PASS reduced motion: no canvases or iframes anywhere, one "fallback: reduced-motion" per WebGL figure  (canvases 0, iframes 0, logs {"iceberg":1,"bttr":1,"beatcut":1,"drift":1,"stresstest":1,"raingarden":1,"ghostline":1,"terrarium":1,"howpolluted":1,"archer":1,"bcwc":1,"ring":1})
+FAIL reduced motion: the iceberg poster cross-fades to the under-water one past its midpoint, and back  (top 1, 100 ms in 1, half 1 (0.4s), back 0)
+PASS reduced motion: the ring cross-fades to each project still on link hover/focus, and back  (rest 0,0,0,0,0,0,0,0,0; hover 0: 1,0,0,0,0,0,0,0,0; hover 1: 0,1,0,0,0,0,0,0,0; hover 2: 0,0,1,0,0,0,0,0,0; hover 3: 0,0,0,1,0,0,0,0,0; hover 4: 0,0,0,0,1,0,0,0,0; hover 5: 0,0,0,0,0,1,0,0,0; hover 6: 0,0,0,0,0,0,1,0,0; hover 7: 0,0,0,0,0,0,0,1,0; hover 8: 0,0,0,0,0,0,0,0,1; left 0,0,0,0,0,0,0,0,0; focus 1 0,1,0,0,0,0,0,0,0; hover 8 + focus 1 0,0,0,0,0,0,0,0,1; leave 0,1,0,0,0,0,0,0,0; blur 0,0,0,0,0,0,0,0,0; 0.4s)
+PASS reduced motion: no page errors
+PASS 390x844: no horizontal scroll at top, middle and bottom  (top 390, middle 390, bottom 390)
+PASS 390x844: no page errors
+PASS world: goes live behind the page and draws a varied scene  (107 colours, 143 igloo blocks, act mountain)
+PASS world: the HUD climbs with the scroll and the igloo gains blocks  (0 m -> 4,665 m, blocks 3 -> 110)
+PASS world: log 02 switches to the ice field, with labels on the block in view  ({"act":"field","labels":1,"here":"#bttrurslf"})
+PASS world: Enter on a block link dollies in and lands on that project, its heading focused  ({"top":72,"focus":"in #drift","hash":"#drift"})
+PASS world: Ctrl+K opens the palette, typing filters, Enter goes, Esc closes  (open true, first "Raingarden", landed at 76px, closed true)
+PASS world: the altimeter marks all seven logs and follows the page  ({"n":7,"cur":"#projects"})
+PASS world: at most 3 WebGL contexts with the world in them, top to bottom  (peak 3, now 2)
+PASS world: no page errors
+PASS world: no console errors or WebGL/context warnings
+PASS world, reduced motion: no world canvas, its stills instead, one "[world] fallback: reduced-motion"  ({"canvas":0,"still":true}, 1 log(s))
+PASS world, ?static=1: no world canvas, its stills instead, one "[world] fallback: forced"  ({"canvas":0,"still":true}, 1 log(s))
+
+29 passed, 3 failed in 1618 s

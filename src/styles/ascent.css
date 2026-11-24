@@ -534,7 +534,11 @@ html.poster-world .bar,
 html.poster-world main,
 html.poster-world .foot,
 html.poster-world .skip,
-html.poster-world .world-scrim {
+html.poster-world .world-scrim,
+html.poster-world .frost,
+html.poster-world .alti,
+html.poster-world .breath,
+html.poster-world .cracks {
   display: none !important;
 }
 
@@ -737,9 +741,19 @@ html.ice-hover main {
     top: calc(var(--bar-h) + 12px);
   }
 
+  /* A phone has no room beside the block: the index stays the keyboard path, out of sight until focused. */
+  html.world-live .ice-list:not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
   html.world-live .ice-list {
     max-width: 150px;
     padding-left: 10px;
+    background: rgba(9, 16, 28, 0.7);
   }
 
   html.world-live .ice-link {
