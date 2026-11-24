@@ -27,6 +27,7 @@ export const state = {
   placed: 0,
   total: 0,
   live: false, // the world is drawing
+  stirred: false, // the visitor has moved, scrolled, touched or typed
   theme: 'dusk',
   time: 0,
   onLand: null,
@@ -104,7 +105,7 @@ function hud() {
     const k = state.motion ? dt : 99;
     shown.alt = ease(shown.alt, state.alt, k, 5);
     shown.temp = ease(shown.temp, tempAt(state.alt), k, 3);
-    shown.wind = ease(shown.wind, state.motion ? windAt(state.alt, state.time) : windAt(state.alt, 0), k, 2.5);
+    shown.wind = ease(shown.wind, state.motion && state.stirred ? windAt(state.alt, state.time) : windAt(state.alt, 0), k, 2.5);
     shown.snow = ease(shown.snow, snowAt(state.alt), k, 2);
     shown.vis = ease(shown.vis, visibilityAt(state.alt), k, 2);
     const total = state.total || 0;
@@ -324,6 +325,8 @@ export function initWorld({ env, onReady } = {}) {
     const go = () => {
       const onStir = () => {
         for (const t of STIR) removeEventListener(t, onStir, true);
+        state.stirred = true;
+        document.documentElement.classList.add('stirred');
         if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 600 });
         else setTimeout(start, 200);
       };

@@ -419,6 +419,10 @@ h2.log-h::before {
 .icicles .drip {
   fill: rgba(225, 238, 252, 0.9);
   opacity: 0;
+}
+
+/* the drips start with the visitor: a page nobody has touched stays still */
+html.stirred .icicles .drip {
   animation: drip 19s linear infinite;
 }
 

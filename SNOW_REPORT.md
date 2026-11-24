@@ -206,4 +206,18 @@ Flags: `?static=1` (stills), `?world=0` (the page without its world, for compari
     half rate at DPR 1 while a figure runs mid-screen.
   - Checks that assumed the iceberg sits at the page top, or one context per live figure, were updated.
 
+## Screenshots
+
+- `design/shots/` (`npm run shoot`), at 1440x900, 1920x1080 and 390x844: `top` (base camp and the HUD),
+  `field-0` and `field-1` (the first two blocks), each log (`index`, `building`, `projects`, `work`,
+  `contests`, `contact`, plus `-fig` when its figure is cut), every track at its first and last stage
+  (`bttrurslf`, `beatcut`, `drift`, `stress-test`, `raingarden`, `ghostline`, `terrarium`, `bcwc`), `bottom`,
+  `full`, and the still page (`static-top`, `static-index`, `static-contact-fig`).
+- `design/compare/` (`npm run compare`): yuzeli.ca beside this page at the same sizes and positions.
+- `design/compare/blocks-*.png` (`npm run compare:blocks`, new): the BTTRshop hub's blocks
+  (`design/ref-bttrshop/`) beside this page's first three blocks, at 1440x900 and 390x844.
+- `design/ref-bttrshop/`: the hub, shot from BTTRURSLF-v2's dev server (its dev server was stopped after).
+  `design/ref-yuzeli/` and `design/ref-igloo/` are local only.
+- `public/posters/world-0..6.webp`: the world's still per log, which is also what reduced motion shows.
+
 <!-- REPORT-FINAL -->

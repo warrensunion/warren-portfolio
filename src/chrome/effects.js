@@ -60,7 +60,15 @@ export function initEffects(root, { reduced, subscribe }) {
   const frost = document.createElement('div');
   frost.className = 'frost';
   frost.setAttribute('aria-hidden', 'true');
-  frost.style.backgroundImage = `url(${frostTexture()})`;
+  // drawn the first time the climb is cold enough to need it, in an idle moment (it is a few thousand strokes)
+  let frostDrawn = false;
+  const drawFrost = () => {
+    if (frostDrawn) return;
+    frostDrawn = true;
+    const go = () => (frost.style.backgroundImage = `url(${frostTexture(384)})`);
+    if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2000 });
+    else setTimeout(go, 300);
+  };
   document.body.append(frost);
   addEventListener(
     'pointermove',
@@ -191,6 +199,7 @@ export function initEffects(root, { reduced, subscribe }) {
       lastDrift = dq;
       html.style.setProperty('--drift', dq.toFixed(3));
     }
+    if (st.alt > 600) drawFrost();
     // frost: none at base camp, full at -40 C
     const f = Math.max(0, Math.min(1, (-tempAt(st.alt) - 6) / 34));
     const fq = Math.round(f * 50) / 50;

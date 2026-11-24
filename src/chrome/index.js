@@ -47,7 +47,13 @@ export function initChrome(root, { world, env, content }) {
   const sound = part('sound', () => initSound({ tools, reduced }));
   if (sound) state.onLand = (n) => sound.clink(n);
 
-  part('palette', () => initPalette(root, { tools, content, world, sound }));
-  part('altimeter', () => initAltimeter(root, { reduced }));
-  part('effects', () => initEffects(root, { reduced, subscribe }));
+  // The rest waits for an idle moment after load, so none of it competes with the first paint.
+  const later = () => {
+    part('palette', () => initPalette(root, { tools, content, world, sound }));
+    part('altimeter', () => initAltimeter(root, { reduced }));
+    part('effects', () => initEffects(root, { reduced, subscribe }));
+  };
+  const idle = () => ('requestIdleCallback' in window ? requestIdleCallback(later, { timeout: 2500 }) : setTimeout(later, 800));
+  if (document.readyState === 'complete') idle();
+  else addEventListener('load', idle, { once: true });
 }
