@@ -35,8 +35,8 @@ async function settle(page, extraMs) {
         return [...f.querySelectorAll('img.fig-poster:not(.fig-still), img.fig-still.is-on')].every((i) => i.complete && i.naturalWidth > 0);
       }),
     null,
-    { timeout: 45000 },
-  );
+    { timeout: 90000 },
+  ).catch(() => console.log('  (a figure on screen was still building after 90 s; shot on its stills)'));
   // The canvas fades in over 400 ms; the scramble label and the ring's assembly take longer.
   await sleep(extraMs);
 }
